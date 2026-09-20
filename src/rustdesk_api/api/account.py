@@ -25,6 +25,7 @@ from rustdesk_api.db.database import get_db
 from rustdesk_api.errors import ApiError
 from rustdesk_api.models.session import AuthSession
 from rustdesk_api.models.user import User
+from rustdesk_api.security.passwords import verify_password
 from rustdesk_api.services import audit as audit_service
 from rustdesk_api.services import authentication as auth_service
 from rustdesk_api.services import password_reset as reset_service
@@ -144,6 +145,69 @@ def reset_password_with_token(
         target_id=user.id,
         ip_address=client_ip,
         detail={"username": user.username},
+    )
+    db.commit()
+
+
+# ---------------------------------------------------------------------------
+# Changing your own password
+# ---------------------------------------------------------------------------
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(min_length=1, max_length=256)
+    new_password: str = Field(min_length=8, max_length=256)
+
+
+@router.post(
+    "/change-password",
+    status_code=204,
+    dependencies=[Depends(verify_csrf), Depends(enforce_auth_rate_limit)],
+)
+def change_password(
+    payload: ChangePasswordRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_interactive_user),
+    current: AuthSession | None = Depends(get_optional_session),
+    settings: Settings = Depends(get_settings_dep),
+    client_ip: str | None = Depends(get_client_ip),
+) -> None:
+    """The signed-in user sets a new password. It needs the current one, so a
+    stolen session alone cannot lock the owner out, and wrong guesses count
+    towards the same lockout as a wrong password at sign-in. Every other session,
+    API key and enrollment token of the user ends; this session stays."""
+    if auth_service.is_locked(user):
+        raise ApiError("ACCOUNT_LOCKED", auth_service.lock_message(user), status.HTTP_429_TOO_MANY_REQUESTS)
+    if not verify_password(payload.current_password, user.password_hash):
+        auth_service.register_failure(
+            db, user, auth_service.Lockout.from_settings(settings), ip_address=client_ip
+        )
+        audit_service.record(
+            db,
+            action="password_changed",
+            actor_id=user.id,
+            target_type="user",
+            target_id=user.id,
+            result="failure",
+            ip_address=client_ip,
+        )
+        db.commit()
+        # 403, not 401: the session is fine, and a 401 would send the WebUI to the sign-in page.
+        raise ApiError("INVALID_CREDENTIALS", "The current password is not right.", status.HTTP_403_FORBIDDEN)
+    if payload.new_password == payload.current_password:
+        raise ApiError("PASSWORD_UNCHANGED", "The new password must differ from the current one.", 422)
+
+    auth_service.set_password(db, user, payload.new_password)
+    auth_service.register_success(user)
+    ended = token_service.revoke_all_for_user(db, user.id, keep_id=current.id if current else None)
+    audit_service.record(
+        db,
+        action="password_changed",
+        actor_id=user.id,
+        target_type="user",
+        target_id=user.id,
+        ip_address=client_ip,
+        detail={"sessions_ended": ended},
     )
     db.commit()
 

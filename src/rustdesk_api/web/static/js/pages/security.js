@@ -392,10 +392,51 @@ async function renderEnrollment(fresh) {
   });
 }
 
+// ------------------------------------------------------------------ password
+
+function setupPasswordForm(user) {
+  document.getElementById("pw-username").value = user.username; // lets a password manager file the new one
+  const form = document.getElementById("password-form");
+  const error = document.getElementById("pw-error");
+  const fail = (message) => {
+    error.textContent = message;
+    error.classList.remove("hidden");
+  };
+
+  form.addEventListener("submit", async (evt) => {
+    evt.preventDefault();
+    error.classList.add("hidden");
+    const current = document.getElementById("pw-current").value;
+    const next = document.getElementById("pw-new").value;
+    if (next !== document.getElementById("pw-confirm").value) {
+      fail("The two new passwords are not the same.");
+      return;
+    }
+    try {
+      await api("/api/v1/auth/change-password", {
+        method: "POST",
+        body: JSON.stringify({ current_password: current, new_password: next }),
+      });
+    } catch (err) {
+      fail(err.message);
+      return;
+    }
+    for (const id of ["pw-current", "pw-new", "pw-confirm"]) document.getElementById(id).value = "";
+    toast("Password changed. Your other sessions were signed out.", "success");
+    // The lists below changed: other sessions, API keys and enrollment tokens are gone.
+    try {
+      await Promise.all([renderSessions(), renderApiKeys(), renderEnrollment()]);
+    } catch (err) {
+      toast(err.message, "error");
+    }
+  });
+}
+
 (async () => {
   const user = await requireAuth();
   if (!user) return;
   renderNav("security", user);
+  setupPasswordForm(user);
   try {
     await Promise.all([renderTwoFactor(), renderSessions(), renderApiKeys(), renderEnrollment()]);
   } catch (err) {

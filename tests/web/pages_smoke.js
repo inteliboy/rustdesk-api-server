@@ -434,6 +434,49 @@ const listFixtures = (items) => ({
     assert.ok(env.toasts.some(([m]) => /label/.test(m)));
   });
 
+  await test("security: changing the password sends both passwords, clears the form and reloads the lists", async () => {
+    const env = await new Env("security.html", "security.js", {
+      user: alice,
+      fixtures: securityFixtures({ "POST ^/api/v1/auth/change-password": null }),
+    }).run();
+    assert.strictEqual(env.element("pw-username").value, "alice");
+
+    env.element("pw-current").value = "old-password-1";
+    env.element("pw-new").value = "new-password-2";
+    env.element("pw-confirm").value = "different-3";
+    await env.fire("password-form", "submit");
+    assert.strictEqual(env.posted("/api/v1/auth/change-password").length, 0, "a mismatch is caught before the request");
+    assert.match(env.element("pw-error").textContent, /not the same/);
+    assert.ok(!env.element("pw-error").classList.contains("hidden"));
+
+    env.element("pw-confirm").value = "new-password-2";
+    const sessionLoads = env.requests.filter((r) => /auth\/sessions$/.test(r.url) && r.method === "GET").length;
+    await env.fire("password-form", "submit");
+    const [request] = env.posted("/api/v1/auth/change-password");
+    assert.deepStrictEqual(JSON.parse(request.body), { current_password: "old-password-1", new_password: "new-password-2" });
+    assert.strictEqual(request.headers["X-CSRF-Token"], "csrf-token");
+    assert.ok(env.element("pw-error").classList.contains("hidden"));
+    for (const id of ["pw-current", "pw-new", "pw-confirm"]) assert.strictEqual(env.element(id).value, "", `${id} is cleared`);
+    assert.ok(env.toasts.some(([m]) => /Password changed/.test(m)), JSON.stringify(env.toasts));
+    const after = env.requests.filter((r) => /auth\/sessions$/.test(r.url) && r.method === "GET").length;
+    assert.ok(after > sessionLoads, "the sessions list is reloaded");
+  });
+
+  await test("security: a refused password change shows the server's reason and keeps what was typed", async () => {
+    const env = await new Env("security.html", "security.js", {
+      user: alice,
+      fixtures: securityFixtures({
+        "POST ^/api/v1/auth/change-password": { __status: 403, body: { error: { code: "INVALID_CREDENTIALS", message: "The current password is not right." } } },
+      }),
+    }).run();
+    env.element("pw-current").value = "wrong";
+    env.element("pw-new").value = "new-password-2";
+    env.element("pw-confirm").value = "new-password-2";
+    await env.fire("password-form", "submit");
+    assert.strictEqual(env.element("pw-error").textContent, "The current password is not right.");
+    assert.strictEqual(env.element("pw-new").value, "new-password-2");
+  });
+
   // -------------------------------------------------------------------- users
   await test("users: locked accounts are recognised and a reset link is displayed for copying", async () => {
     const future = new Date(Date.now() + 3600e3).toISOString();

@@ -6,6 +6,36 @@
   <h1 class="text-lg font-semibold">Security</h1>
 
   <section>
+    <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Password</h2>
+    <form id="password-form" class="card p-4 max-w-md space-y-3">
+      <input id="pw-username" type="text" autocomplete="username" readonly tabindex="-1" aria-hidden="true" class="sr-only" />
+      <div>
+        <label for="pw-current" class="block text-sm font-medium mb-1">Current password</label>
+        <input id="pw-current" type="password" required autocomplete="current-password"
+               class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm" />
+      </div>
+      <div>
+        <label for="pw-new" class="block text-sm font-medium mb-1">New password</label>
+        <input id="pw-new" type="password" required minlength="8" autocomplete="new-password"
+               class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm" />
+        <p class="text-xs text-slate-400 mt-1">At least 8 characters.</p>
+      </div>
+      <div>
+        <label for="pw-confirm" class="block text-sm font-medium mb-1">Repeat the new password</label>
+        <input id="pw-confirm" type="password" required minlength="8" autocomplete="new-password"
+               class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm" />
+      </div>
+      <p id="pw-error" class="text-sm text-red-600 dark:text-red-400 hidden" role="alert"></p>
+      <button type="submit" class="px-4 py-2 rounded-md bg-brand-600 text-white text-sm font-medium hover:bg-brand-700">
+        Change password
+      </button>
+      <p class="text-xs text-slate-500">
+        This session stays signed in. Every other session, API key and enrollment token of yours is ended.
+      </p>
+    </form>
+  </section>
+
+  <section>
     <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Two-factor authentication</h2>
     <div id="two-factor" class="card p-4">
       <div class="skeleton h-16"></div>

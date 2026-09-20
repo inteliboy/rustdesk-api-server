@@ -477,6 +477,10 @@ function describeActivity(item, { includeActor = true } = {}) {
         : "A password-reset link was refused (invalid, used or expired)";
     case "session_revoked":
       return `${prefix}signed out one of their sessions`;
+    case "password_changed":
+      return item.result === "success"
+        ? `${prefix}changed their password`
+        : `${prefix}entered a wrong current password while changing it`;
     case "sessions_revoked":
       return `${prefix}signed out ${safe.count} other session${item.detail && item.detail.count === 1 ? "" : "s"}`;
     case "api_key_created":
@@ -610,7 +614,7 @@ function renderNav(active, user) {
   nav.innerHTML = items
     .map(
       (item) =>
-        `<a href="${item.href}" class="px-3 py-2 rounded-md text-sm font-medium ${
+        `<a href="${item.href}" class="px-2.5 py-2 rounded-md text-sm font-medium whitespace-nowrap ${
           item.key === active ? "bg-brand-600 text-white" : "text-slate-600 hover:bg-slate-100"
         }">${item.label}</a>`
     )

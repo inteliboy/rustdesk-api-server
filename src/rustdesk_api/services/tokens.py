@@ -80,10 +80,14 @@ def revoke_session(db: Session, session_obj: AuthSession) -> None:
     session_obj.revoked_at = _utcnow()
 
 
-def revoke_all_for_user(db: Session, user_id: int) -> int:
+def revoke_all_for_user(db: Session, user_id: int, *, keep_id: int | None = None) -> int:
+    """Revoke every live session, API key and enrollment token of a user, except the
+    session `keep_id` (the one making the request, when a user changes their own password)."""
     stmt = select(AuthSession).where(AuthSession.user_id == user_id, AuthSession.revoked_at.is_(None))
     count = 0
     for session_obj in db.execute(stmt).scalars():
+        if keep_id is not None and session_obj.id == keep_id:
+            continue
         session_obj.revoked_at = _utcnow()
         count += 1
     return count

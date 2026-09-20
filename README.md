@@ -268,6 +268,10 @@ docker compose up -d
   migrations run when the new container starts.
 - **Behind a reverse proxy.** Publish the port only to the proxy, set `TRUSTED_PROXIES` to its address and
   `EXTERNAL_URL` to the public URL. See [Reverse proxy setup](#reverse-proxy-setup).
+- **A shell in the container.** The container's main process only writes its log, and it has no terminal
+  attached, so the first "Terminal" view in Synology's Container Manager (or `docker attach`) shows log output
+  and takes no input. Open a new session instead: in Container Manager choose **Terminal -> Create** and run
+  `sh`, or use `docker exec -it rustdesk-api sh`.
 - The container has a health check on `/health`, stops cleanly on `SIGTERM` (`docker stop`), and needs no shell.
 
 ### How the Docker image is tested
@@ -382,6 +386,11 @@ guessing. Wrong two-factor codes count too, on both sign-in paths (WebUI and Rus
 guess after a lock lapses locks it again. An administrator unlocks on the Users page (a *Locked* badge shows) or
 with `rustdesk-api unlock-user --username alice`; a successful login resets the count. Be aware that anyone can
 lock a username they know: the per-IP sign-in rate limit keeps that slow, and `0` turns lockout off.
+
+**Changing your password.** **Security -> Password** takes your current password and a new one (8+ characters).
+This session stays signed in; every other session, API key and enrollment token of yours ends, so a change
+after a suspected leak also cuts off whoever had them. A wrong current password counts towards the lockout
+below, like a wrong password at sign-in. It is not available to API keys.
 
 **Sessions.** **Security -> Signed-in sessions** lists your browsers and RustDesk clients with address and
 last use. Sign out one, or *everywhere else*.
