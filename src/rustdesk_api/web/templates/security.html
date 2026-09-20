@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Security - RustDesk API Server{% endblock %}
+{% block body %}
+{% include "_app_shell.html" %}
+<main class="max-w-4xl mx-auto px-4 py-8 space-y-8">
+  <h1 class="text-lg font-semibold">Security</h1>
+
+  <section>
+    <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Two-factor authentication</h2>
+    <div id="two-factor" class="card p-4">
+      <div class="skeleton h-16"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Signed-in sessions</h2>
+    <p class="text-sm text-slate-500 mb-3">
+      Browsers and RustDesk clients currently signed in to your account. Sign out any you do not recognise.
+    </p>
+    <div id="sessions" class="card p-4">
+      <div class="skeleton h-16"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">API keys</h2>
+    <p class="text-sm text-slate-500 mb-3">
+      A key lets a script call this server's <code>/api/v1</code> API as you, with
+      <code>Authorization: Bearer &hellip;</code>. A <em>read</em> key can only fetch data. A key cannot manage your
+      account (keys, sessions, two-factor), and it is shown only once.
+    </p>
+    <div id="api-keys" class="card p-4">
+      <div class="skeleton h-16"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Enrollment tokens</h2>
+    <p class="text-sm text-slate-500 mb-3">
+      A token for <code>rustdesk --assign --token &hellip;</code>: it lets a script put a device into your
+      address book or group (or, for an administrator, assign it to any user). It cannot be used for anything else,
+      and it is shown only once.
+    </p>
+    <div id="enrollment" class="card p-4">
+      <div class="skeleton h-16"></div>
+    </div>
+  </section>
+</main>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/pages/security.js"></script>
+
+{% endblock %}

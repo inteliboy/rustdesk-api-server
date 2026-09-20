@@ -1,0 +1,12 @@
+{
+  "name": "rustdesk-api-webui",
+  "private": true,
+  "description": "Build tooling for the WebUI stylesheet. Node is only needed to REBUILD static/css/tailwind.css (which is committed); it is not needed to run the server.",
+  "scripts": {
+    "build:css": "tailwindcss -c tailwind.config.js -i frontend/tailwind.css -o src/rustdesk_api/web/static/css/tailwind.css --minify",
+    "watch:css": "tailwindcss -c tailwind.config.js -i frontend/tailwind.css -o src/rustdesk_api/web/static/css/tailwind.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "3.4.19"
+  }
+}

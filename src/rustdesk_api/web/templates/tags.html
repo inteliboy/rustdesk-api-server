@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Tags - RustDesk API Server{% endblock %}
+{% block body %}
+{% include "_app_shell.html" %}
+<main class="max-w-3xl mx-auto px-4 py-8">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-lg font-semibold">Tags</h1>
+    <button id="new-tag-btn" class="px-4 py-2 rounded-md bg-brand-600 text-white text-sm font-medium hover:bg-brand-700">
+      New tag
+    </button>
+  </div>
+
+  <div id="new-tag-form" class="card p-4 mb-6 hidden">
+    <div class="grid grid-cols-2 gap-3 mb-3">
+      <input id="nt-name" placeholder="Name" class="border border-slate-300 rounded px-2 py-1.5 text-sm" />
+      <input id="nt-color" type="color" value="#64748b" class="border border-slate-300 rounded h-9 w-full" />
+    </div>
+    <button id="nt-create" class="px-4 py-2 rounded-md bg-brand-600 text-white text-sm font-medium hover:bg-brand-700">Create</button>
+  </div>
+
+  <div id="tag-list" class="flex flex-wrap gap-2"></div>
+  <div id="empty-state" class="hidden p-10 text-center text-sm text-slate-500">No tags yet.</div>
+</main>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/pages/tags.js"></script>
+
+{% endblock %}

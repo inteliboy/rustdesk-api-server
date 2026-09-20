@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Users - RustDesk API Server{% endblock %}
+{% block body %}
+{% include "_app_shell.html" %}
+<main class="max-w-4xl mx-auto px-4 py-8">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-lg font-semibold">Users</h1>
+    <div class="flex items-center gap-4">
+      <a href="/api/v1/export/users" class="text-sm text-slate-500 hover:text-slate-900" download>Export CSV</a>
+      <button id="new-user-btn" class="px-4 py-2 rounded-md bg-brand-600 text-white text-sm font-medium hover:bg-brand-700">
+        New user
+      </button>
+    </div>
+  </div>
+
+  <div id="reset-link-box" class="card p-4 mb-6 hidden border-amber-300 dark:border-amber-700">
+    <div class="flex items-center justify-between mb-2">
+      <p class="text-sm font-medium">Password-reset link for <span id="reset-link-user"></span></p>
+      <button id="reset-link-close" class="text-slate-400 hover:text-slate-700 text-lg leading-none">&times;</button>
+    </div>
+    <p class="text-xs text-slate-500 mb-2">Give it to them yourself - nothing is emailed. It works once, expires
+      <span id="reset-link-expiry"></span>, and is not shown again.</p>
+    <div id="reset-link-url" class="font-mono text-xs break-all select-all mb-3"></div>
+    <button id="reset-link-copy" class="px-3 py-1.5 rounded-md border border-slate-300 text-sm hover:bg-slate-100">Copy link</button>
+  </div>
+
+  <div id="new-user-form" class="card p-4 mb-6 hidden">
+    <div class="grid grid-cols-3 gap-3 mb-3">
+      <input id="nu-username" placeholder="Username" class="border border-slate-300 rounded px-2 py-1.5 text-sm" />
+      <input id="nu-email" placeholder="Email (optional)" class="border border-slate-300 rounded px-2 py-1.5 text-sm" />
+      <input id="nu-password" type="password" placeholder="Password" class="border border-slate-300 rounded px-2 py-1.5 text-sm" />
+    </div>
+    <label class="flex items-center gap-2 text-sm mb-3">
+      <input id="nu-admin" type="checkbox" /> Administrator
+    </label>
+    <button id="nu-create" class="px-4 py-2 rounded-md bg-brand-600 text-white text-sm font-medium hover:bg-brand-700">Create</button>
+  </div>
+
+  <div id="user-detail-modal" class="fixed inset-0 bg-black/50 items-center justify-center z-50 hidden">
+    <div class="card w-full max-w-lg mx-4 max-h-[85vh] overflow-y-auto p-5">
+      <div class="flex items-center justify-between mb-4">
+        <h2 id="ud-username" class="text-base font-semibold"></h2>
+        <button id="ud-close" class="text-slate-400 hover:text-slate-700 text-lg leading-none">&times;</button>
+      </div>
+      <div id="ud-profile" class="text-sm mb-5"></div>
+      <div class="mb-5">
+        <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Owned devices</h3>
+        <div id="ud-devices" class="text-sm"></div>
+      </div>
+      <div>
+        <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Recent activity</h3>
+        <div id="ud-activity" class="text-sm"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-slate-500 text-left">
+        <tr>
+          <th class="px-4 py-2 font-medium">Username</th>
+          <th class="px-4 py-2 font-medium">Email</th>
+          <th class="px-4 py-2 font-medium">Role</th>
+          <th class="px-4 py-2 font-medium">Status</th>
+          <th class="px-4 py-2 font-medium">Last login</th>
+          <th class="px-4 py-2"></th>
+        </tr>
+      </thead>
+      <tbody id="user-rows" class="divide-y divide-slate-100"></tbody>
+    </table>
+  </div>
+</main>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/pages/users.js"></script>
+
+{% endblock %}

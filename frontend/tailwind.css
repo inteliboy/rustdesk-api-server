@@ -1,0 +1,143 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Theme variables. Colors are "R G B" triplets so Tailwind opacity modifiers work.
+   Light = stock Tailwind slate. Dark keeps the SAME class names but re-maps the ramp:
+   the numbers no longer mean "light to dark", they mean "background to foreground". */
+@layer base {
+  :root {
+    color-scheme: light;
+    --slate-50: 248 250 252;
+    --slate-100: 241 245 249;
+    --slate-200: 226 232 240;
+    --slate-300: 203 213 225;
+    --slate-400: 148 163 184;
+    --slate-500: 100 116 139;
+    --slate-600: 71 85 105;
+    --slate-700: 51 65 85;
+    --slate-800: 30 41 59;
+    --slate-900: 15 23 42;
+    --surface: 255 255 255;
+    --link: var(--brand-600);
+  }
+
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --slate-50: 11 17 32;
+    --slate-100: 30 41 59;
+    --slate-200: 51 65 85;
+    --slate-300: 71 85 105;
+    --slate-400: 116 130 153;
+    --slate-500: 148 163 184;
+    --slate-600: 180 192 208;
+    --slate-700: 203 213 225;
+    --slate-800: 226 232 240;
+    --slate-900: 241 245 249;
+    --surface: 17 24 39;
+    --link: var(--brand-400);
+  }
+
+  /* Form controls in the templates set no background of their own. */
+  input,
+  select,
+  textarea {
+    background-color: rgb(var(--surface));
+    color: rgb(var(--slate-900));
+  }
+  input::placeholder,
+  textarea::placeholder {
+    color: rgb(var(--slate-400));
+  }
+  input[type="checkbox"],
+  input[type="radio"] {
+    accent-color: rgb(var(--brand-600));
+  }
+}
+
+@layer base {
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  input:focus,
+  select:focus,
+  textarea:focus {
+    outline: 2px solid rgb(var(--brand-500));
+    outline-offset: -1px;
+  }
+}
+
+/* In the components layer so utilities (border-l-4, ...) can still override them. */
+@layer components {
+  .card {
+    background: rgb(var(--surface));
+    border: 1px solid rgb(var(--slate-200));
+    border-radius: 0.75rem;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.125rem 0.6rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .badge-dot {
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 9999px;
+  }
+  .badge-online {
+    background: rgb(34 197 94 / 0.15);
+    color: #166534;
+  }
+  .badge-online .badge-dot {
+    background: #22c55e;
+  }
+  .badge-offline {
+    background: rgb(var(--slate-100));
+    color: rgb(var(--slate-600));
+  }
+  .badge-offline .badge-dot {
+    background: rgb(var(--slate-400));
+  }
+  :root[data-theme="dark"] .badge-online {
+    color: #86efac;
+  }
+  /* Tag badges take their text color from the tag itself (an inline style), so a
+     dark tag color would be unreadable on a dark background. */
+  :root[data-theme="dark"] .badge:not(.badge-online):not(.badge-offline) {
+    filter: brightness(1.6) saturate(1.1);
+  }
+
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      rgb(var(--slate-100)) 25%,
+      rgb(var(--slate-200)) 37%,
+      rgb(var(--slate-100)) 63%
+    );
+    background-size: 400% 100%;
+    animation: skeleton-loading 1.4s ease infinite;
+    border-radius: 0.375rem;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 1rem;
+    right: 1rem;
+    z-index: 50;
+    max-width: 22rem;
+  }
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}

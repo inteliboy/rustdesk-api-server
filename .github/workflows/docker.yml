@@ -1,0 +1,160 @@
+name: Docker
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Build and test the image
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build the image (amd64)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: rustdesk-api:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # A throwaway key for this run only.
+      - name: Make a throwaway SECRET_KEY
+        run: echo "SECRET_KEY=$(python -c 'import secrets; print(secrets.token_urlsafe(48))')" >> "$GITHUB_ENV"
+
+      # 1. The image on its own: `docker run` with a named volume.
+      - name: Start the container
+        run: |
+          docker run -d --name rd -p 21114:21114 -v rd-data:/app/data \
+            -e SECRET_KEY="$SECRET_KEY" rustdesk-api:ci
+
+      - name: Smoke test a fresh container
+        run: python scripts/docker_smoke.py first
+
+      - name: Runs as a non-root user
+        run: |
+          uid=$(docker exec rd id -u)
+          echo "uid=$uid"
+          test "$uid" != "0"
+
+      - name: Docker reports the container healthy
+        run: |
+          for i in $(seq 1 30); do
+            status=$(docker inspect -f '{{.State.Health.Status}}' rd)
+            echo "health: $status"
+            [ "$status" = "healthy" ] && exit 0
+            sleep 3
+          done
+          docker logs rd
+          exit 1
+
+      - name: Data survives a restart
+        run: |
+          docker restart rd
+          python scripts/docker_smoke.py again
+
+      - name: Management commands run in the same image
+        run: |
+          docker run --rm rustdesk-api:ci version
+          docker run --rm rustdesk-api:ci generate-key | grep -q .
+
+      - name: Stops cleanly on SIGTERM and logs no secrets
+        run: |
+          docker stop -t 30 rd
+          code=$(docker inspect -f '{{.State.ExitCode}}' rd)
+          echo "exit code: $code"
+          docker logs rd > server.log 2>&1
+          tail -n 15 server.log
+          if grep -qF "$SECRET_KEY" server.log; then echo "SECRET_KEY appears in the log"; exit 1; fi
+          if grep -qF "smoke-test-password-1" server.log; then echo "a password appears in the log"; exit 1; fi
+          test "$code" = "0"
+
+      - name: Clean up
+        if: always()
+        run: |
+          docker logs rd || true
+          docker rm -f rd || true
+          docker volume rm rd-data || true
+
+      # 2. The documented route: docker compose, down, up again.
+      - name: Compose up
+        run: docker compose up -d --build --wait
+
+      - name: Smoke test a fresh compose stack
+        run: python scripts/docker_smoke.py first
+
+      - name: Compose down and up again keeps the data
+        run: |
+          docker compose down
+          docker compose up -d --wait
+          python scripts/docker_smoke.py again
+
+      - name: Compose logs and clean up
+        if: always()
+        run: |
+          docker compose logs --no-color || true
+          docker compose down -v || true
+
+  publish:
+    name: Publish to GitHub Container Registry
+    needs: test
+    # Only for the main branch and version tags - never for pull requests.
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Work out tags and labels
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,format=short
+
+      - name: Build and push (amd64 and arm64)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

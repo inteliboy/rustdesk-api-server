@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Strategies - RustDesk API Server{% endblock %}
+{% block body %}
+{% include "_app_shell.html" %}
+<main class="max-w-4xl mx-auto px-4 py-8">
+  <div class="flex items-center justify-between mb-2">
+    <h1 class="text-lg font-semibold">Strategies</h1>
+    <button id="new-strategy-btn" class="px-4 py-2 rounded-md bg-brand-600 text-white text-sm font-medium hover:bg-brand-700">
+      New strategy
+    </button>
+  </div>
+  <p class="text-sm text-slate-500 mb-6">
+    A strategy is a set of RustDesk client settings pushed to devices: it is assigned to a device (on its page) or to a
+    group, and reaches the client with its next heartbeat. Settings a strategy leaves unset are reset to the client&rsquo;s
+    own default.
+  </p>
+
+  <div id="editor" class="card p-5 mb-6 hidden">
+    <div class="flex items-center justify-between mb-4">
+      <h2 id="editor-title" class="text-base font-semibold"></h2>
+      <button id="editor-close" class="text-slate-400 hover:text-slate-700 text-lg leading-none">&times;</button>
+    </div>
+    <div class="grid sm:grid-cols-2 gap-3 mb-4">
+      <input id="st-name" placeholder="Name" maxlength="100" class="border border-slate-300 rounded px-2 py-1.5 text-sm" />
+      <input id="st-description" placeholder="Description (optional)" maxlength="500" class="border border-slate-300 rounded px-2 py-1.5 text-sm" />
+    </div>
+    <div id="st-options" class="space-y-5"></div>
+    <div class="flex gap-3 mt-5">
+      <button id="st-save" class="px-4 py-2 rounded-md bg-brand-600 text-white text-sm font-medium hover:bg-brand-700">Save</button>
+      <button id="st-cancel" class="px-4 py-2 rounded-md border border-slate-300 text-sm font-medium hover:bg-slate-50">Cancel</button>
+    </div>
+  </div>
+
+  <div class="card overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-slate-500 text-left">
+        <tr>
+          <th class="px-4 py-2 font-medium">Name</th>
+          <th class="px-4 py-2 font-medium">Description</th>
+          <th class="px-4 py-2 font-medium">Settings</th>
+          <th class="px-4 py-2 font-medium">Devices</th>
+          <th class="px-4 py-2 font-medium">Groups</th>
+          <th class="px-4 py-2"></th>
+        </tr>
+      </thead>
+      <tbody id="strategy-rows" class="divide-y divide-slate-100"></tbody>
+    </table>
+    <div id="empty-state" class="hidden p-10 text-center text-sm text-slate-500">No strategies yet.</div>
+  </div>
+</main>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/pages/strategies.js"></script>
+
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Device - RustDesk API Server{% endblock %}
+{% block body %}
+{% include "_app_shell.html" %}
+<main id="device-page" data-device-id="{{ device_id }}" class="max-w-3xl mx-auto px-4 py-8">
+  <a href="/devices" class="text-sm text-slate-500 hover:text-slate-900">&larr; Back to devices</a>
+  <div id="content" class="mt-4 space-y-6">
+    <div class="skeleton h-40"></div>
+  </div>
+</main>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/pages/device_detail.js"></script>
+
+{% endblock %}

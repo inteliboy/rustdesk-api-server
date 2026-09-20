@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Devices - RustDesk API Server{% endblock %}
+{% block body %}
+{% include "_app_shell.html" %}
+<main class="max-w-screen-2xl mx-auto px-4 py-8">
+  <div class="flex items-center justify-between mb-4 gap-3 flex-wrap">
+    <h1 class="text-lg font-semibold">Devices</h1>
+    <div class="flex items-center gap-2 flex-wrap">
+      <select id="status-filter" aria-label="Status" class="rounded-md border border-slate-300 px-2 py-2 text-sm">
+        <option value="">Any status</option>
+        <option value="online">Online</option>
+        <option value="offline">Offline</option>
+      </select>
+      <select id="group-filter" aria-label="Group" class="rounded-md border border-slate-300 px-2 py-2 text-sm">
+        <option value="">All groups</option>
+      </select>
+      <select id="tag-filter" aria-label="Tag" class="rounded-md border border-slate-300 px-2 py-2 text-sm">
+        <option value="">All tags</option>
+      </select>
+      <select id="sort-select" aria-label="Sort by" class="rounded-md border border-slate-300 px-2 py-2 text-sm">
+        <option value="last_seen">Sort: last seen</option>
+        <option value="created">Sort: registered</option>
+        <option value="name">Sort: name</option>
+        <option value="id">Sort: RustDesk ID</option>
+      </select>
+      <input id="search" type="search" placeholder="Search by id, hostname, alias, IP..."
+             class="w-72 rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+    </div>
+  </div>
+
+  <div class="flex items-center justify-between mb-4 gap-3 flex-wrap text-sm">
+    <div class="flex items-center gap-2 flex-wrap">
+      <select id="view-select" aria-label="Saved views" class="rounded-md border border-slate-300 px-2 py-1.5 text-sm">
+        <option value="">Saved views</option>
+      </select>
+      <button id="view-delete" class="hidden px-2 py-1.5 rounded-md text-red-500 dark:text-red-400 hover:bg-slate-100">Delete view</button>
+      <button id="view-save-toggle" class="px-2 py-1.5 rounded-md border border-slate-300 hover:bg-slate-100">Save these filters</button>
+      <span id="view-save-form" class="hidden">
+        <span class="flex items-center gap-2">
+          <input id="view-name" maxlength="100" placeholder="Name this view" aria-label="View name"
+                 class="rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
+          <button id="view-save" class="px-3 py-1.5 rounded-md bg-brand-600 text-white font-medium hover:bg-brand-700">Save</button>
+        </span>
+      </span>
+    </div>
+    <div class="flex items-center gap-4 text-slate-500">
+      <a id="export-csv" href="/api/v1/export/devices?format=csv" download class="hover:text-slate-900">Export CSV</a>
+      <a id="export-json" href="/api/v1/export/devices?format=json" download class="hover:text-slate-900">Export JSON</a>
+      <button id="import-toggle" class="hidden hover:text-slate-900">Import&hellip;</button>
+    </div>
+  </div>
+
+  <div id="import-panel" class="card p-4 mb-4 hidden">
+    <p class="text-sm text-slate-500 mb-3">
+      A CSV file with a header row (or a JSON list) using any of these columns: <code>rustdesk_id</code> (required),
+      <code>alias</code>, <code>name</code>, <code>note</code>, <code>owner</code> (a username), <code>group</code>
+      (an existing group's name) and <code>tags</code> (separated by <code>;</code>, created if missing). An empty cell
+      leaves that field as it is. If any row has a problem, nothing is imported.
+    </p>
+    <div class="flex items-center gap-3 flex-wrap">
+      <input id="import-file" type="file" accept=".csv,.json,text/csv,application/json" class="text-sm" />
+      <button id="import-check" class="px-3 py-1.5 rounded-md border border-slate-300 text-sm hover:bg-slate-100">Check only</button>
+      <button id="import-run" class="px-3 py-1.5 rounded-md bg-brand-600 text-white text-sm font-medium hover:bg-brand-700">Import</button>
+    </div>
+    <div id="import-result" class="mt-3 text-sm"></div>
+  </div>
+
+  <div id="bulk-bar" class="card p-3 mb-4 hidden text-sm">
+    <div class="flex items-center gap-3 flex-wrap">
+      <span id="bulk-count" class="font-medium"></span>
+      <select id="bulk-action" aria-label="Bulk action" class="rounded-md border border-slate-300 px-2 py-1.5 text-sm"></select>
+      <select id="bulk-target" aria-label="Bulk target" class="hidden rounded-md border border-slate-300 px-2 py-1.5 text-sm"></select>
+      <button id="bulk-apply" class="px-3 py-1.5 rounded-md bg-brand-600 text-white font-medium hover:bg-brand-700">Apply</button>
+      <button id="bulk-clear" class="px-3 py-1.5 rounded-md text-slate-500 hover:bg-slate-100">Clear selection</button>
+    </div>
+  </div>
+
+  <div class="card overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-slate-500 text-left">
+        <tr>
+          <th class="px-4 py-2 w-8"><input id="select-all" type="checkbox" aria-label="Select all devices on this page" /></th>
+          <th class="px-4 py-2 font-medium">Status</th>
+          <th class="px-4 py-2 font-medium">RustDesk ID</th>
+          <th class="px-4 py-2 font-medium">Hostname / Alias</th>
+          <th class="px-4 py-2 font-medium">Platform</th>
+          <th class="px-4 py-2 font-medium">CPU</th>
+          <th class="px-4 py-2 font-medium">Memory</th>
+          <th class="px-4 py-2 font-medium">Owner</th>
+          <th class="px-4 py-2 font-medium">Group</th>
+          <th class="px-4 py-2 font-medium">Tags</th>
+          <th class="px-4 py-2 font-medium">Registered</th>
+          <th class="px-4 py-2 font-medium">Last seen</th>
+        </tr>
+      </thead>
+      <tbody id="device-rows" class="divide-y divide-slate-100"></tbody>
+    </table>
+    <div id="empty-state" class="hidden p-10 text-center text-sm text-slate-500">No devices found.</div>
+  </div>
+
+  <div class="flex items-center justify-between mt-4 text-sm text-slate-500">
+    <span id="page-info"></span>
+    <div class="flex gap-2">
+      <button id="prev-page" class="px-3 py-1.5 rounded-md border border-slate-300 hover:bg-slate-100">Previous</button>
+      <button id="next-page" class="px-3 py-1.5 rounded-md border border-slate-300 hover:bg-slate-100">Next</button>
+    </div>
+  </div>
+</main>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/pages/devices.js"></script>
+
+{% endblock %}

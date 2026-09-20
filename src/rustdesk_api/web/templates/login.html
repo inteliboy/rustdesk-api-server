@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Sign in - RustDesk API Server{% endblock %}
+{% block body %}
+<div class="min-h-screen flex items-center justify-center px-4">
+  <div class="w-full max-w-sm">
+    <h1 class="text-xl font-semibold text-center mb-6">RustDesk API Server</h1>
+    <p id="login-notice" class="card p-3 mb-4 text-sm hidden"></p>
+    <form id="login-form" class="card p-6 flex flex-col gap-4">
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1" for="username">Username or email</label>
+        <input id="username" name="username" type="text" required autocomplete="username"
+               class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1" for="password">Password</label>
+        <input id="password" name="password" type="password" required autocomplete="current-password"
+               class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+      </div>
+      <p id="error-message" class="text-sm text-red-600 dark:text-red-400 hidden"></p>
+      <button type="submit" class="w-full bg-brand-600 text-white rounded-md py-2 text-sm font-medium hover:bg-brand-700">
+        Sign in
+      </button>
+    </form>
+    <p id="login-links" class="text-sm text-center text-slate-500 mt-4">
+      <a id="register-link" href="/register" class="text-link hover:underline hidden">Create an account</a>
+      <span id="register-sep" class="hidden"> &middot; </span>
+      <span>Forgot your password? Ask an administrator for a reset link.</span>
+    </p>
+    <form id="code-form" class="card p-6 flex flex-col gap-4 hidden">
+      <p class="text-sm text-slate-600">
+        Enter the 6-digit code from your authenticator app, or one of your recovery codes.
+      </p>
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1" for="code">Verification code</label>
+        <input id="code" name="code" type="text" required autocomplete="one-time-code" inputmode="text"
+               class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm tracking-widest focus:outline-none focus:ring-2 focus:ring-brand-500" />
+      </div>
+      <p id="code-error" class="text-sm text-red-600 dark:text-red-400 hidden"></p>
+      <button type="submit" class="w-full bg-brand-600 text-white rounded-md py-2 text-sm font-medium hover:bg-brand-700">
+        Verify
+      </button>
+      <button type="button" id="code-back" class="text-sm text-slate-500 hover:text-slate-900">Back</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/pages/login.js"></script>
+
+{% endblock %}

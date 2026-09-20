@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Create an account - RustDesk API Server{% endblock %}
+{% block body %}
+<div class="min-h-screen flex items-center justify-center px-4">
+  <div class="w-full max-w-sm">
+    <h1 class="text-xl font-semibold text-center mb-1">Create an account</h1>
+    <p id="register-note" class="text-sm text-slate-500 text-center mb-6"></p>
+    <form id="register-form" class="card p-6 flex flex-col gap-4">
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1" for="username">Username</label>
+        <input id="username" name="username" type="text" required minlength="3" maxlength="150" autocomplete="username"
+               class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1" for="email">Email (optional)</label>
+        <input id="email" name="email" type="email" autocomplete="email"
+               class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1" for="password">Password</label>
+        <input id="password" name="password" type="password" required minlength="8" autocomplete="new-password"
+               class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+        <p class="text-xs text-slate-400 mt-1">At least 8 characters.</p>
+      </div>
+      <p id="error-message" class="text-sm text-red-600 dark:text-red-400 hidden"></p>
+      <button type="submit" class="w-full bg-brand-600 text-white rounded-md py-2 text-sm font-medium hover:bg-brand-700">
+        Create account
+      </button>
+    </form>
+    <div id="register-done" class="card p-6 hidden">
+      <p id="register-done-text" class="text-sm"></p>
+    </div>
+    <p class="text-sm text-center text-slate-500 mt-4"><a href="/login" class="text-link hover:underline">Back to sign in</a></p>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/pages/register.js"></script>
+
+{% endblock %}

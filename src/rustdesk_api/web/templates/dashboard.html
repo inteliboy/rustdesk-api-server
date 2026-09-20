@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - RustDesk API Server{% endblock %}
+{% block body %}
+{% include "_app_shell.html" %}
+<main class="max-w-6xl mx-auto px-4 py-8">
+  <h1 class="text-lg font-semibold mb-6">Dashboard</h1>
+  <div id="stats" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-10">
+    <div class="skeleton h-24"></div>
+    <div class="skeleton h-24"></div>
+    <div class="skeleton h-24"></div>
+    <div class="skeleton h-24"></div>
+    <div class="skeleton h-24"></div>
+    <div class="skeleton h-24"></div>
+  </div>
+
+  <div class="flex items-center justify-between mb-3 gap-2">
+    <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Recent activity</h2>
+    <a id="audit-export" href="/api/v1/export/audit?days=30" download class="hidden text-sm text-slate-500 hover:text-slate-900">Export last 30 days (CSV)</a>
+  </div>
+  <div id="activity" class="card divide-y divide-slate-100"></div>
+  <section id="server-section" class="hidden mt-10">
+    <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+      <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Server</h2>
+      <p id="status-line" class="text-xs text-slate-500"></p>
+    </div>
+    <div id="error" class="hidden card p-4 mb-4 text-sm text-red-600 dark:text-red-400"></div>
+    <div id="server-stats" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4"></div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+      <section class="card p-4">
+        <h3 class="text-sm font-semibold mb-1">CPU usage</h3>
+        <p class="text-xs text-slate-500 mb-2">Share of the whole machine (all cores).</p>
+        <div id="chart-cpu"></div>
+      </section>
+      <section class="card p-4">
+        <h3 class="text-sm font-semibold mb-1">API server memory</h3>
+        <p class="text-xs text-slate-500 mb-2">Resident memory of the API server process.</p>
+        <div id="chart-process-memory"></div>
+      </section>
+      <section class="card p-4 lg:col-span-2">
+        <h3 class="text-sm font-semibold mb-1">System memory in use</h3>
+        <p class="text-xs text-slate-500 mb-2">Everything running on this machine, not just the API server.</p>
+        <div id="chart-system-memory"></div>
+      </section>
+    </div>
+    <div id="info" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+    <p class="text-xs text-slate-500 mt-4">
+      Readings are kept in memory only: they start empty after a restart and are not shared between
+      worker processes. Inside a container this shows the host's hardware.
+    </p>
+  </section>
+</main>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/pages/dashboard_server.js"></script>
+<script src="/static/js/pages/dashboard.js"></script>
+
+{% endblock %}

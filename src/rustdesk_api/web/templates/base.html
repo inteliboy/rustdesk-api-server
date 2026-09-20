@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}RustDesk API Server{% endblock %}</title>
+  <script src="/static/js/theme.js"></script>
+  <link rel="stylesheet" href="/static/css/tailwind.css" />
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen">
+  {% block body %}{% endblock %}
+  <div id="toast-root" class="toast flex flex-col gap-2"></div>
+  <script src="/static/js/app.js"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

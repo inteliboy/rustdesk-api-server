@@ -1,0 +1,6 @@
+# Check files out with LF everywhere (Windows developers, Windows/Linux CI, Docker builds), so the
+# committed, generated stylesheet and the tests that compare against it behave the same on every OS.
+* text=auto eol=lf
+*.png binary
+*.ico binary
+*.woff2 binary

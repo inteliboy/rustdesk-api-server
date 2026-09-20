@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Groups - RustDesk API Server{% endblock %}
+{% block body %}
+{% include "_app_shell.html" %}
+<main class="max-w-4xl mx-auto px-4 py-8">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-lg font-semibold">Groups</h1>
+    <button id="new-group-btn" class="px-4 py-2 rounded-md bg-brand-600 text-white text-sm font-medium hover:bg-brand-700">
+      New group
+    </button>
+  </div>
+
+  <div id="new-group-form" class="card p-4 mb-6 hidden">
+    <div class="grid grid-cols-2 gap-3 mb-3">
+      <input id="ng-name" placeholder="Name" class="border border-slate-300 rounded px-2 py-1.5 text-sm" />
+      <input id="ng-description" placeholder="Description (optional)" class="border border-slate-300 rounded px-2 py-1.5 text-sm" />
+    </div>
+    <button id="ng-create" class="px-4 py-2 rounded-md bg-brand-600 text-white text-sm font-medium hover:bg-brand-700">Create</button>
+  </div>
+
+  <div class="card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-slate-500 text-left">
+        <tr>
+          <th class="px-4 py-2 font-medium">Name</th>
+          <th class="px-4 py-2 font-medium">Description</th>
+          <th class="px-4 py-2 font-medium">Devices</th>
+          <th class="px-4 py-2 font-medium">Strategy</th>
+          <th class="px-4 py-2"></th>
+        </tr>
+      </thead>
+      <tbody id="group-rows" class="divide-y divide-slate-100"></tbody>
+    </table>
+    <div id="empty-state" class="hidden p-10 text-center text-sm text-slate-500">No groups yet.</div>
+  </div>
+</main>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/pages/groups.js"></script>
+
+{% endblock %}

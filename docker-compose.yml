@@ -1,0 +1,39 @@
+services:
+  rustdesk-api:
+    build: .
+    ports:
+      - "21114:21114"
+    volumes:
+      # A named volume, so the non-root container user (uid 10001) can write to it on any host.
+      # To keep the database in ./data instead, use "./data:/app/data" and give that folder to
+      # uid 10001 first (Linux: mkdir -p data && sudo chown 10001:10001 data). Docker Desktop on
+      # Windows and macOS needs no chown.
+      - rustdesk-data:/app/data
+    environment:
+      RUSTDESK_API_HOST: 0.0.0.0
+      RUSTDESK_API_PORT: 21114
+      DATABASE_URL: sqlite:///./data/rustdesk.db
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in your environment or a .env file}
+      # Optional; enables two-factor authentication and saved passwords in shared address books
+      # (see README). Generate one with: docker compose run --rm rustdesk-api generate-key
+      DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:-}
+      # The address users type into the browser. Needed for password-reset links; set it to
+      # https://... when you put a reverse proxy in front.
+      EXTERNAL_URL: ${EXTERNAL_URL:-http://127.0.0.1:21114}
+      ALLOW_REGISTRATION: "false"
+      DEVICE_ONLINE_TIMEOUT: "120"
+      LOG_LEVEL: INFO
+      API_DOCS_ENABLED: "true"
+      CORS_ORIGINS: ""
+      # Keep "false" while you reach the server over plain http; set "true" behind HTTPS.
+      SECURE_COOKIES: ${SECURE_COOKIES:-false}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:21114/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  rustdesk-data:
