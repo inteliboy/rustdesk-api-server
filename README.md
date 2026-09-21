@@ -44,8 +44,8 @@ RustDesk Client
   personal and shared **address books** in the client's newer per-item protocol
 - **Control the clients**: see and **disconnect** incoming connections, push **strategies** (permission
   and behaviour settings) to devices or groups, enroll devices with `rustdesk --assign`
-- **Security first**: Argon2id passwords, optional **two-factor** login (also in the RustDesk client),
-  account lockout, revocable sessions and API keys, CSRF protection, strict Content-Security-Policy,
+- **Security first**: Argon2id passwords, optional **two-factor** login (also in the RustDesk client) and
+  **single sign-on** with OpenID Connect, account lockout, revocable sessions and API keys, CSRF protection, strict Content-Security-Policy,
   IDOR-safe authorization on every endpoint, protection against device take-over by ID guessing
 - **Operations**: SQLite with Alembic migrations, online backup command, log retention, server CPU/memory
   charts, Prometheus `/metrics`, `/health` and `/ready`, optional network allow-list for the WebUI
@@ -149,7 +149,9 @@ tested. In short:
 - **Tested against a real client (RustDesk 1.4.9, Windows):** login, heartbeat, system info, current user,
   and the legacy address book.
 - **Implemented from the client's source, not yet exercised live:** the newer per-item address book, audit
-  logs (`/api/audit/*`), disconnect and strategies, `--assign`, and the two-factor login dialog.
+  logs (`/api/audit/*`), connection notes, disconnect and strategies (including the server options that move
+  clients to other servers), `--assign`, the two-factor login dialog and the OpenID Connect "Continue with ..."
+  sign-in (also tested only against an in-process fake provider).
 - **Not tested:** other client versions and platforms (macOS, Linux, Android, iOS, web client).
 
 Treat it as a young project: run it against a test client first, and please report what you find.
@@ -163,7 +165,7 @@ Treat it as a young project: run it against a test client first, and please repo
 [Working with many devices](#working-with-many-devices) · [Device identity](#device-identity) ·
 [Monitoring](#monitoring-and-network-access) · [Log retention](#log-retention) · [Database](#database) ·
 [First-run setup](#first-run-setup) · [Client configuration](#rustdesk-client-configuration) ·
-[Reverse proxy](#reverse-proxy-setup) · [Security](#security-recommendations) ·
+[Older API servers](#moving-clients-from-an-older-api-server) · [Reverse proxy](#reverse-proxy-setup) · [Security](#security-recommendations) ·
 [Backup and restore](#backup--restore) · [API docs](#api-documentation) · [Development](#development) ·
 [Testing](#testing) · [Troubleshooting](#troubleshooting) · [Contributing](#contributing) ·
 [License](#license)
@@ -172,8 +174,8 @@ Treat it as a young project: run it against a test client first, and please repo
 
 Version 0.1.0. Phases 1 and 2 of the plan are done (application bootstrap, authentication, the
 RustDesk-compatible API, device registration and heartbeat, groups, tags, sharing, admin UI, audit logs),
-plus the account, fleet-management and hardening work described below. OIDC and LDAP sign-in and webhook
-notifications are not implemented.
+plus the account, fleet-management and hardening work described below, and OpenID Connect single sign-on from
+Phase 3. LDAP sign-in and webhook notifications are not implemented.
 
 ## Features
 
@@ -275,9 +277,11 @@ docker compose up -d
   the container runs as a non-root user (uid 10001) and a bind-mounted `./data` that Docker created as root
   would not be writable on Linux. To use a folder instead, change the volume to `./data:/app/data` and run
   `mkdir -p data && sudo chown 10001:10001 data` first (Docker Desktop on Windows and macOS needs no `chown`).
-- **Settings.** Every variable in `.env.example` can be set on the container as an environment variable, or in
-  the `.env` file that Compose reads. Set `EXTERNAL_URL` to the address people type into the browser (password
-  reset links use it), and `SECURE_COOKIES=true` once it is served over HTTPS.
+- **Settings.** Every variable in `.env.example` can be set on the container (`docker run -e NAME=value`). With
+  Compose, only the variables `docker-compose.yml` lists are read from your environment or the `.env` file
+  (`SECRET_KEY`, `DATA_ENCRYPTION_KEY`, `EXTERNAL_URL`, `SECURE_COOKIES` and the `OIDC_*` ones); add any other,
+  such as `TRUSTED_PROXIES`, under `environment:` in that file. Set `EXTERNAL_URL` to the address people type into
+  the browser (password reset and sign-in links use it), and `SECURE_COOKIES=true` once it is served over HTTPS.
 - **Prebuilt image.** `ghcr.io/inteliboy/rustdesk-api-server`, for amd64 and arm64, tagged `latest`,
   a short commit hash (`sha-1a2b3c4`) and, for releases, the version (`0.1.0`). Use it instead of `build: .`
   by putting `image:` in the compose file. If the repository is private the package is private too: run
@@ -340,7 +344,8 @@ The settings added by client management are `ALLOW_SYSINFO_PRESETS` (see Managin
 two-factor authentication and saved address-book passwords, `DATA_ENCRYPTION_KEY`. Accounts and access add
 `ALLOW_REGISTRATION`, `REGISTRATION_REQUIRES_APPROVAL`, `PASSWORD_RESET_LIFETIME_MINUTES`,
 `LOGIN_LOCKOUT_THRESHOLD`, `LOGIN_LOCKOUT_MINUTES`, `WEBUI_ALLOWED_NETWORKS` and `METRICS_TOKEN`;
-device identity adds `DEVICE_UUID_REBIND`. Each is described in `.env.example`.
+device identity adds `DEVICE_UUID_REBIND`. Each is described in `.env.example`; the `OIDC_*` settings are
+explained under [Single sign-on](#single-sign-on-openid-connect).
 
 The Dashboard shows which build is running: the version, the git commit (linked to GitHub) and the RustDesk
 client release whose source the protocol code was written against. The Docker images get the commit from CI;
@@ -379,6 +384,7 @@ address, not port 21114, which the client removes) and are *sticky*: they are pu
 them later leaves clients as they are, because resetting them would erase the addresses and key a client was
 installed with. **Try it on one device first** - assign the strategy to that device alone - because a client
 that can no longer reach this server cannot be corrected from here. The key must match the ID server's public key.
+A worked example is under [Moving clients from an older API server](#moving-clients-from-an-older-api-server).
 
 **`rustdesk --assign`.** Run on a device as administrator/root,
 `rustdesk --assign --token <token> --user_name alice --address_book_name "My address book" --address_book_tag office`
@@ -670,6 +676,49 @@ validation with no override, so a self-signed certificate is rejected there (its
 reporting is more lenient). Use a certificate from a publicly trusted CA behind a reverse proxy,
 or install your own CA in the client machine's OS trust store. Details and the source references
 are in `docs/rustdesk-compatibility.md`.
+
+### Moving clients from an older API server
+
+A common starting point: the clients were installed against an earlier API server that answered on plain HTTP,
+port 21114, on the same host as `hbbs`/`hbbr` (this is also where a client looks when its **API server** field is
+empty: `http://<id server>:21114`). You want this server to take over from it without touching every machine,
+and to end up on HTTPS. An example, with made-up names:
+
+- `hbbs` and `hbbr` run on `example.com`; the clients have ID server `example.com` and API server empty (or
+  `http://example.com:21114`);
+- this server sits behind a TLS reverse proxy at `https://rustdesk.example.com`.
+
+**1. Keep answering the old address.** Put this server where the old one was.
+
+- Without a reverse proxy, publish it on 21114 (`-p 21114:21114`) and forward that port to the host.
+- Behind a reverse proxy, add a **plain-HTTP** listener on a spare port (say 21125) that forwards to this server
+  and accepts **any host name** - the old clients send `Host: example.com:21114`, and a rule bound to another name
+  answers `404` - and forward the router's external port 21114 to 21125.
+
+The old clients' heartbeat and system-info uploads carry no login, so their devices appear here by themselves at
+their next check-in (as new records here: nothing is imported from the old server's database, and users and
+address books have to be created here). Check it from outside your network:
+`curl http://example.com:21114/api/version` should return this server's JSON. An HTML `404` from the proxy means
+no rule matched the request.
+
+**2. Know what plain HTTP costs.** Host names, user names, operating systems and public addresses of the
+clients cross the internet unencrypted, and anyone who *signs in* from a client that is still on it sends the
+password unencrypted too. Treat it as temporary and do not sign in from those clients. With
+`WEBUI_ALLOWED_NETWORKS` set, outsiders cannot open the WebUI or the management API through that address either
+(the client endpoints stay reachable, as they must).
+
+**3. Move the clients.** On **Strategies** create a strategy whose only setting is **API server**
+`https://rustdesk.example.com` (the *Servers* section; see [Managing clients](#managing-clients)), and assign it to
+**one test device** first. After that device's next heartbeat it talks to the HTTPS address: confirm that its
+*last seen* keeps updating and the proxy log shows its requests. Then assign the strategy to a group or to more
+devices. Leave ID server, relay server and key empty unless `hbbs`/`hbbr` are moving as well - a client given
+wrong values there cannot be corrected from this server.
+
+**4. Close the old address.** When every client has moved, remove the port-21114 forward (and the plain-HTTP
+listener). Do not try to serve HTTPS on 21114: the client removes `:21114` from `https://` addresses (see above).
+
+The plain-HTTP heartbeat and system-info path was checked with `curl` against a real deployment; pushing the
+strategy to a real older client has not been observed yet, so do step 3 on one machine before the rest.
 
 ## Reverse proxy setup
 
