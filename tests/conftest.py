@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import shutil
+import sqlite3
 import uuid
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
 from argon2 import PasswordHasher
 from fastapi.testclient import TestClient
+from sqlalchemy.engine import make_url
 
 from rustdesk_api.app import create_app
 from rustdesk_api.config import Settings, clear_settings_cache, get_settings
@@ -36,8 +40,35 @@ def settings(tmp_path, monkeypatch) -> Iterator[Settings]:
     clear_settings_cache()
 
 
+@pytest.fixture(scope="session")
+def migrated_database(tmp_path_factory) -> Path:
+    """A database with every migration applied, built once per test process.
+    Migrating a fresh file for each test (12 revisions, several of which copy whole
+    tables on SQLite) was most of a test's time on a Windows runner; a copy of this
+    one is already at `head`, so the migration runs the app does at startup find
+    nothing to do."""
+    path = tmp_path_factory.mktemp("template") / "migrated.db"
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setenv("DATABASE_URL", f"sqlite:///{path.as_posix()}")
+        mp.setenv("SECRET_KEY", "test-secret-key")
+        clear_settings_cache()
+        run_migrations(get_settings())
+        clear_settings_cache()
+    # One self-contained file: no write-ahead log to leave behind when it is copied.
+    connection = sqlite3.connect(path)
+    try:
+        connection.execute("PRAGMA journal_mode=DELETE")
+    finally:
+        connection.close()
+    return path
+
+
 @pytest.fixture()
-def app(settings: Settings):
+def app(settings: Settings, migrated_database: Path):
+    # `settings` alone gives an empty database (the migration tests start from that).
+    database = make_url(settings.database_url).database
+    assert database is not None
+    shutil.copyfile(migrated_database, database)
     init_engine(settings)
     run_migrations(settings)
     return create_app(settings)
