@@ -109,6 +109,20 @@ def get_user_by_username(db: Session, username: str) -> User | None:
     return db.execute(stmt).scalar_one_or_none()
 
 
+def get_user_for_login(db: Session, identifier: str) -> User | None:
+    """The account a sign-in name refers to: the username, else (when it looks
+    like an address) the e-mail. A username wins over another account's e-mail,
+    so nobody can take over a name by registering it as their address."""
+    identifier = identifier.strip()
+    user = get_user_by_username(db, identifier)
+    if user is not None or "@" not in identifier:
+        return user
+    stmt = select(User).where(func.lower(User.email) == identifier.lower()).limit(2)
+    matches = db.execute(stmt).scalars().all()
+    # Two accounts whose addresses differ only by case: sign in by username.
+    return matches[0] if len(matches) == 1 else None
+
+
 def create_user(
     db: Session,
     *,
@@ -145,7 +159,7 @@ def authenticate(
     A correct password does not reset the failure count: with 2FA the login
     is not finished yet. The caller calls `register_success` once it is.
     """
-    user = get_user_by_username(db, username)
+    user = get_user_for_login(db, username)
     if user is None:
         # Perform a dummy hash verification so that responses for unknown
         # usernames take a similar amount of time to known ones.

@@ -145,7 +145,8 @@ the development tools.
 
 In the RustDesk client's network settings set **ID server**, **Relay server** and **Key** to your `hbbs` /
 `hbbr`, and **API server** to `http://your-server:21114` (the `http://` is required). Sign in with an account
-created in the WebUI, and the client's address book, devices and logs start flowing. More in
+created in the WebUI (the username, or the account's e-mail address, in either letter case; the WebUI login
+takes both too), and the client's address book, devices and logs start flowing. More in
 [RustDesk client configuration](#rustdesk-client-configuration).
 
 ## Compatibility with RustDesk clients

@@ -86,3 +86,39 @@ def test_rustdesk_bearer_token_is_not_csrf_checked(admin_client):
         headers={**fresh_headers, "X-CSRF-Token": ""},
     )
     assert r.status_code == 201
+
+
+def test_login_by_email_works_in_the_webui_and_the_rustdesk_client(admin_client):
+    """Given an account with an e-mail address, when the client or the WebUI
+    signs in with that address (in any letter case), then it succeeds."""
+    for address in ("admin@example.com", "  Admin@Example.COM "):
+        r = admin_client.post("/api/login", json={"username": address, "password": "adminpass123"})
+        assert r.json()["user"]["name"] == "admin"
+        r = admin_client.post("/api/v1/auth/login", json={"username": address, "password": "adminpass123"})
+        assert r.status_code == 200
+        assert r.json()["user"]["username"] == "admin"
+
+
+def test_login_by_email_still_needs_the_password(admin_client):
+    r = admin_client.post("/api/login", json={"username": "admin@example.com", "password": "wrong"})
+    assert "error" in r.json()
+    assert "access_token" not in r.json()
+
+
+def test_a_username_wins_over_another_accounts_email(admin_client):
+    """Registering someone else's sign-in name as an address must not let the
+    holder of the address take the name over."""
+    admin_client.post(
+        "/api/v1/users",
+        json={"username": "mallory", "password": "mallorypass1", "email": "boss@example.com"},
+    )
+    admin_client.post("/api/v1/users", json={"username": "boss@example.com", "password": "bosspassword1"})
+    r = admin_client.post("/api/login", json={"username": "boss@example.com", "password": "bosspassword1"})
+    assert r.json()["user"]["name"] == "boss@example.com"
+    r = admin_client.post("/api/login", json={"username": "boss@example.com", "password": "mallorypass1"})
+    assert "error" in r.json()
+
+
+def test_a_name_without_an_at_sign_is_never_looked_up_as_an_email(admin_client):
+    r = admin_client.post("/api/login", json={"username": "admin@example", "password": "adminpass123"})
+    assert "error" in r.json()
