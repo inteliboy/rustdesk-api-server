@@ -9,7 +9,6 @@
 
 (async function launch() {
   const version = document.currentScript ? document.currentScript.dataset.version || "" : "";
-  const sourceUrl = document.currentScript ? document.currentScript.dataset.source || "" : "";
   const launcher = document.getElementById("rd-launch");
   const text = document.getElementById("rd-launch-text");
   const error = document.getElementById("rd-launch-error");
@@ -65,8 +64,6 @@
       wsRelayUrl: `${scheme}//${location.host}${session.ws_relay_path}`,
       myId: session.my_id,
       myName: session.my_name,
-      version: session.version,
-      sourceUrl,
       workerUrl: `/static/webclient/session.worker.js?v=${encodeURIComponent(version)}`,
     };
     try {

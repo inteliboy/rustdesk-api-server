@@ -70,6 +70,7 @@ them is fictional demo data: made-up people, devices and addresses, made-up hard
 | Click a device's ID to choose how to connect: the RustDesk client or the browser (when the web client is on) | [devices-connect-menu-light.png](screenshots/devices-connect-menu-light.png) | [devices-connect-menu-dark.png](screenshots/devices-connect-menu-dark.png) |
 | A device: details, strategy, sharing | [device-detail-light.png](screenshots/device-detail-light.png) | [device-detail-dark.png](screenshots/device-detail-dark.png) |
 | The [web client](#web-client-control-a-device-in-the-browser): the password screen of a session in the browser (it follows the WebUI's theme and accent color) | [webclient-light.png](screenshots/webclient-light.png) | [webclient-dark.png](screenshots/webclient-dark.png) |
+| The web client's file manager: two panes, Send and Receive, the transfer queue | [webclient-files-light.png](screenshots/webclient-files-light.png) | [webclient-files-dark.png](screenshots/webclient-files-dark.png) |
 | Logs: Activity (what happened in the WebUI and the API) | [logs-activity-light.png](screenshots/logs-activity-light.png) | [logs-activity-dark.png](screenshots/logs-activity-dark.png) |
 | Logs: connections reported by the clients | [logs-light.png](screenshots/logs-light.png) | [logs-dark.png](screenshots/logs-dark.png) |
 | Address book | [address-book-light.png](screenshots/address-book-light.png) | [address-book-dark.png](screenshots/address-book-dark.png) |
@@ -855,8 +856,24 @@ works from here), a reverse proxy that does not pass WebSocket upgrades, and a k
 
 **Look.** The client wears the WebUI's theme: light or dark (including "system") and the accent color chosen under
 **Appearance**, read from the same per-browser setting, so it matches the pages around it. The connect screen is the
-sign-in card's twin: the device's ID (fixed, chosen by the WebUI) and the password field, no bar above it. The bar and
-the command dock appear when the remote screen does.
+sign-in card's twin: the device's ID (fixed, chosen by the WebUI) and the password field, no bar above it. When the
+remote screen appears, so do a flat bar (the device, view controls, **Disconnect**) and a dock along the bottom (keys,
+input mode, type text, clipboard, and the panels **Files**, **Chat** and **Details**), all drawn with the WebUI's
+surfaces and icons. **Chat** and **Details** slide in from the right.
+
+**File transfer.** **Files** opens a file manager over the remote screen with two panes: this computer on the left and
+the remote computer on the right, each with its own path, sortable columns (folders stay on top), and buttons for a
+new folder, rename and delete. Select items in a pane (click, Ctrl/Shift-click, or Space and the arrow keys) and press
+**Send** (left to right) or **Receive** (right to left) between the panes, or drag rows from one pane onto the other.
+Dragging files in from the desktop onto the remote pane also sends them. The queue below shows every transfer with its
+progress and can cancel it. In Chrome and Edge the left pane browses a real folder you open (the browser asks first);
+in other browsers it holds the files you add, and received files go to the Downloads folder. Keys, if you like them:
+Tab switches pane, Enter opens a folder, Backspace goes up, typing a name jumps to it, Ctrl+A selects all, Delete
+deletes (after asking), Esc closes.
+
+| The file manager | Light | Dark |
+| ---------------- | ----- | ---- |
+| Two panes with Send and Receive between them, the transfer queue below | [webclient-files-light.png](screenshots/webclient-files-light.png) | [webclient-files-dark.png](screenshots/webclient-files-dark.png) |
 
 **Reverse proxy.** Let the WebSocket upgrade through on `/api/v1/webclient/ws/` (Nginx: `proxy_http_version 1.1;`
 `proxy_set_header Upgrade $http_upgrade;` `proxy_set_header Connection "upgrade";`, and a long `proxy_read_timeout`).
@@ -872,8 +889,9 @@ hbbr, using frames encoded by the client's own code). **Not verified:** a whole 
 machine. Try it on a spare device first.
 
 **Licence.** The client is AGPL-3.0, taken from [CortenDesk](https://github.com/Vaso73/cortendesk)'s web client and
-changed (see [`webclient/NOTICE`](webclient/NOTICE)); the rest of this repository is MIT. The link to the client's
-source is in the session's **Details** panel (dock: **Session**), with the client's version. To change the client:
+changed (see [`webclient/NOTICE`](webclient/NOTICE)); the rest of this repository is MIT. The client's screens
+carry no version or source text; its source, licence and origin are in [`webclient/`](webclient/) (see
+[`webclient/NOTICE`](webclient/NOTICE)). To change the client:
 `cd webclient && npm ci && npm run build` (it needs Node.js 20; running the server does not).
 
 ## Default strategy and fleet hygiene

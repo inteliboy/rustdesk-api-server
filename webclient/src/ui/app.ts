@@ -3,12 +3,12 @@
 // DOM id contract (the Blade view provides some; each is created here if missing, and
 // #rd-canvas / #rd-side / #rd-overlay are normalized INTO #rd-viewport on mount):
 //   #rd-root       page wrapper (toolbar + viewport); gets data-state="<SessionState>"
-//   #rd-toolbar    top bar — brand / control island / avatar, rendered by this module
+//   #rd-toolbar    top bar — the device, view controls and Disconnect, rendered by this module
 //   #rd-viewport   region between toolbar and page bottom; holds canvas, side panel, dock, overlay, toast
 //   #rd-canvas     <canvas> transferred to the session worker (replaced with a fresh node on reconnect)
 //   #rd-dock       floating bottom command bar — input, clipboard, panels
-//   #rd-side       right slide-out with Files / Chat / Details tabs; .rd-open = visible
-//   #rd-edge       edge strip of shortcuts shown while the side panel is closed
+//   #rd-side       right slide-out with Chat / Details tabs; .rd-open = visible
+//   #rd-ft-overlay the file manager, a window over the remote screen (file-panel.ts)
 //   #rd-overlay    connect overlay — rendered children: #rd-peer-id (row #rd-field-id, hidden when
 //                  the peer id is server-injected or in ?id=), #rd-password, #rd-connect,
 //                  #rd-overlay-status, #rd-overlay-error; .rd-hidden hides the overlay
@@ -39,7 +39,6 @@ import {
 import { RESTART_RECONNECT_TIMEOUT_MS, nextRestartReconnectDelay } from '../core/session-controls';
 import { buildLockScreenKeyCommand, buildSecurityControlMenu } from './session-controls-menu';
 import {
-  overlayVersion,
   QUALITY,
   STATE_LABEL,
   buildSessionConfig,
@@ -91,7 +90,7 @@ export * from './common';
 
 type RdWindow = Window & { __RD__?: RdGlobalConfig };
 
-type SideTab = 'files' | 'chat' | 'details';
+type SideTab = 'chat' | 'details';
 type InputMode = 'pointer' | 'touch';
 type FitMode = 'fit' | 'actual';
 
@@ -114,7 +113,6 @@ type Els = {
   viewport: HTMLElement;
   dock: HTMLElement;
   side: HTMLElement;
-  edge: HTMLElement;
   overlay: HTMLElement;
   toast: HTMLElement;
   remoteCursor: HTMLImageElement;
@@ -245,7 +243,7 @@ export class RdApp {
   private cursorScale = 1;
   private remoteCursorHot = { x: 0, y: 0 };
   private platformAdditions = '';
-  private sideTab: SideTab = 'files';
+  private sideTab: SideTab = 'chat';
   private chatLog: ChatEntry[] = [];
   private chatUnread = 0;
   private voiceCall: VoiceCaptureController | undefined;
@@ -372,7 +370,6 @@ export class RdApp {
       return n;
     };
     const side = make('rd-side');
-    const edge = make('rd-edge');
     const overlay = make('rd-overlay');
     const toast = make('rd-toast');
     let remoteCursor = document.getElementById('rd-remote-cursor') as HTMLImageElement | null;
@@ -402,7 +399,6 @@ export class RdApp {
       viewport,
       dock,
       side,
-      edge,
       overlay,
       toast,
       remoteCursor,
@@ -422,7 +418,6 @@ export class RdApp {
     const rootEl = document.getElementById('rd-root');
     const dockEl = document.getElementById('rd-dock');
     const toolbarEl = document.getElementById('rd-toolbar');
-    const edgeEl = document.getElementById('rd-edge');
     const sideEl = document.getElementById('rd-side');
     if (!rootEl) return;
 
@@ -471,27 +466,18 @@ export class RdApp {
       updateSideLayout();
     });
 
-    if (edgeEl) {
-      edgeEl.addEventListener('mouseenter', () => { edgeEl.style.opacity = '1'; });
-      edgeEl.addEventListener('mouseleave', () => {
-        if (document.fullscreenElement) edgeEl.style.opacity = '0.30';
-      });
-    }
-
     const onFullscreenChange = () => {
       const fs = !!document.fullscreenElement;
       if (fs) {
         bottomOpen = false;
         topOpen = false;
         document.body.classList.add('rd-fullscreen-active');
-        if (edgeEl) edgeEl.style.opacity = '0.30';
         if (bottomArrow) { bottomArrow.textContent = '\u25b2'; bottomArrow.style.bottom = '0px'; }
         if (topArrow) { topArrow.textContent = '\u25bc'; topArrow.style.top = '0px'; }
       } else {
         document.body.classList.remove('rd-fullscreen-active');
         if (dockEl) dockEl.style.transform = '';
         if (toolbarEl) toolbarEl.style.transform = '';
-        if (edgeEl) edgeEl.style.opacity = '';
         if (bottomArrow) bottomArrow.style.bottom = '';
         if (topArrow) topArrow.style.top = '';
       }
@@ -505,39 +491,27 @@ export class RdApp {
   // --- top bar -----------------------------------------------------------------
 
   private renderTopBar(): void {
-    const initials =
-      (this.cfg?.myName || this.cfg?.myId || '?')
-        .split(/[\s._-]+/)
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((w) => w[0]!.toUpperCase())
-        .join('') || '?';
     this.el.toolbar.innerHTML = `
-      <div></div>
-      <div class="rd-tb-island">
-        <span class="rd-peer-chip">
-          <span class="rd-status-dot" aria-hidden="true"></span>
-          <span class="rd-peer-meta">
-            <span class="rd-peer" id="rd-peer-label">—</span>
-            <span class="rd-peer-sub" id="rd-peer-sub"></span>
-          </span>
+      <span class="rd-peer-chip">
+        <span class="rd-status-dot" aria-hidden="true"></span>
+        <span class="rd-peer-meta">
+          <span class="rd-peer" id="rd-peer-label">—</span>
+          <span class="rd-peer-sub" id="rd-peer-sub"></span>
         </span>
-        <span class="rd-island-sep rd-stream-only" aria-hidden="true"></span>
+      </span>
+      <span class="rd-tb-actions">
         <span class="rd-recording-indicator rd-stream-only" id="rd-recording-indicator" hidden aria-live="polite">REC <span>00:00</span></span>
-        <button type="button" class="rd-ib rd-stream-only" id="rd-btn-monitors" title="Select monitor" aria-label="Select monitor" aria-haspopup="true" hidden>${iconHtml('monitor')}</button>
-        <button type="button" class="rd-ib rd-stream-only" id="rd-btn-more" title="More options" aria-label="More options" aria-haspopup="true">${iconHtml('more')}</button>
-        <span class="rd-island-sep rd-stream-only" aria-hidden="true"></span>
+        <button type="button" class="rd-chip rd-stream-only" id="rd-btn-monitors" title="Select monitor" aria-label="Select monitor" aria-haspopup="true" hidden>${iconHtml('monitor')}<span>Monitor</span></button>
         <button type="button" class="rd-chip rd-stream-only" id="rd-btn-fit" aria-haspopup="true" title="Scale mode">
           <span id="rd-fit-label">Fit to screen</span>${iconHtml('chevronDown')}
         </button>
         <button type="button" class="rd-chip rd-stream-only" id="rd-btn-viewonly" aria-pressed="false" title="Block all input to the remote device">
           ${iconHtml('eye')}<span>View only</span>
         </button>
-        <button type="button" class="rd-disconnect rd-stream-only" id="rd-btn-disconnect">Disconnect</button>
-      </div>
-      <div class="rd-tb-user">
-        <span class="rd-avatar" title="${escapeHtml(this.cfg?.myName || this.cfg?.myId || '')}">${escapeHtml(initials)}</span>
-      </div>`;
+        <button type="button" class="rd-ib rd-stream-only" id="rd-btn-more" title="More options" aria-label="More options" aria-haspopup="true">${iconHtml('more')}</button>
+        <span class="rd-tb-sep rd-stream-only" aria-hidden="true"></span>
+        <button type="button" class="rd-disconnect rd-stream-only" id="rd-btn-disconnect">${iconHtml('power')}<span>Disconnect</span></button>
+      </span>`;
     const t = this.el.toolbar;
     this.el.peerLabel = q(t, '#rd-peer-label');
     this.el.peerSub = q(t, '#rd-peer-sub');
@@ -583,15 +557,17 @@ export class RdApp {
     const db = (id: string, icon: IconName, label: string, title = label): string =>
       `<button type="button" class="rd-db" id="${id}" title="${title}" aria-label="${title}">` +
       `${iconHtml(icon)}<span>${label}</span></button>`;
+    const key = (id: string, label: string, title: string): string =>
+      `<button type="button" class="rd-db rd-keycap" id="${id}" title="${title}" aria-label="${title}"><span>${label}</span></button>`;
     this.el.dock.innerHTML = `
       <div class="rd-dock-group" role="group" aria-label="Keyboard">
-        ${db('rd-lat-ctrl', 'keyboard', 'Ctrl', 'Hold Ctrl for clicks and keys')}
-        ${db('rd-lat-alt', 'keyboard', 'Alt', 'Hold Alt for clicks and keys')}
-        ${db('rd-key-del', 'keyboard', 'Del', 'Send Delete')}
+        ${key('rd-lat-ctrl', 'Ctrl', 'Hold Ctrl for clicks and keys')}
+        ${key('rd-lat-alt', 'Alt', 'Hold Alt for clicks and keys')}
+        ${key('rd-key-del', 'Del', 'Send Delete')}
         ${db('rd-btn-cad', 'keyboard', 'Keys', 'Keyboard shortcuts')}
       </div>
       <span class="rd-dock-sep" aria-hidden="true"></span>
-      <div class="rd-dock-group" role="group" aria-label="Input mode">
+      <div class="rd-dock-group rd-seg" role="group" aria-label="Input mode">
         ${db('rd-mode-pointer', 'pointer', 'Pointer', 'Pointer mode — touch acts as a pressed button')}
         ${db('rd-mode-touch', 'touch', 'Touch', 'Touch mode — drag moves the cursor, tap clicks, long-press right-clicks')}
       </div>
@@ -600,11 +576,11 @@ export class RdApp {
         ${db('rd-btn-type', 'typeText', 'Type', 'Type text on the remote device')}
         ${db('rd-btn-clip', 'clipboard', 'Clipboard', 'Send clipboard to remote')}
       </div>
-      <span class="rd-dock-sep" aria-hidden="true"></span>
+      <span class="rd-dock-fill" aria-hidden="true"></span>
       <div class="rd-dock-group" role="group" aria-label="Panels">
-        ${db('rd-btn-files', 'folderTransfer', 'File Transfer')}
+        ${db('rd-btn-files', 'folderTransfer', 'Files', 'File transfer')}
         ${db('rd-btn-chat', 'chat', 'Chat')}
-        ${db('rd-btn-session', 'info', 'Session', 'Session details')}
+        ${db('rd-btn-session', 'info', 'Details', 'Session details')}
       </div>`;
     const d = this.el.dock;
     q<HTMLButtonElement>(d, '#rd-lat-ctrl').addEventListener('click', () =>
@@ -628,7 +604,7 @@ export class RdApp {
     q<HTMLButtonElement>(d, '#rd-btn-clip').addEventListener('click', () => {
       void this.sendClipboard();
     });
-    q<HTMLButtonElement>(d, '#rd-btn-files').addEventListener('click', () => this.openSide('files'));
+    q<HTMLButtonElement>(d, '#rd-btn-files').addEventListener('click', () => this.toggleFiles());
     q<HTMLButtonElement>(d, '#rd-btn-chat').addEventListener('click', () => this.openSide('chat'));
     q<HTMLButtonElement>(d, '#rd-btn-session').addEventListener('click', () => this.openSide('details'));
   }
@@ -664,22 +640,17 @@ export class RdApp {
     const tab = (id: SideTab, icon: IconName, label: string): string =>
       `<button type="button" class="rd-tab" data-tab="${id}" role="tab" aria-selected="false">` +
       `${iconHtml(icon)}<span>${label}</span><i class="rd-badge" hidden></i></button>`;
-    // This client is AGPL-3.0 software; the link to its source is here, in the session's details.
-    const source = this.cfg?.sourceUrl ?? '';
-    const aboutSource = /^https?:\/\//.test(source)
-      ? ` &middot; <a href="${escapeHtml(source)}" target="_blank" rel="noopener">Source code (AGPL-3.0)</a>`
-      : '';
+    const row = (label: string, id: string): string =>
+      `<div class="rd-stat-row"><dt>${label}</dt><dd id="${id}">—</dd></div>`;
     this.el.side.innerHTML = `
       <header class="rd-side-head">
         <div class="rd-side-tabs" role="tablist">
-          ${tab('files', 'folderTransfer', 'Files')}
           ${tab('chat', 'chat', 'Chat')}
           ${tab('details', 'info', 'Details')}
         </div>
         <button type="button" class="rd-ib" id="rd-side-close" title="Close panel" aria-label="Close panel">${iconHtml('close')}</button>
       </header>
       <div class="rd-side-body">
-        <section class="rd-pane" data-pane="files" hidden></section>
         <section class="rd-pane rd-pane-chat" data-pane="chat" hidden>
           <div class="rd-voice-call">
             <button type="button" class="rd-voice-call-btn" id="rd-voice-call" aria-describedby="rd-voice-call-status">Voice call</button>
@@ -688,29 +659,28 @@ export class RdApp {
           <div class="rd-chat-list" id="rd-chat-list"></div>
           <form class="rd-chat-compose" id="rd-chat-form">
             <input type="text" id="rd-chat-input" autocomplete="off" placeholder="Message the remote user…" maxlength="2000">
-            <button type="submit" class="rd-ib rd-chat-send" title="Send" aria-label="Send message">${iconHtml('send')}</button>
+            <button type="submit" class="rd-chat-send" id="rd-chat-send" disabled>Send</button>
           </form>
         </section>
         <section class="rd-pane rd-pane-details" data-pane="details" hidden>
+          <h4 class="rd-group-title">Device</h4>
           <dl class="rd-stats-body">
-            <div class="rd-stat-row"><dt>Device</dt><dd id="rd-stat-device">—</dd></div>
-            <div class="rd-stat-row"><dt>User</dt><dd id="rd-stat-user">—</dd></div>
-            <div class="rd-stat-row"><dt>Platform</dt><dd id="rd-stat-platform">—</dd></div>
-            <div class="rd-stat-row"><dt>Peer version</dt><dd id="rd-stat-version">—</dd></div>
-            <div class="rd-stat-row"><dt>Codec</dt><dd id="rd-stat-codec">—</dd></div>
-            <div class="rd-stat-row"><dt>Resolution</dt><dd id="rd-stat-res">—</dd></div>
-            <div class="rd-stat-row"><dt>FPS</dt><dd id="rd-stat-fps">—</dd></div>
-            <div class="rd-stat-row"><dt>Bitrate</dt><dd id="rd-stat-bitrate">—</dd></div>
-            <div class="rd-stat-row"><dt>Frames dropped</dt><dd id="rd-stat-dropped">—</dd></div>
-            <div class="rd-stat-row"><dt>Duration</dt><dd id="rd-stat-duration">—</dd></div>
+            ${row('Device', 'rd-stat-device')}
+            ${row('User', 'rd-stat-user')}
+            ${row('Platform', 'rd-stat-platform')}
+            ${row('Client version', 'rd-stat-version')}
           </dl>
-          <p class="rd-about">Web client ${escapeHtml(overlayVersion(this.cfg))}${aboutSource}</p>
+          <h4 class="rd-group-title">Stream</h4>
+          <dl class="rd-stats-body">
+            ${row('Codec', 'rd-stat-codec')}
+            ${row('Resolution', 'rd-stat-res')}
+            ${row('FPS', 'rd-stat-fps')}
+            ${row('Bitrate', 'rd-stat-bitrate')}
+            ${row('Frames dropped', 'rd-stat-dropped')}
+            ${row('Duration', 'rd-stat-duration')}
+          </dl>
         </section>
       </div>`;
-    this.el.edge.innerHTML = `
-      <button type="button" class="rd-edge-btn" data-open="files" title="File transfer" aria-label="Open file transfer">${iconHtml('folderTransfer')}</button>
-      <button type="button" class="rd-edge-btn" data-open="chat" title="Chat" aria-label="Open chat">${iconHtml('chat')}<i class="rd-badge" hidden></i></button>
-      <button type="button" class="rd-edge-btn" data-open="details" title="Session details" aria-label="Open session details">${iconHtml('info')}</button>`;
 
     const s = this.el.side;
     this.el.chatList = q(s, '#rd-chat-list');
@@ -733,9 +703,7 @@ export class RdApp {
       b.addEventListener('click', () => this.openSide(b.dataset.tab as SideTab));
     }
     q<HTMLButtonElement>(s, '#rd-side-close').addEventListener('click', () => this.closeSide());
-    for (const b of this.el.edge.querySelectorAll<HTMLButtonElement>('.rd-edge-btn')) {
-      b.addEventListener('click', () => this.openSide(b.dataset.open as SideTab));
-    }
+    this.el.chatInput.addEventListener('input', () => this.updateChatSend());
     q<HTMLFormElement>(s, '#rd-chat-form').addEventListener('submit', (e) => {
       e.preventDefault();
       this.sendChatFromInput();
@@ -757,13 +725,7 @@ export class RdApp {
       this.closeSide();
       return;
     }
-    if (tabName === 'files') {
-      if (this.permissions.File === false) {
-        this.toast('This device does not permit file transfer');
-        return;
-      }
-      this.ensureFilePanel();
-    }
+    this.filePanel?.close();
     this.sideTab = tabName;
     this.el.side.classList.add('rd-open');
     this.el.root.classList.add('rd-side-is-open');
@@ -776,7 +738,6 @@ export class RdApp {
       p.hidden = p.dataset.pane !== tabName;
     }
     for (const [id, on] of [
-      ['rd-btn-files', tabName === 'files'],
       ['rd-btn-chat', tabName === 'chat'],
       ['rd-btn-session', tabName === 'details'],
     ] as const) {
@@ -793,28 +754,43 @@ export class RdApp {
   private closeSide(): void {
     this.el.side.classList.remove('rd-open');
     this.el.root.classList.remove('rd-side-is-open');
-    for (const id of ['rd-btn-files', 'rd-btn-chat', 'rd-btn-session']) {
+    for (const id of ['rd-btn-chat', 'rd-btn-session']) {
       this.el.dock.querySelector(`#${id}`)?.classList.remove('rd-on');
     }
   }
 
-  // The file panel mounts INSIDE the Files pane. Its FILE_TRANSFER connection
-  // reuses this session's h1 credential — no second password prompt.
-  private ensureFilePanel(): void {
-    if (this.filePanel) {
-      this.filePanel.open();
+  // The file manager is a window over the remote screen (two panes need the width). Its FILE_TRANSFER
+  // connection reuses this session's h1 credential — no second password prompt.
+  private toggleFiles(): void {
+    if (this.state !== 'streaming') {
+      this.toast('Connect to a device first');
       return;
     }
-    const pane = q<HTMLElement>(this.el.side, '[data-pane="files"]');
-    this.filePanel = new FilePanel({
-      viewport: pane,
-      workerUrl: this.workerUrl,
-      toast: (msg) => this.toast(msg),
-      getConfig: () => {
-        if (!this.cfg || this.state !== 'streaming') return null;
-        return buildSessionConfig(this.cfg, this.peerId, '', this.sessionHashHex, 'fileTransfer');
-      },
-    });
+    if (this.filePanel?.isOpen) {
+      this.filePanel.close();
+      return;
+    }
+    if (this.permissions.File === false) {
+      this.toast('This device does not permit file transfer');
+      return;
+    }
+    this.closeSide();
+    this.closePop();
+    if (!this.filePanel) {
+      this.filePanel = new FilePanel({
+        viewport: this.el.viewport,
+        workerUrl: this.workerUrl,
+        toast: (msg) => this.toast(msg),
+        getConfig: () => {
+          if (!this.cfg || this.state !== 'streaming') return null;
+          return buildSessionConfig(this.cfg, this.peerId, '', this.sessionHashHex, 'fileTransfer');
+        },
+        onVisibility: (open) => {
+          this.el.dock.querySelector('#rd-btn-files')?.classList.toggle('rd-on', open);
+          if (!open) this.canvas.focus();
+        },
+      });
+    }
     this.filePanel.open();
   }
 
@@ -862,7 +838,13 @@ export class RdApp {
     // No delivery ack exists in the protocol; echo what we sent.
     this.chatLog.push({ who: 'me', text, at: Date.now() });
     this.el.chatInput.value = '';
+    this.updateChatSend();
     this.renderChatList();
+  }
+
+  /** The Send button waits for something to send. */
+  private updateChatSend(): void {
+    q<HTMLButtonElement>(this.el.side, '#rd-chat-send').disabled = this.el.chatInput.value.trim() === '';
   }
 
   /** Called directly by the Voice call button so getUserMedia retains its user gesture. */
@@ -1071,7 +1053,7 @@ export class RdApp {
     const advanced = action ? ` data-action="${escapeHtml(action)}"` : '';
     return (
       `<button type="button" class="rd-mi${checked ? ' rd-checked' : ''}" role="menuitem"${security}${advanced}>` +
-      `${icon ? iconHtml(icon) : '<span class="rd-mi-pad"></span>'}` +
+      `${icon ? iconHtml(icon) : ''}` +
       `<span class="rd-mi-label">${escapeHtml(label)}</span>` +
       `${checked ? iconHtml('check') : ''}</button>`
     );
@@ -1184,8 +1166,8 @@ export class RdApp {
       const tools =
         canTerminal || canCamera
           ? '<div class="rd-pop-sep"></div><div class="rd-pop-title">Tools</div>' +
-            (canTerminal ? this.menuItem(null, 'Remote terminal', false, 'terminal') : '') +
-            (canCamera ? this.menuItem(null, 'View camera', false, 'camera') : '')
+            (canTerminal ? this.menuItem('terminal', 'Remote terminal', false, 'terminal') : '') +
+            (canCamera ? this.menuItem('camera', 'View camera', false, 'camera') : '')
           : '';
       const canRemoteCursor = canUseRemoteCursor(this.peerPlatform, this.displays[this.current]);
       const codecHtml = this.codecSupport.map((codec) =>
@@ -1474,7 +1456,7 @@ export class RdApp {
           <div class="rd-pop-title">Type on the remote device</div>
           <textarea id="rd-type-text" rows="4" placeholder="Sent as keystrokes — works where the remote clipboard does not."></textarea>
           <div class="rd-pop-actions">
-            <button type="button" class="rd-chip rd-chip-solid" id="rd-type-send">${iconHtml('send')}<span>Send keystrokes</span></button>
+            <button type="button" class="rd-chip rd-chip-solid" id="rd-type-send"><span>Send keystrokes</span></button>
           </div>`;
         const ta = q<HTMLTextAreaElement>(pop, '#rd-type-text');
         setTimeout(() => ta.focus(), 0);
@@ -2348,13 +2330,9 @@ export class RdApp {
 
     // A capability withdrawn mid-session has to close what it opened.
     if (kind === 'File') {
-      this.el.edge
-        .querySelector<HTMLButtonElement>('[data-open="files"]')
-        ?.toggleAttribute('disabled', !enabled);
       if (!enabled) {
         this.filePanel?.destroy();
         this.filePanel = undefined;
-        if (this.sideOpen && this.sideTab === 'files') this.closeSide();
       }
     }
 
@@ -2377,9 +2355,6 @@ export class RdApp {
         el.setAttribute('aria-label', title);
       }
     }
-    this.el.edge
-      .querySelector<HTMLButtonElement>('[data-open="files"]')
-      ?.toggleAttribute('disabled', false);
   }
 
   /**

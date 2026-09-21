@@ -24,8 +24,6 @@ WEB_DIR = Path(__file__).resolve().parent
 # static/i18n (built from i18n/catalog.tsv by scripts/build_i18n.py).
 SUPPORTED_LANGUAGES = ("en", "pl", "fr", "de", "es")
 LANGUAGE_COOKIE = "rd_lang"
-# The web client is AGPL-3.0 software; its page links to where its source is.
-WEBCLIENT_SOURCE_URL = "https://github.com/inteliboy/rustdesk-api-server/tree/main/webclient"
 
 
 def pick_language(request: Request) -> str:
@@ -139,9 +137,7 @@ def connect_page(request: Request) -> HTMLResponse:
 def webclient_page(request: Request) -> HTMLResponse:
     """The browser web client for one device (?device=<id>). Full screen, so not
     inside the WebUI's shell; the API decides whether this user may start it."""
-    return templates.TemplateResponse(
-        request, "webclient.html", {"version": __version__, "source_url": WEBCLIENT_SOURCE_URL}
-    )
+    return templates.TemplateResponse(request, "webclient.html", {"version": __version__})
 
 
 @web_router.get("/settings", response_class=HTMLResponse)

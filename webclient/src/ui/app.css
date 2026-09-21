@@ -20,8 +20,8 @@
   --rd-ok: #16a34a;
   --rd-warn: #d97706;
   --rd-shadow: rgba(15, 23, 42, 0.18);
-  --rd-toolbar-h: 56px;
-  --rd-side-w: 380px;
+  --rd-toolbar-h: 48px;
+  --rd-side-w: 360px;
 }
 
 html[data-theme='dark'] {
@@ -40,8 +40,8 @@ html[data-theme='dark'] {
   --rd-shadow: rgba(0, 0, 0, 0.55);
 }
 
-/* The accents of the WebUI's Appearance menu. Light: the 600 shade, darker 700 for its gradient; dark: the
-   500 shade (readable on dark surfaces) and 600. */
+/* The accents of the WebUI's Appearance menu. Light: the 600 shade, 700 for hover; dark: the 500 shade
+   (readable on dark surfaces) and 600. */
 html[data-accent='indigo'] { --rd-accent: #4f46e5; --rd-accent-2: #4338ca; }
 html[data-accent='violet'] { --rd-accent: #7c3aed; --rd-accent-2: #6d28d9; }
 html[data-accent='emerald'] { --rd-accent: #059669; --rd-accent-2: #047857; }
@@ -72,11 +72,9 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
   -webkit-font-smoothing: antialiased;
 }
 
-/* Streaming-only chrome: the island controls, dock and edge strip exist only
-   while a session is live. Everything else (brand, peer chip, avatar) stays. */
+/* Streaming-only chrome: the bar's controls, the dock and the panel exist only while a session is live. */
 #rd-root:not([data-state='streaming']) .rd-stream-only,
 #rd-root:not([data-state='streaming']) #rd-dock,
-#rd-root:not([data-state='streaming']) #rd-edge,
 #rd-root:not([data-state='streaming']) #rd-side {
   display: none !important;
 }
@@ -90,50 +88,33 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
 
 #rd-toolbar {
   flex: 0 0 var(--rd-toolbar-h);
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
-  padding: 0 14px;
+  padding: 0 12px 0 16px;
   background: var(--rd-surface);
   border-bottom: 1px solid var(--rd-border);
 }
 
-.rd-tb-user {
-  display: flex;
-  justify-content: flex-end;
-}
-.rd-avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--rd-accent-fg);
-  background: linear-gradient(135deg, var(--rd-accent), var(--rd-accent-2));
-  user-select: none;
-}
-
-/* Control island — the pill in the middle of the top bar. */
-.rd-tb-island {
+.rd-tb-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 6px 5px 10px;
-  background: var(--rd-surface);
-  border: 1px solid var(--rd-border);
-  border-radius: 14px;
-  max-width: min(92vw, 760px);
+  gap: 4px;
+  min-width: 0;
+}
+.rd-tb-sep {
+  width: 1px;
+  height: 20px;
+  margin: 0 6px;
+  background: var(--rd-border);
+  flex: 0 0 auto;
 }
 
 .rd-peer-chip {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 2px 8px 2px 4px;
+  gap: 10px;
   min-width: 0;
 }
 .rd-peer-meta {
@@ -187,14 +168,7 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
   }
 }
 
-.rd-island-sep {
-  width: 1px;
-  height: 22px;
-  background: var(--rd-border);
-  flex: 0 0 auto;
-}
-
-/* Icon button (island + panel headers) */
+/* Icon button (bar and panel headers) */
 .rd-ib {
   appearance: none;
   border: 0;
@@ -202,7 +176,7 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
   color: var(--rd-muted);
   width: 32px;
   height: 32px;
-  border-radius: 9px;
+  border-radius: 6px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -237,7 +211,7 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
   min-width: 30px;
   height: 30px;
   padding: 0 6px;
-  border-radius: 8px;
+  border-radius: 6px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -269,7 +243,6 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
 /* Chrome labels are controls, not copy — a drag must not select "Details". */
 #rd-toolbar,
 #rd-dock,
-#rd-edge,
 .rd-side-head,
 .rd-pop {
   user-select: none;
@@ -281,9 +254,10 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
   appearance: none;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 7px 11px;
-  border-radius: 9px;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 6px;
   border: 1px solid transparent;
   background: transparent;
   color: var(--rd-fg);
@@ -325,18 +299,22 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
 
 .rd-disconnect {
   appearance: none;
-  border: 0;
-  padding: 8px 16px;
-  border-radius: 9px;
-  background: var(--rd-accent);
-  color: var(--rd-accent-fg);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, var(--rd-danger) 45%, var(--rd-border-strong));
+  border-radius: 6px;
+  background: transparent;
+  color: var(--rd-danger);
   font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
 }
 .rd-disconnect:hover {
-  background: var(--rd-accent-2);
+  background: color-mix(in srgb, var(--rd-danger) 10%, transparent);
 }
 .rd-disconnect:focus-visible {
   outline: 2px solid var(--rd-accent);
@@ -409,10 +387,9 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
 #rd-dock {
   flex: 0 0 auto;
   display: flex;
-  align-items: stretch;
-  justify-content: center;
+  align-items: center;
   gap: 4px;
-  padding: 5px 8px;
+  padding: 6px 12px;
   background: var(--rd-surface); /* like the top bar */
   border-top: 1px solid var(--rd-border);
   overflow-x: auto;
@@ -424,48 +401,53 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
 
 .rd-dock-group {
   display: flex;
+  align-items: center;
   gap: 2px;
 }
 .rd-dock-sep {
   width: 1px;
-  margin: 6px 3px;
+  height: 20px;
+  margin: 0 6px;
   background: var(--rd-border);
   flex: 0 0 auto;
+}
+.rd-dock-fill {
+  flex: 1 1 0;
+  min-width: 8px;
 }
 
 .rd-db {
   appearance: none;
-  border: 0;
+  border: 1px solid transparent;
   background: transparent;
-  color: var(--rd-muted);
-  border-radius: 11px;
-  min-width: 58px;
-  padding: 6px 9px 5px;
+  color: var(--rd-fg);
+  border-radius: 6px;
+  height: 32px;
+  padding: 0 10px;
   display: inline-flex;
-  flex-direction: column;
   align-items: center;
-  gap: 3px;
-  font-size: 10.5px;
+  gap: 7px;
+  font-size: 12.5px;
   font-weight: 500;
   cursor: pointer;
   position: relative;
   white-space: nowrap;
+  flex: 0 0 auto;
+}
+.rd-db svg,
+.rd-db i {
+  color: var(--rd-muted);
 }
 .rd-db:hover {
   background: var(--rd-surface-2);
-  color: var(--rd-fg);
 }
 .rd-db:focus-visible {
   outline: 2px solid var(--rd-accent);
   outline-offset: 1px;
 }
-.rd-db i {
-  font-size: 17px;
-  line-height: 1;
-}
 .rd-db.rd-on {
-  background: color-mix(in srgb, var(--rd-accent) 15%, transparent);
-  color: var(--rd-fg);
+  background: color-mix(in srgb, var(--rd-accent) 14%, transparent);
+  border-color: color-mix(in srgb, var(--rd-accent) 40%, transparent);
 }
 .rd-db.rd-on svg,
 .rd-db.rd-on i {
@@ -474,6 +456,39 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
 .rd-db:disabled {
   opacity: 0.35;
   cursor: not-allowed;
+}
+/* Ctrl, Alt and Del are keys, so they look like keys. */
+.rd-keycap {
+  min-width: 40px;
+  justify-content: center;
+  border-color: var(--rd-border-strong);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 600;
+}
+.rd-keycap.rd-on {
+  border-color: var(--rd-accent);
+  color: var(--rd-accent);
+}
+/* Pointer / Touch is one choice between two: a segmented control. */
+.rd-seg {
+  padding: 2px;
+  gap: 2px;
+  background: var(--rd-surface-2);
+  border: 1px solid var(--rd-border);
+  border-radius: 8px;
+}
+.rd-seg .rd-db {
+  height: 26px;
+  padding: 0 9px;
+}
+.rd-seg .rd-db.rd-on {
+  background: var(--rd-surface);
+  border-color: var(--rd-border-strong);
+}
+.rd-db .rd-badge {
+  top: -5px;
+  right: -5px;
 }
 
 .rd-badge {
@@ -497,19 +512,18 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
 
 #rd-side {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  bottom: 10px;
+  top: 0;
+  right: 0;
+  bottom: 0;
   width: var(--rd-side-w);
-  max-width: calc(100vw - 20px);
+  max-width: 100vw;
   z-index: 22;
   display: flex;
   flex-direction: column;
   background: var(--rd-surface);
-  border: 1px solid var(--rd-border);
-  border-radius: 12px;
-  box-shadow: 0 18px 48px var(--rd-shadow);
-  transform: translateX(calc(100% + 20px));
+  border-left: 1px solid var(--rd-border);
+  box-shadow: -10px 0 28px var(--rd-shadow);
+  transform: translateX(calc(100% + 30px));
   transition: transform 0.22s ease;
 }
 #rd-side.rd-open {
@@ -527,40 +541,43 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
 }
 
 .rd-side-head {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 8px 8px 10px;
+  height: 44px;
+  padding: 0 8px 0 16px;
   border-bottom: 1px solid var(--rd-border);
 }
 .rd-side-tabs {
   display: flex;
-  gap: 4px;
+  align-self: stretch;
+  gap: 18px;
   flex: 1;
   min-width: 0;
 }
 .rd-tab {
   appearance: none;
   border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
   background: transparent;
   color: var(--rd-muted);
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 7px 11px;
-  border-radius: 9px;
-  font-size: 12.5px;
+  padding: 0;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   position: relative;
 }
 .rd-tab:hover {
-  background: var(--rd-surface-2);
   color: var(--rd-fg);
 }
 .rd-tab.rd-active {
-  background: var(--rd-surface-2);
   color: var(--rd-fg);
+  border-bottom-color: var(--rd-accent);
 }
 .rd-tab.rd-active svg,
 .rd-tab.rd-active i {
@@ -584,23 +601,6 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
   flex-direction: column;
 }
 
-/* The file panel was built as a self-positioning overlay; inside the Files
-   pane it becomes a plain filling child, and the pane shell owns closing. */
-.rd-pane [id='rd-ft-overlay'] {
-  position: static !important;
-  inset: auto !important;
-  width: 100% !important;
-  height: 100% !important;
-  max-width: none !important;
-  transform: none !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-}
-.rd-pane #rd-ft-close {
-  display: none !important;
-}
-
 /* Chat */
 .rd-pane-chat {
   padding: 0;
@@ -609,24 +609,24 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px;
+  padding: 10px 12px;
   border-bottom: 1px solid var(--rd-border);
 }
 .rd-voice-call-btn {
-  min-height: 44px;
   flex: 0 0 auto;
-  padding: 0 14px;
-  border: 1px solid var(--rd-border);
-  border-radius: 8px;
-  background: var(--rd-surface-2);
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--rd-border-strong);
+  border-radius: 6px;
+  background: var(--rd-surface);
   color: var(--rd-fg);
   font: inherit;
+  font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
 }
 .rd-voice-call-btn:hover:not(:disabled) {
-  border-color: var(--rd-accent);
-  color: var(--rd-accent);
+  background: var(--rd-surface-2);
 }
 .rd-voice-call-btn:disabled {
   opacity: 0.5;
@@ -670,7 +670,7 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
 }
 .rd-bubble {
   padding: 7px 11px;
-  border-radius: 12px;
+  border-radius: 12px 12px 12px 4px;
   background: var(--rd-surface-2);
   font-size: 13px;
   line-height: 1.45;
@@ -678,7 +678,9 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
   word-break: break-word;
 }
 .rd-msg-row.rd-from-me .rd-bubble {
-  background: color-mix(in srgb, var(--rd-accent) 26%, var(--rd-surface));
+  border-radius: 12px 12px 4px 12px;
+  background: var(--rd-accent);
+  color: var(--rd-accent-fg);
 }
 .rd-msg-time {
   margin-top: 2px;
@@ -688,42 +690,78 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
 .rd-chat-compose {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px;
+  gap: 8px;
+  padding: 10px 12px;
   border-top: 1px solid var(--rd-border);
 }
 .rd-chat-compose input {
   flex: 1;
   min-width: 0;
-  background: var(--rd-surface-2);
-  border: 1px solid var(--rd-border);
-  border-radius: 9px;
-  padding: 8px 11px;
+  height: 34px;
+  box-sizing: border-box;
+  background: var(--rd-surface);
+  border: 1px solid var(--rd-border-strong);
+  border-radius: 6px;
+  padding: 0 10px;
   color: var(--rd-fg);
   font-size: 13px;
   outline: none;
 }
 .rd-chat-compose input:focus {
-  border-color: var(--rd-accent);
+  outline: 2px solid var(--rd-accent);
+  outline-offset: -1px;
 }
+/* The same primary button as the WebUI's: solid accent, 6px corners, the input's height. */
 .rd-chat-send {
-  color: var(--rd-accent);
+  appearance: none;
+  flex: 0 0 auto;
+  height: 34px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--rd-accent);
+  color: var(--rd-accent-fg);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.rd-chat-send:hover:not(:disabled) {
+  background: var(--rd-accent-2);
+}
+.rd-chat-send:focus-visible {
+  outline: 2px solid var(--rd-accent);
+  outline-offset: 2px;
+}
+.rd-chat-send:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 /* Details */
 .rd-pane-details {
   overflow-y: auto;
 }
+.rd-group-title {
+  margin: 0;
+  padding: 16px 16px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rd-muted);
+}
 .rd-stats-body {
   margin: 0;
-  padding: 6px 14px;
+  padding: 0 16px;
 }
 .rd-stat-row {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  padding: 9px 0;
+  padding: 8px 0;
   border-bottom: 1px solid var(--rd-border);
+  font-size: 12.5px;
 }
 .rd-stat-row:last-child {
   border-bottom: 0;
@@ -741,85 +779,28 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
   max-width: 60%;
 }
 
-.rd-about {
-  margin: 0;
-  padding: 10px 14px 14px;
-  font-size: 12px;
-  color: var(--rd-muted);
-}
-.rd-about a {
-  color: inherit;
-  text-decoration: underline;
-}
-
-/* Edge strip: shortcuts to the panel while it is closed. */
-#rd-edge {
-  position: absolute;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 21;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 6px 4px;
-  background: var(--rd-surface);
-  border: 1px solid var(--rd-border);
-  border-right: 0;
-  border-radius: 12px 0 0 12px;
-  box-shadow: 0 8px 24px var(--rd-shadow);
-}
-#rd-root.rd-side-is-open #rd-edge {
-  display: none;
-}
-.rd-edge-btn {
-  appearance: none;
-  border: 0;
-  background: transparent;
-  color: var(--rd-muted);
-  width: 34px;
-  height: 34px;
-  border-radius: 9px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  position: relative;
-}
-.rd-edge-btn:hover {
-  background: var(--rd-surface-2);
-  color: var(--rd-fg);
-}
-.rd-edge-btn:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-.rd-edge-btn .rd-badge {
-  top: -3px;
-  right: -3px;
-}
-
 /* --- popovers ------------------------------------------------------------------ */
 
 .rd-pop {
   position: fixed;
   z-index: 40;
-  min-width: 210px;
+  min-width: 220px;
   max-width: min(92vw, 320px);
   max-height: calc(100vh - 20px);
   box-sizing: border-box;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 6px;
+  padding: 4px;
   background: var(--rd-surface);
   border: 1px solid var(--rd-border);
-  border-radius: 12px;
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.5);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px var(--rd-shadow);
+  scrollbar-width: thin;
 }
 .rd-pop-title {
-  padding: 7px 10px 5px;
-  font-size: 10.5px;
-  font-weight: 700;
+  padding: 8px 10px 4px;
+  font-size: 11px;
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--rd-muted);
@@ -837,9 +818,9 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 8px 10px;
-  border-radius: 8px;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 6px;
   font-size: 13px;
   cursor: pointer;
   text-align: left;
@@ -857,8 +838,7 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
   min-width: 0;
 }
 .rd-mi-pad {
-  width: 18px;
-  flex: 0 0 auto;
+  display: none;
 }
 .rd-mi.rd-checked {
   color: var(--rd-fg);
@@ -877,8 +857,8 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
   display: flex;
   align-items: center;
   gap: 11px;
-  padding: 9px 10px;
-  border-radius: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
   cursor: pointer;
   text-align: left;
 }
@@ -1164,11 +1144,6 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
   border-radius: 0 0 8px 8px;
 }
 
-/* Dimmed until hovered in fullscreen; the inline opacity is set from app.ts. */
-#rd-edge {
-  transition: opacity 0.2s ease-in-out;
-}
-
 .rd-fullscreen-active #rd-dock {
   position: fixed;
   bottom: 0;
@@ -1201,11 +1176,13 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
   .rd-peer-sub {
     max-width: 130px;
   }
-  .rd-chip span {
-    display: none; /* icon-only chips; the title attribute still names them */
+  .rd-chip span,
+  .rd-disconnect span,
+  .rd-db:not(.rd-keycap) span {
+    display: none; /* icon-only; the title attribute still names them */
   }
   #rd-btn-fit {
-    display: none; /* fit control matters least on a phone; lives in overflow later */
+    display: none; /* fit control matters least on a phone */
   }
 }
 
@@ -1214,74 +1191,16 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
     min-height: 44px;
   }
   #rd-toolbar {
-    grid-template-columns: auto 1fr auto;
     padding: 0 8px;
     gap: 8px;
   }
-  .rd-tb-island {
-    max-width: none;
-    justify-self: stretch;
-    justify-content: space-between;
-  }
-  .rd-db {
-    min-width: 50px;
-  }
   #rd-side {
-    top: 6px;
-    right: 6px;
-    bottom: 6px;
-    max-width: calc(100vw - 12px);
+    width: 100vw;
+    border-left: 0;
   }
 }
 
-/* --- file panel inside the side panel ------------------------------------------
-   The transfer UI was designed as a wide two-column overlay. Inside the 380px
-   Files tab it stacks: browser files on top, remote device below, with the
-   transfer buttons between — Send points down at the device pane, Receive
-   points back up. The media query in file-panel.css cannot do this because it
-   watches the window, not the container. */
-
-.rd-pane .rd-ft-panes {
-  grid-template-columns: 1fr;
-  grid-template-rows: 1fr auto 1fr;
-  gap: 8px;
-}
-.rd-pane .rd-ft-mid {
-  flex-direction: row;
-  justify-content: center;
-  gap: 8px;
-}
-.rd-pane .rd-ft-mid .rd-ft-go {
-  flex: 1;
-  max-width: 160px;
-  padding: 8px;
-}
-/* → becomes ↓ (toward the device pane below); ← becomes ↑. */
-.rd-pane .rd-ft-mid .rd-ft-go svg,
-.rd-pane .rd-ft-mid .rd-ft-go i {
-  transform: rotate(90deg);
-}
-.rd-pane .rd-ft-col-mod {
-  display: none; /* three columns cannot breathe at this width */
-}
-.rd-pane .rd-ft-bottom {
-  height: 130px;
-  flex: 0 0 auto;
-}
-.rd-pane .rd-ft-head {
-  padding: 8px 10px;
-}
-.rd-pane .rd-ft-title span {
-  display: none; /* the tab header already says Files */
-}
-.rd-pane .rd-ft-pane-head {
-  padding: 7px 9px;
-  gap: 8px;
-}
-.rd-pane .rd-ft-pathrow {
-  padding: 6px 8px;
-}
-
+/* Dark, thin scrollbars
 /* Dark, thin scrollbars — the UA default renders as white slabs here. */
 .rd-pane * {
   scrollbar-width: thin;
