@@ -707,7 +707,7 @@ client against the generated commands: try them on one machine first (the macOS 
 ## Languages
 
 The WebUI comes in English, Polish, French, German and Spanish. It starts in the first of those your browser asks for
-and remembers a choice made with the language menu (a cookie, per browser, like the theme). English is the source
+and remembers a choice made under **Appearance** (a cookie, per browser, like the theme). English is the source
 text; the other languages are catalogs (`frontend/i18n/*.txt`, one line per phrase) that `scripts/build_i18n.py`
 turns into `static/i18n/<lang>.js`, and a small script (`static/js/i18n.js`) translates what is on the page, including
 what the other scripts add later. Anything without a translation stays English, so a page may be partly translated:

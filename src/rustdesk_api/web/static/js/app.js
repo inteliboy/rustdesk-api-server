@@ -560,7 +560,18 @@ const ACCENT_SWATCHES = {
   amber: "#d97706",
 };
 
-// "Appearance" dropdown: light / dark / follow-system, plus the accent color.
+// The language choice inside the Appearance panel (empty where i18n.js is not loaded).
+function languageSection() {
+  const languages = window.rdLanguages;
+  if (!languages) return "";
+  const options = Object.entries(languages)
+    .map(([code, name]) => `<option value="${code}" lang="${code}" ${code === (window.rdLanguage || "en") ? "selected" : ""}>${name}</option>`)
+    .join("");
+  return `<p class="text-xs font-semibold uppercase tracking-wide text-slate-500 mt-4 mb-2">Language</p>
+      <select id="lang-select" aria-label="Language" class="w-full rounded-md border border-slate-300 bg-surface px-2 py-1.5 text-sm">${options}</select>`;
+}
+
+// "Appearance" dropdown: light / dark / follow-system, the accent color and the language.
 // The state itself lives in theme.js (loaded in <head> to avoid a flash).
 function renderThemeMenu() {
   const host = document.getElementById("theme-menu");
@@ -588,7 +599,7 @@ function renderThemeMenu() {
     panel.innerHTML = `<p class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Theme</p>
       <div class="flex gap-1 mb-4">${themeButtons}</div>
       <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Accent color</p>
-      <div class="flex gap-2 px-1 py-1">${swatches}</div>`;
+      <div class="flex gap-2 px-1 py-1">${swatches}</div>${languageSection()}`;
   }
 
   function setOpen(open) {
@@ -598,6 +609,9 @@ function renderThemeMenu() {
   }
 
   toggle.addEventListener("click", () => setOpen(panel.classList.contains("hidden")));
+  panel.addEventListener("change", (evt) => {
+    if (evt.target.id === "lang-select" && window.rdSetLanguage) window.rdSetLanguage(evt.target.value);
+  });
   panel.addEventListener("click", (evt) => {
     const target = evt.target.closest("button");
     if (!target) return;

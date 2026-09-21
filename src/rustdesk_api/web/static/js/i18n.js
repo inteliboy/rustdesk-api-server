@@ -184,12 +184,21 @@
   else start();
 })();
 
-// The language picker in the corner of every page. A cookie (not the server's database)
+// The language picker: in the Appearance menu (app.js), and in the corner of the pages that have no
+// header (sign in, register, first run). A cookie (not the server's database)
 // remembers the choice per browser, like the theme.
 (function () {
   "use strict";
   if (typeof document === "undefined" || typeof document.getElementById !== "function") return;
   const LANGUAGES = { en: "English", pl: "Polski", fr: "Français", de: "Deutsch", es: "Español" };
+  // Used by the Appearance menu (app.js) and by the corner picker below.
+  window.rdLanguages = LANGUAGES;
+  window.rdSetLanguage = (code) => {
+    if (!LANGUAGES[code]) return;
+    const secure = window.location.protocol === "https:" ? "; Secure" : "";
+    document.cookie = `rd_lang=${encodeURIComponent(code)}; path=/; max-age=31536000; SameSite=Lax${secure}`;
+    window.location.reload();
+  };
   function attach() {
     const select = document.getElementById("lang-select");
     if (!select || select.dataset.ready) return;
@@ -198,11 +207,7 @@
       .map(([code, name]) => `<option value="${code}" lang="${code}">${name}</option>`)
       .join("");
     select.value = window.rdLanguage || "en";
-    select.addEventListener("change", () => {
-      const secure = window.location.protocol === "https:" ? "; Secure" : "";
-      document.cookie = `rd_lang=${encodeURIComponent(select.value)}; path=/; max-age=31536000; SameSite=Lax${secure}`;
-      window.location.reload();
-    });
+    select.addEventListener("change", () => window.rdSetLanguage(select.value));
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", attach);
   else attach();

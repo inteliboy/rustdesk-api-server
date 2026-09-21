@@ -14,3 +14,8 @@ In use || Używane || Utilisée || In Benutzung || En uso
 latest || najnowszy || dernier || neuester || último
 of {1} GB || z {1} GB || sur {1} GB || von {1} GB || de {1} GB
 of {1} MB || z {1} MB || sur {1} MB || von {1} MB || de {1} MB
+
+# theme names in the Appearance menu (shown capitalised by the stylesheet)
+system || systemowy || système || System || sistema
+light || jasny || clair || hell || claro
+dark || ciemny || sombre || dunkel || oscuro
