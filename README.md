@@ -539,6 +539,14 @@ external URL, e.g. `http://your-server:21114`. Configure `RUSTDESK_ID_SERVER`,
 `RUSTDESK_RELAY_SERVER` and `RUSTDESK_KEY` in your environment to match your `hbbs`/`hbbr`
 deployment - this project does not run or replace those services.
 
+**Do not use `https://...:21114` as the API server.** The client deletes `:21114` from any `https://` API
+server address (`get_api_server` in the client's `src/common.rs`; only a build-time option disables this), so
+`https://example.com:21114` is silently used as `https://example.com` - port 443, usually another web server,
+and login fails with `FormatException ... <html>`. Plain `http://host:21114` is not affected. For HTTPS put the API
+on another port (`https://example.com:21120`) or, better, on its own host name on 443
+(`https://rustdesk.example.com`, reverse-proxied to this server), and enter that in the client. With the API
+server field empty the client assumes `http://<id server>:21114`.
+
 **Address book mode.** The client decides between its newer address book (personal and shared
 books, per-item changes) and the old "Legacy address book" by asking the server, and this
 server answers for the newer one by default. If a client misbehaves with it, set

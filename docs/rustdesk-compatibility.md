@@ -861,3 +861,30 @@ login resets the count. Not yet seen on a live client; the client treats any `er
 3. Compare captured traffic against the assumptions documented above.
 4. File discrepancies as issues, fix the endpoint, update this document,
    and add/adjust the corresponding test in `tests/compatibility/`.
+
+## API server URL: `:21114` is stripped from `https://` addresses
+
+Observed 2026-09-21 on a deployment behind a reverse proxy, then confirmed in the source at the 1.4.9 tag
+(`src/common.rs`, `get_api_server`):
+
+```rust
+if res.starts_with("https")
+    && res.ends_with(":21114")
+    && get_builtin_option(keys::OPTION_ALLOW_HTTPS_21114) != "Y"
+{
+    return res.replace(":21114", "");
+}
+```
+
+So a client whose **API server** is `https://example.com:21114` really calls `https://example.com` (port 443).
+If another web server answers there, the client's JSON decoder fails with
+`Unknown Error: FormatException: Unexpected character (at character 1) <html>` and the server never sees a request.
+`OPTION_ALLOW_HTTPS_21114` is a build-time (built-in) option, not something a user can set in the UI. `http://` addresses
+are not rewritten. With the field empty the client uses `http://<id server host>:21114` (`get_api_server_`).
+
+Consequences for deployment: an HTTPS API server must not be on port 21114. Use another port
+(`https://example.com:21120`) or a host name of its own on 443 (`https://rustdesk.example.com`). Direct requests to
+`https://example.com:21114/api/...` (curl, a browser, the WebUI) work fine; only the client rewrites it. Verified that
+the server itself answers login, login-options, heartbeat and sysinfo correctly over HTTP/1.1 and HTTP/2 through a
+TLS-terminating reverse proxy.
+
