@@ -9,16 +9,25 @@ the client's own config, i.e. reset to its default.
 
 Two consequences shape this module:
 
-* Only options listed in `OPTIONS` can be pushed. It is a deliberate allow-list
-  of permission and behaviour switches - never server addresses, keys,
-  passwords or IP whitelists - so a strategy can neither redirect a fleet to
-  another server nor lock people out.
+* Only options listed in `OPTIONS` can be pushed. It is a deliberate allow-list:
+  permission and behaviour switches, plus the "Servers" section used to move
+  clients to a new ID/relay/API server (`sticky` options, below). Never
+  passwords, IP whitelists or proxy settings. Server values are validated
+  strictly (the API server must be a plain `https://` origin, hosts must be
+  host names or IPv4 addresses, the key must look like a key) so a typo cannot
+  smuggle in anything else, and a strategy is assigned per device or group, so
+  a move can start with a single test device.
+* A `sticky` option is pushed only while it has a value and is never sent
+  empty. Every other option is sent empty when unset so that removing it, or
+  unassigning the strategy, resets the client; for the server options that
+  would erase the addresses and key a client was installed with, and a client
+  with no working server settings can no longer be fixed from here.
 * A strategy is written into the client's `Config` options (`handle_config_options`),
   so only keys the client itself keeps there (`KEYS_SETTINGS` in
   `libs/base/src/config/keys.rs`) can work. Keys the client reads from its local,
   built-in or per-session stores are ignored on the client even if pushed; they are
   listed in `RETIRED_KEYS` and are not offered.
-* Every response carries *all* catalog keys (unset ones empty), so removing an
+* Every response carries *all* non-sticky catalog keys (unset ones empty), so removing an
   option from a strategy, or unassigning it, resets the option on the client
   instead of leaving the last pushed value behind.
 """
@@ -27,8 +36,10 @@ from __future__ import annotations
 
 import datetime
 import json
+import re
 import time
 from dataclasses import dataclass
+from urllib.parse import urlsplit
 
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
@@ -59,14 +70,16 @@ class OptionSpec:
     key: str
     label: str
     section: str
-    kind: str  # "bool" (Y/N), "choice" or "int"
+    kind: str  # "bool" (Y/N), "choice", "int", "host", "url" or "key"
     choices: tuple[str, ...] = ()
     minimum: int = 0
     maximum: int = 0
     help: str = ""
+    sticky: bool = False  # pushed only while set; never sent empty (see the module docstring)
 
 
 _ON_OFF = "Y = on, N = off; not set = the client's own default."
+_STICKY = "Pushed only while set: removing it later does not change clients that already have it."
 
 OPTIONS: tuple[OptionSpec, ...] = (
     # What a remote user may do on this machine.
@@ -181,6 +194,51 @@ OPTIONS: tuple[OptionSpec, ...] = (
     OptionSpec("enable-abr", "Adaptive bitrate", "Video", "bool", help=_ON_OFF),
     OptionSpec("enable-hwcodec", "Hardware video codec", "Video", "bool", help=_ON_OFF),
     OptionSpec("enable-directx-capture", "DirectX screen capture (Windows)", "Video", "bool", help=_ON_OFF),
+    # Moving clients to other servers. Try it on one device first: a client that can no
+    # longer reach this API server (or hbbs) cannot be corrected from here.
+    OptionSpec(
+        "api-server",
+        "API server",
+        "Servers",
+        "url",
+        help="https:// address of this API server, e.g. https://rdapi.example.com (not port 21114: "
+        "the client drops it from https addresses). " + _STICKY,
+        sticky=True,
+    ),
+    OptionSpec(
+        "custom-rendezvous-server",
+        "ID server",
+        "Servers",
+        "host",
+        help="Host name or IPv4 address of hbbs, optionally with :port. " + _STICKY,
+        sticky=True,
+    ),
+    OptionSpec(
+        "relay-server",
+        "Relay server",
+        "Servers",
+        "host",
+        help="Host name or IPv4 address of hbbr, optionally with :port. " + _STICKY,
+        sticky=True,
+    ),
+    OptionSpec(
+        "key",
+        "Server key",
+        "Servers",
+        "key",
+        help="The hbbs public key (id_ed25519.pub). Must match the ID server or the client cannot "
+        "connect. " + _STICKY,
+        sticky=True,
+    ),
+    OptionSpec(
+        "allow-websocket",
+        "Use WebSocket",
+        "Servers",
+        "bool",
+        help="Y = connect to the ID and relay servers over WebSocket (wss on port 443 behind a "
+        "reverse proxy). " + _STICKY,
+        sticky=True,
+    ),
 )
 
 # Keys an earlier version offered that a strategy cannot reach: the client reads
@@ -218,9 +276,57 @@ def catalog() -> list[dict]:
             "minimum": spec.minimum,
             "maximum": spec.maximum,
             "help": spec.help,
+            "sticky": spec.sticky,
         }
         for spec in OPTIONS
     ]
+
+
+_HOST_RE = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9.-]{0,251}[A-Za-z0-9])?$")
+_KEY_RE = re.compile(r"^[A-Za-z0-9+/=_-]{1,128}$")
+# The client removes ":21114" from an https API address, so such a value would not
+# reach the port the admin typed (see docs/rustdesk-compatibility.md).
+_STRIPPED_API_PORT = 21114
+
+
+def _valid_port(text: str) -> bool:
+    return text.isascii() and text.isdigit() and 1 <= int(text) <= 65535
+
+
+def _clean_host(key: str, text: str) -> str:
+    host, colon, port = text.partition(":")
+    if not _HOST_RE.match(host) or (colon and not _valid_port(port)):
+        raise InvalidStrategy(f"{key!r} must be a host name or IPv4 address, optionally with :port.")
+    return text.lower()
+
+
+def _clean_https_origin(key: str, text: str) -> str:
+    problem = InvalidStrategy(
+        f"{key!r} must be an https:// address without a path, e.g. https://rdapi.example.com."
+    )
+    if re.search(r"\s", text):
+        raise problem
+    parts = urlsplit(text)
+    try:
+        port = parts.port
+    except ValueError:
+        raise problem from None
+    host = parts.hostname or ""
+    if (
+        parts.scheme != "https"
+        or not _HOST_RE.match(host)
+        or parts.username is not None
+        or parts.password is not None
+        or parts.query
+        or parts.fragment
+        or parts.path not in ("", "/")
+    ):
+        raise problem
+    if port == _STRIPPED_API_PORT:
+        raise InvalidStrategy(
+            f"{key!r} must not use port {_STRIPPED_API_PORT}: the client removes it from https addresses."
+        )
+    return f"https://{host}" + (f":{port}" if port is not None else "")
 
 
 def validate_options(raw: object) -> dict[str, str]:
@@ -251,6 +357,12 @@ def validate_options(raw: object) -> dict[str, str]:
                     f"{key!r} must be a whole number from {spec.minimum} to {spec.maximum}."
                 )
             text = str(int(text))
+        if spec.kind == "host":
+            text = _clean_host(key, text)
+        elif spec.kind == "url":
+            text = _clean_https_origin(key, text)
+        elif spec.kind == "key" and not _KEY_RE.match(text):
+            raise InvalidStrategy(f"{key!r} does not look like a RustDesk server key.")
         options[key] = text
     return options
 
@@ -383,12 +495,19 @@ def heartbeat_fragment(db: Session, device: Device, client_modified_at: int | No
     if strategy is None:
         if have == 0:
             return {}
-        # It once had one: reset everything we may have pushed.
-        return {"modified_at": 0, "strategy": {"config_options": {key: "" for key in CATALOG}}}
+        # It once had one: reset what we may have pushed (not the sticky options).
+        return {"modified_at": 0, "strategy": {"config_options": _config_options({})}}
     if strategy.modified_at == have:
         return {}
-    options = strategy.options
     return {
         "modified_at": strategy.modified_at,
-        "strategy": {"config_options": {key: options.get(key, "") for key in CATALOG}},
+        "strategy": {"config_options": _config_options(strategy.options)},
+    }
+
+
+def _config_options(options: dict[str, str]) -> dict[str, str]:
+    """Every catalog key, unset ones empty (the client resets them) - except the
+    sticky ones, which are only sent while they have a value."""
+    return {
+        spec.key: options.get(spec.key, "") for spec in OPTIONS if not spec.sticky or options.get(spec.key)
     }

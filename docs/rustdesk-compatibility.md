@@ -669,10 +669,22 @@ Behaviour here:
   id gets a bare `{"data": "OK"}` and changes nothing. (Pre-existing weakness this does not close: an
   unauthenticated `/api/sysinfo` can still re-bind a device's `uuid`.)
 - A strategy is sent only when its `modified_at` differs from the client's. `modified_at` is the strategy's last
-  change in Unix microseconds. Every push carries **all** option keys the server knows, unset ones as `""`, so
-  removing an option, or unassigning the strategy (sent as `modified_at: 0` with every key empty), resets the
-  client rather than leaving the last value behind. The list of pushable options (`services/strategies.py`) is a
-  deliberate allow-list of permission/behaviour switches: no server addresses, keys, passwords or IP whitelists.
+  change in Unix microseconds. Every push carries **all** non-sticky option keys the server knows, unset ones as
+  `""`, so removing an option, or unassigning the strategy (sent as `modified_at: 0` with every key empty), resets
+  the client rather than leaving the last value behind. The list of pushable options (`services/strategies.py`) is a
+  deliberate allow-list of permission/behaviour switches and the "Servers" options below; no passwords, IP
+  whitelists or proxy settings.
+- **Server options (added 2026-09-21; source-derived, not observed on a live client).** `api-server`,
+  `custom-rendezvous-server`, `relay-server`, `key` and `allow-websocket` are all on `KEYS_SETTINGS`, so the
+  heartbeat can move a client to other servers. They are *sticky*: sent only while set, never as `""`, because
+  `handle_config_options` deletes an option whose value is empty (unless the client has a built-in default for
+  it), which would wipe the addresses and key a client was installed with; the price is that removing one from a
+  strategy does not revert clients that already applied it. Validation: `api-server` is an `https://` origin
+  without path, credentials or query, and not port 21114 (the client removes `:21114` from https API addresses,
+  see above); ID/relay servers are host names or IPv4 addresses with an optional `:port`; the key matches
+  `[A-Za-z0-9+/=_-]{1,128}`. The push changes the channel it travels on: once `api-server` is applied, the next
+  heartbeat goes to the new address, so a wrong value cannot be corrected from here. Assign such a strategy to a
+  single test device first.
   Values follow the client's `option2bool`: `enable-*` options are on unless `N`, `allow-*` options off unless
   `Y`; `access-mode` is `custom|full|view`, `approve-mode` `password|click`, `verification-method`
   `use-temporary-password|use-permanent-password`, `temporary-password-length` `6|8|10`.
@@ -688,8 +700,7 @@ Behaviour here:
   `allow-numeric-one-time-password`, `temporary-password-length`, `allow-scope-violation-close` and
   `allow-scope-violation-alarm` (see the Alarms log), `keep-awake-during-incoming-sessions`, `enable-abr`,
   `enable-hwcodec`, `enable-directx-capture`. Not observed on a live client. Deliberately not offered although on
-  `KEYS_SETTINGS`: server addresses and key (`api-server`, `custom-rendezvous-server`, `relay-server`, `key`),
-  `whitelist`/`id-whitelist`, `direct-server`/`direct-access-port`, proxy settings, the `preset-*` keys,
+  `KEYS_SETTINGS`: `whitelist`/`id-whitelist`, `direct-server`/`direct-access-port`, proxy settings, the `preset-*` keys,
   `allow-insecure-tls-fallback` (weakens TLS) and network tuning (`disable-udp`, `allow-kcp-congestion-control`,
   ...). `allow-ask-for-note` (below) is a `LocalConfig` key and cannot be pushed either.
 

@@ -8,6 +8,10 @@ function optionControl(spec, value) {
     return `<input id="${escapeHtml(id)}" data-key="${escapeHtml(spec.key)}" type="number" min="${Number(spec.minimum)}" max="${Number(spec.maximum)}"
       value="${escapeHtml(current)}" placeholder="not set" class="opt-control border border-slate-300 rounded px-2 py-1 text-sm w-28" />`;
   }
+  if (spec.kind === "host" || spec.kind === "url" || spec.kind === "key") {
+    return `<input id="${escapeHtml(id)}" data-key="${escapeHtml(spec.key)}" type="text" maxlength="256" spellcheck="false" autocomplete="off"
+      value="${escapeHtml(current)}" placeholder="not set" class="opt-control border border-slate-300 rounded px-2 py-1 text-sm w-64 font-mono" />`;
+  }
   const choices = spec.choices.map(
     (c) => `<option value="${escapeHtml(c)}" ${c === current ? "selected" : ""}>${escapeHtml(c)}</option>`
   );
@@ -48,7 +52,8 @@ function renderOptions(options) {
 function collectOptions() {
   const options = {};
   document.querySelectorAll(".opt-control").forEach((el) => {
-    if (el.value !== "") options[el.dataset.key] = el.value;
+    const value = el.value.trim();
+    if (value !== "") options[el.dataset.key] = value;
   });
   return options;
 }

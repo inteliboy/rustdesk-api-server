@@ -369,9 +369,16 @@ permissions incoming sessions get (keyboard, clipboard, file transfer, ...), how
 client behaviours. Assign it to a device (its page) or to a group (the Groups page); a device's own strategy wins
 over its group's. The client applies it with its next heartbeat. Settings a strategy leaves unset are reset to
 the client's default, so removing a setting, or unassigning the strategy, takes effect too. Only the switches
-listed on the Strategies page can be pushed - never server addresses, keys, passwords or IP whitelists. They
+listed on the Strategies page can be pushed - never passwords, IP whitelists or proxy settings. They
 are the options the client keeps in its own `Config` store; settings it reads from its local or per-session
 config (for example update checks or outgoing-session recording) cannot be reached this way and are not offered.
+
+The **Servers** section (API server, ID server, relay server, key, WebSocket) moves clients to other servers, for
+example after a host name change. Those settings are validated strictly (the API server must be a plain `https://`
+address, not port 21114, which the client removes) and are *sticky*: they are pushed only while set, and removing
+them later leaves clients as they are, because resetting them would erase the addresses and key a client was
+installed with. **Try it on one device first** - assign the strategy to that device alone - because a client
+that can no longer reach this server cannot be corrected from here. The key must match the ID server's public key.
 
 **`rustdesk --assign`.** Run on a device as administrator/root,
 `rustdesk --assign --token <token> --user_name alice --address_book_name "My address book" --address_book_tag office`

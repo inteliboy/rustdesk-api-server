@@ -64,6 +64,7 @@ def test_a_registered_account_waits_for_approval_and_is_never_an_admin(admin_cli
     assert c.get("/api/v1/auth/options").json() == {
         "registration_enabled": True,
         "registration_requires_approval": True,
+        "oidc_name": None,
     }
     r = _register(c, is_admin=True)
     assert (r.status_code, r.json()) == (201, {"status": "pending_approval"})

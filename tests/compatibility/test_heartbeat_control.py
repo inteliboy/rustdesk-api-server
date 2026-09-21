@@ -209,7 +209,8 @@ def test_an_assigned_strategy_is_pushed_once_and_carries_every_catalog_key(admin
     pushed = _beat(admin_client, modified_at=0)
     assert pushed["modified_at"] == strategy["modified_at"] > 0
     options = pushed["strategy"]["config_options"]
-    assert set(options) == set(CATALOG)
+    # Sticky (server) options are left out unless set: an empty value would erase them.
+    assert set(options) == {key for key, spec in CATALOG.items() if not spec.sticky}
     assert options["enable-file-transfer"] == "N" and options["enable-clipboard"] == "N"
     assert options["enable-audio"] == ""  # unset -> the client resets it to its default
 
@@ -253,7 +254,9 @@ def test_unassigning_resets_what_was_pushed_and_then_stays_quiet(admin_client):
     _assign(admin_client, device, None)
     reset = _beat(admin_client, modified_at=have)
     assert reset["modified_at"] == 0
-    assert reset["strategy"]["config_options"] == {key: "" for key in CATALOG}
+    assert reset["strategy"]["config_options"] == {
+        key: "" for key, spec in CATALOG.items() if not spec.sticky
+    }
     assert _beat(admin_client, modified_at=0) == {"data": "OK"}
 
 
@@ -331,10 +334,9 @@ def test_only_catalog_options_with_valid_values_are_accepted(admin_client):
         return admin_client.post("/api/v1/strategies", json={"name": "s", "options": options})
 
     for options in (
-        {"custom-rendezvous-server": "evil.example"},  # not a strategy option
-        {"api-server": "http://evil.example"},
-        {"key": "x"},
-        {"whitelist": "0.0.0.0"},
+        {"whitelist": "0.0.0.0"},  # not a strategy option
+        {"proxy-url": "http://evil.example:3128"},
+        {"api-server": "http://evil.example"},  # the API server must be https
         {"enable-file-transfer": "yes"},
         {"approve-mode": "always"},
         {"auto-disconnect-timeout": "0"},
@@ -367,7 +369,10 @@ def test_the_option_catalog_is_listed(admin_client):
     assert by_key["enable-file-transfer"]["choices"] == ["Y", "N"]
     assert by_key["approve-mode"]["choices"] == ["password", "click"]
     assert by_key["auto-disconnect-timeout"]["kind"] == "int"
-    assert not {"custom-rendezvous-server", "api-server", "key", "relay-server", "whitelist"} & set(by_key)
+    assert not {"whitelist", "id-whitelist", "proxy-url", "direct-server"} & set(by_key)
+    servers = {"custom-rendezvous-server", "relay-server", "api-server", "key", "allow-websocket"}
+    assert servers <= set(by_key) and all(by_key[k]["sticky"] for k in servers)
+    assert not by_key["enable-audio"]["sticky"]
 
 
 def test_strategy_usage_counts_and_assignment_errors(admin_client):
@@ -431,3 +436,101 @@ def test_options_a_strategy_cannot_reach_are_not_offered_and_old_ones_are_droppe
     r = admin_client.post("/api/v1/strategies", json={"name": "Old", "options": old})
     assert r.status_code == 201, r.text
     assert r.json()["options"] == {"enable-audio": "N"}
+
+
+MOVE = {
+    "api-server": "https://rdapi.example.com",
+    "custom-rendezvous-server": "rdid.example.com",
+    "relay-server": "rdrelay.example.com:21117",
+    "key": "AbCdEfGhIjKlMnOpQrStUvWxYz0123456789+/AbCde=",
+    "allow-websocket": "Y",
+}
+
+
+def test_server_options_are_pushed_to_the_device_they_are_assigned_to(admin_client):
+    device = _register(admin_client)
+    strategy = _strategy(admin_client, "Move", {**MOVE, "enable-audio": "N"})
+    assert strategy["options"] == {**MOVE, "enable-audio": "N"}
+    _assign(admin_client, device, strategy["id"])
+
+    options = _beat(admin_client, modified_at=0)["strategy"]["config_options"]
+    for key, value in MOVE.items():
+        assert options[key] == value, key
+    assert options["enable-audio"] == "N"
+
+
+def test_server_options_are_never_pushed_empty(admin_client):
+    """An empty value makes the client delete the option, which would wipe the
+    server addresses and key a client was installed with."""
+    from rustdesk_api.services.strategies import CATALOG
+
+    sticky = {key for key, spec in CATALOG.items() if spec.sticky}
+    assert sticky >= set(MOVE)
+
+    device = _register(admin_client)
+
+    # A strategy without server options leaves them out of the push.
+    plain = _strategy(admin_client, "Plain", {"enable-audio": "N"})
+    _assign(admin_client, device, plain["id"])
+    first = _beat(admin_client, modified_at=0)
+    assert not sticky & set(first["strategy"]["config_options"])
+
+    # Removing the server options from a strategy that had them does not send empty ones.
+    move = _strategy(admin_client, "Move", MOVE)
+    _assign(admin_client, device, move["id"])
+    pushed = _beat(admin_client, modified_at=first["modified_at"])
+    assert sticky <= set(pushed["strategy"]["config_options"])
+    r = admin_client.put(f"/api/v1/strategies/{move['id']}", json={"name": "Move", "options": {}})
+    assert r.status_code == 200
+    edited = _beat(admin_client, modified_at=pushed["modified_at"])
+    assert edited["modified_at"] > pushed["modified_at"]
+    assert not sticky & set(edited["strategy"]["config_options"])
+
+    # Neither does unassigning.
+    _assign(admin_client, device, None)
+    reset = _beat(admin_client, modified_at=edited["modified_at"])
+    assert reset["modified_at"] == 0
+    assert not sticky & set(reset["strategy"]["config_options"])
+
+
+def test_server_option_values_are_validated_and_normalised(admin_client):
+    def create(options):
+        return admin_client.post("/api/v1/strategies", json={"name": "s", "options": options})
+
+    for options in (
+        {"api-server": "http://rdapi.example.com"},  # not https
+        {"api-server": "https://rdapi.example.com/path"},
+        {"api-server": "https://user:pw@rdapi.example.com"},
+        {"api-server": "https://rdapi.example.com?x=1"},
+        {"api-server": "https://rdapi.example.com:21114"},  # the client strips this port
+        {"api-server": "https://rdapi.example.com:99999"},
+        {"api-server": "ftp://rdapi.example.com"},
+        {"api-server": "https://exa mple.com"},
+        {"custom-rendezvous-server": "https://rdid.example.com"},  # a host, not a URL
+        {"custom-rendezvous-server": "rdid.example.com:0"},
+        {"relay-server": "rdrelay.example.com:abc"},
+        {"relay-server": "a b"},
+        {"relay-server": "-bad.example"},
+        {"key": "has spaces"},
+        {"key": "x" * 200},
+        {"allow-websocket": "true"},
+    ):
+        r = create(options)
+        assert r.status_code == 422, (options, r.text)
+        assert r.json()["error"]["code"] == "INVALID_STRATEGY"
+
+    r = create(
+        {
+            "api-server": "https://RDAPI.Example.com/",
+            "custom-rendezvous-server": "RDID.example.com:21116",
+            "relay-server": "192.168.1.5",
+            "allow-websocket": "N",
+        }
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["options"] == {
+        "api-server": "https://rdapi.example.com",
+        "custom-rendezvous-server": "rdid.example.com:21116",
+        "relay-server": "192.168.1.5",
+        "allow-websocket": "N",
+    }
