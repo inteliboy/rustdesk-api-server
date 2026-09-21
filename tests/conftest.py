@@ -4,12 +4,23 @@ import uuid
 from collections.abc import Iterator
 
 import pytest
+from argon2 import PasswordHasher
 from fastapi.testclient import TestClient
 
 from rustdesk_api.app import create_app
 from rustdesk_api.config import Settings, clear_settings_cache, get_settings
 from rustdesk_api.db.database import init_engine
 from rustdesk_api.db.migrations.runner import run_migrations
+from rustdesk_api.security import passwords
+
+
+@pytest.fixture(autouse=True)
+def cheap_password_hashing(monkeypatch) -> None:
+    """Nearly every test creates an account and signs in, and Argon2's production
+    settings (64 MiB, 3 passes) make that the slowest part of a test on a small CI
+    runner. Same algorithm, minimal cost; a hash carries its own parameters, so
+    verifying is unaffected. tests/unit/test_passwords.py still checks the format."""
+    monkeypatch.setattr(passwords, "_hasher", PasswordHasher(time_cost=1, memory_cost=8, parallelism=1))
 
 
 @pytest.fixture()

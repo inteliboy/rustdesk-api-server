@@ -876,7 +876,10 @@ is skipped when `npm install` has not been run). Theme colors live in `frontend/
 pytest
 ```
 
-Tests use temporary SQLite databases and do not depend on a developer's local database.
+Tests use temporary SQLite databases and do not depend on a developer's local database. Each test has its own
+database and uses no fixed port, so they can run in parallel: `pytest -n auto` (this is what CI does) uses every
+core; plain `pytest` runs them one after another. The tests hash passwords with Argon2 at minimal cost to keep
+them fast; the server itself always uses the normal settings.
 
 If Node.js is installed, `tests/web/pages_smoke.js` (run by pytest) executes the WebUI's page scripts against a
 stub DOM: it catches a script that reads an element its template lacks, throws while rendering, or sends the
