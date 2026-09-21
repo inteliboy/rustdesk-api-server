@@ -191,7 +191,11 @@ function timelineText(e) {
   const ip = detail.ip ? ` from ${ipLabel(detail.ip)}` : "";
   switch (e.kind) {
     case "registered":
-      return `Device registered${ip}`;
+      return detail.pending ? `Device registered${ip} - waiting for approval` : `Device registered${ip}`;
+    case "approved":
+      return "Approved by an administrator";
+    case "rejected":
+      return "Rejected by an administrator";
     case "online":
       return detail.offline_since
         ? `Came back online (silent since ${escapeHtml(fmtDate(detail.offline_since))})`
@@ -270,6 +274,23 @@ function uuidBanner(d, canManage) {
   </div>`;
 }
 
+// A new device is recorded but not used until an administrator says so (NEW_DEVICE_POLICY).
+function approvalBanner(d) {
+  if (d.approval === "approved" || !(currentUser && currentUser.is_admin)) return "";
+  const rejected = d.approval === "rejected";
+  const text = rejected
+    ? "You rejected this device. Nothing it sends is used; approve it to manage it after all, or delete it."
+    : "This device is new and waiting for your approval. It is given no policy and cannot be opened in the browser until you approve it. Check that the ID, host name and address are ones you recognise.";
+  return `<div class="card p-4 border-amber-300 dark:border-amber-700">
+    <p class="text-sm font-medium">${rejected ? "This device was rejected." : "This device is waiting for approval."}</p>
+    <p class="text-sm text-slate-500 mt-1">${text}</p>
+    <div class="flex gap-3 mt-3">
+      <button id="approve-btn" class="px-3 py-1.5 rounded-md bg-brand-600 text-white text-sm font-medium hover:bg-brand-700">Approve</button>
+      ${rejected ? "" : `<button id="reject-btn" class="px-3 py-1.5 rounded-md border border-slate-300 text-sm font-medium hover:bg-slate-100">Reject</button>`}
+    </div>
+  </div>`;
+}
+
 async function render() {
   const [d, groups, tags, strategies] = await Promise.all([
     api(`/api/v1/devices/${deviceId}`),
@@ -278,7 +299,11 @@ async function render() {
     currentUser && currentUser.is_admin ? api("/api/v1/strategies") : Promise.resolve([]),
   ]);
   const canManage = currentUser && (currentUser.is_admin || d.owner_id === currentUser.id);
-  const statusBadge = d.online
+  const statusBadge = d.approval === "pending"
+    ? `<span class="badge" style="background:#d9770622;color:#d97706"><span class="badge-dot" style="background:#d97706"></span>Pending</span>`
+    : d.approval === "rejected"
+    ? `<span class="badge badge-offline"><span class="badge-dot"></span>Rejected</span>`
+    : d.online
     ? `<span class="badge badge-online"><span class="badge-dot"></span>Online</span>`
     : `<span class="badge badge-offline"><span class="badge-dot"></span>Offline</span>`;
 
@@ -316,9 +341,10 @@ async function render() {
         ${statusBadge}
       </span>
     </div>
+    ${approvalBanner(d)}
     ${uuidBanner(d, canManage)}
     <div class="card p-4">
-      ${row("RustDesk ID", connectLink(d.rustdesk_id, d.id))}
+      ${row("RustDesk ID", connectLink(d.rustdesk_id, d.approval === "approved" ? d.id : null))}
       ${row("Alias", `<input id="alias-input" value="${escapeHtml(d.alias)}" class="border border-slate-300 rounded px-2 py-1 text-sm" />`)}
       ${row("Hostname", `<span class="whitespace-nowrap">${escapeHtml(d.hostname ?? "-")}</span>`)}
       ${row("Platform", escapeHtml(d.platform ? fmtPlatform(d.platform) : "-"))}
@@ -379,6 +405,20 @@ async function render() {
       try {
         await api(`/api/v1/devices/${deviceId}/uuid/${verb}`, { method: "POST" });
         toast(verb === "accept" ? "The new install was accepted." : "The new install was rejected.", "success");
+        render();
+      } catch (err) {
+        toast(err.message, "error");
+      }
+    });
+  }
+
+  for (const [id, verb] of [["approve-btn", "approve"], ["reject-btn", "reject"]]) {
+    const button = document.getElementById(id);
+    if (!button) continue;
+    button.addEventListener("click", async () => {
+      try {
+        await api(`/api/v1/devices/${deviceId}/${verb}`, { method: "POST" });
+        toast(verb === "approve" ? "The device was approved." : "The device was rejected.", "success");
         render();
       } catch (err) {
         toast(err.message, "error");

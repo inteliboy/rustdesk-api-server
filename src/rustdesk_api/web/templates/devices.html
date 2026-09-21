@@ -11,6 +11,8 @@
         <option value="online">Online</option>
         <option value="offline">Offline</option>
         <option value="archived">Archived</option>
+        <option value="pending" data-admin-only hidden>Waiting for approval</option>
+        <option value="rejected" data-admin-only hidden>Rejected</option>
       </select>
       <select id="group-filter" aria-label="Group" class="rounded-md border border-slate-300 px-2 py-2 text-sm">
         <option value="">All groups</option>
@@ -64,6 +66,13 @@
       <button id="import-run" class="px-3 py-1.5 rounded-md bg-brand-600 text-white text-sm font-medium hover:bg-brand-700">Import</button>
     </div>
     <div id="import-result" class="mt-3 text-sm"></div>
+  </div>
+
+  <div id="pending-banner" class="card p-3 mb-4 hidden text-sm" role="status">
+    <div class="flex items-center justify-between gap-3 flex-wrap">
+      <span id="pending-count" class="font-medium"></span>
+      <button id="pending-review" class="px-3 py-1.5 rounded-md bg-brand-600 text-white font-medium hover:bg-brand-700">Review</button>
+    </div>
   </div>
 
   <div id="bulk-bar" class="card p-3 mb-4 hidden text-sm">

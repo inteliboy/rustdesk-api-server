@@ -90,6 +90,9 @@ def run_fleet_checks_once(settings: Settings, *, archive: bool) -> None:
             count = fleet.archive_stale(db, settings)
             if count:
                 logger.info("archived %d device(s) unseen for %d day(s)", count, settings.device_stale_days)
+            dropped = fleet.drop_stale_pending(db, settings)
+            if dropped:
+                logger.info("dropped %d device(s) that waited for approval and went silent", dropped)
 
 
 async def fleet_loop(settings: Settings) -> None:

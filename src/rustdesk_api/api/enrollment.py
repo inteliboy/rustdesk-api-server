@@ -83,15 +83,33 @@ def assign_device(
     device = device_service.get_by_rustdesk_id(db, rustdesk_id)
     if device is not None and device.uuid and uuid and device.uuid != uuid:
         return _text(409, "That id is registered to a different machine.")
+    if device is not None and device.approval == device_service.REJECTED:
+        return _text(409, "That device was rejected by an administrator.")
+    vouched = device_service.vouches(actor)
     if device is None:
         # The client normally has uploaded its system info by now, but the
         # command may run first (an installer script): register it, the
         # sysinfo upload fills in the rest.
-        device = device_service.register_or_update(
-            db, rustdesk_id=rustdesk_id, uuid=uuid, ip_address=client_ip
-        )
-    elif device.uuid is None and uuid:
-        device.uuid = uuid
+        try:
+            device = device_service.register_or_update(
+                db,
+                rustdesk_id=rustdesk_id,
+                uuid=uuid,
+                ip_address=client_ip,
+                require_approval=settings.new_device_policy == "approve" and not vouched,
+                vouched=vouched,
+                pending_limit=settings.new_device_pending_limit,
+            )
+        except device_service.PendingDevicesFull:
+            return _text(
+                503, "Too many devices are waiting for approval. Ask an administrator to decide on them."
+            )
+    else:
+        if device.uuid is None and uuid:
+            device.uuid = uuid
+        if vouched and device.approval == device_service.PENDING:
+            # An administrator assigning a device is vouching for it.
+            device_service.approve(db, device, actor_id=actor.id, via="assignment")
 
     try:
         enrollment_service.apply(

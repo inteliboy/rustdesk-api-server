@@ -72,6 +72,12 @@ function attentionItems(stats) {
   const items = [];
   const newer = updateItem(update);
   if (newer) items.push(newer);
+  if (stats.pending_devices > 0) {
+    items.push({
+      href: "/devices?status=pending",
+      text: stats.pending_devices === 1 ? "1 new device is waiting for your approval" : `${stats.pending_devices} new devices are waiting for your approval`,
+    });
+  }
   if (stats.new_devices_24h > 0) {
     items.push({
       href: "/devices?sort=created",

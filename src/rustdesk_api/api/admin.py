@@ -20,6 +20,7 @@ from rustdesk_api.models.device import Device
 from rustdesk_api.models.group import Group
 from rustdesk_api.models.tag import Tag
 from rustdesk_api.models.user import User
+from rustdesk_api.services import devices as device_service
 from rustdesk_api.services import fleet as fleet_service
 from rustdesk_api.services import server_metrics
 from rustdesk_api.services import strategies as strategy_service
@@ -33,7 +34,7 @@ def dashboard_stats(
     _admin: User = Depends(get_current_admin),
     settings: Settings = Depends(get_settings_dep),
 ) -> DashboardStats:
-    live = Device.archived_at.is_(None)
+    live = Device.archived_at.is_(None) & (Device.approval == device_service.APPROVED)
     total_devices = db.execute(select(func.count(Device.id)).where(live)).scalar_one()
     total_users = db.execute(select(func.count(User.id))).scalar_one()
     total_groups = db.execute(select(func.count(Group.id))).scalar_one()
@@ -52,7 +53,9 @@ def dashboard_stats(
         )
     ).scalar_one()
     archived_devices = db.execute(
-        select(func.count(Device.id)).where(Device.archived_at.is_not(None))
+        select(func.count(Device.id)).where(
+            Device.archived_at.is_not(None), Device.approval == device_service.APPROVED
+        )
     ).scalar_one()
     # Nothing of its own, nothing through its group (or no group), and no default.
     has_default = strategy_service.get_default(db) is not None
@@ -78,6 +81,7 @@ def dashboard_stats(
         outdated_devices=fleet_service.count_outdated(db, settings),
         archived_devices=archived_devices,
         devices_without_strategy=without_strategy,
+        pending_devices=device_service.count_pending(db),
     )
 
 

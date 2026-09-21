@@ -213,3 +213,42 @@ Message the remote user… || Napisz do zdalnego użytkownika… || Écrire à l
 Send keystrokes || Wyślij naciśnięcia klawiszy || Envoyer les frappes || Tastenanschläge senden || Enviar pulsaciones
 Rename || Zmień nazwę || Renommer || Umbenennen || Renombrar
 New folder || Nowy folder || Nouveau dossier || Neuer Ordner || Nueva carpeta
+
+# ---- approval of new devices
+Waiting for approval || Czeka na zatwierdzenie || En attente d'approbation || Wartet auf Freigabe || Pendiente de aprobación
+Pending || Oczekuje || En attente || Ausstehend || Pendiente
+Rejected || Odrzucone || Rejeté || Abgelehnt || Rechazado
+Approve || Zatwierdź || Approuver || Freigeben || Aprobar
+An administrator turned this device down; nothing it sends is used || Administrator odrzucił to urządzenie; nic, co wysyła, nie jest używane || Un administrateur a refusé cet appareil ; rien de ce qu'il envoie n'est utilisé || Ein Administrator hat dieses Gerät abgelehnt; nichts, was es sendet, wird verwendet || Un administrador rechazó este dispositivo; nada de lo que envía se utiliza
+Waiting for an administrator to approve it || Czeka, aż administrator je zatwierdzi || Attend l'approbation d'un administrateur || Wartet auf die Freigabe durch einen Administrator || Espera la aprobación de un administrador
+{1} new device(s) are waiting for your approval. || Nowe urządzenia czekające na zatwierdzenie: {1}. || {1} nouvel(aux) appareil(s) attend(ent) votre approbation. || {1} neue(s) Gerät(e) warten auf Ihre Freigabe. || {1} dispositivo(s) nuevo(s) esperan su aprobación.
+1 new device is waiting for your approval || 1 nowe urządzenie czeka na zatwierdzenie || 1 nouvel appareil attend votre approbation || 1 neues Gerät wartet auf Ihre Freigabe || 1 dispositivo nuevo espera su aprobación
+{1} new devices are waiting for your approval || Nowe urządzenia czekające na zatwierdzenie: {1} || {1} nouveaux appareils attendent votre approbation || {1} neue Geräte warten auf Ihre Freigabe || {1} dispositivos nuevos esperan su aprobación
+This device was rejected. || To urządzenie zostało odrzucone. || Cet appareil a été rejeté. || Dieses Gerät wurde abgelehnt. || Este dispositivo fue rechazado.
+This device is waiting for approval. || To urządzenie czeka na zatwierdzenie. || Cet appareil attend son approbation. || Dieses Gerät wartet auf Freigabe. || Este dispositivo espera su aprobación.
+You rejected this device. Nothing it sends is used; approve it to manage it after all, or delete it. || Odrzucono to urządzenie. Nic, co wysyła, nie jest używane; zatwierdź je, aby jednak nim zarządzać, albo usuń. || Vous avez rejeté cet appareil. Rien de ce qu'il envoie n'est utilisé ; approuvez-le pour le gérer malgré tout, ou supprimez-le. || Sie haben dieses Gerät abgelehnt. Nichts, was es sendet, wird verwendet; geben Sie es frei, um es doch zu verwalten, oder löschen Sie es. || Rechazó este dispositivo. Nada de lo que envía se utiliza; apruébelo para gestionarlo de todos modos, o elimínelo.
+This device is new and waiting for your approval. It is given no policy and cannot be opened in the browser until you approve it. Check that the ID, host name and address are ones you recognise. || To urządzenie jest nowe i czeka na Twoje zatwierdzenie. Nie dostaje żadnej polityki i nie można go otworzyć w przeglądarce, dopóki go nie zatwierdzisz. Sprawdź, czy ID, nazwa hosta i adres są Ci znane. || Cet appareil est nouveau et attend votre approbation. Il ne reçoit aucune stratégie et ne peut pas être ouvert dans le navigateur tant que vous ne l'avez pas approuvé. Vérifiez que l'ID, le nom d'hôte et l'adresse vous sont connus. || Dieses Gerät ist neu und wartet auf Ihre Freigabe. Es erhält keine Richtlinie und lässt sich im Browser nicht öffnen, bis Sie es freigeben. Prüfen Sie, ob ID, Hostname und Adresse Ihnen bekannt sind. || Este dispositivo es nuevo y espera su aprobación. No recibe ninguna política y no se puede abrir en el navegador hasta que lo apruebe. Compruebe que el ID, el nombre de host y la dirección le resulten conocidos.
+The device was approved. || Urządzenie zostało zatwierdzone. || L'appareil a été approuvé. || Das Gerät wurde freigegeben. || El dispositivo fue aprobado.
+The device was rejected. || Urządzenie zostało odrzucone. || L'appareil a été rejeté. || Das Gerät wurde abgelehnt. || El dispositivo fue rechazado.
+Approved by an administrator || Zatwierdzone przez administratora || Approuvé par un administrateur || Von einem Administrator freigegeben || Aprobado por un administrador
+Rejected by an administrator || Odrzucone przez administratora || Rejeté par un administrateur || Von einem Administrator abgelehnt || Rechazado por un administrador
+
+# ---- web client: the bar's stream numbers and the chat window
+Codec || Kodek || Codec || Codec || Códec
+FPS || Kl./s || Images/s || Bilder/s || FPS
+Dropped || Pominięte || Perdues || Verworfen || Perdidos
+Client || Klient || Client || Client || Cliente
+Time connected || Czas połączenia || Durée de connexion || Verbindungsdauer || Tiempo conectado
+RustDesk version on the remote device || Wersja RustDesk na zdalnym urządzeniu || Version de RustDesk sur l'appareil distant || RustDesk-Version auf dem entfernten Gerät || Versión de RustDesk en el dispositivo remoto
+Hardware decoding || Dekodowanie sprzętowe || Décodage matériel || Hardware-Dekodierung || Decodificación por hardware
+Software decoding || Dekodowanie programowe || Décodage logiciel || Software-Dekodierung || Decodificación por software
+Minimize || Zminimalizuj || Réduire || Minimieren || Minimizar
+Restore || Przywróć || Restaurer || Wiederherstellen || Restaurar
+Minimize chat || Zminimalizuj czat || Réduire le chat || Chat minimieren || Minimizar el chat
+Restore chat || Przywróć czat || Restaurer le chat || Chat wiederherstellen || Restaurar el chat
+Close chat || Zamknij czat || Fermer le chat || Chat schließen || Cerrar el chat
+Click to minimize or restore || Kliknij, aby zminimalizować lub przywrócić || Cliquez pour réduire ou restaurer || Klicken zum Minimieren oder Wiederherstellen || Haga clic para minimizar o restaurar
+Latency || Opóźnienie || Latence || Latenz || Latencia
+Decode || Dekodowanie || Décodage || Dekodierung || Decodificación
+Round trip to the remote device, as it measures it || Czas podróży do zdalnego urządzenia, mierzony przez nie samo || Aller-retour vers l'appareil distant, tel qu'il le mesure || Umlaufzeit zum entfernten Gerät, von diesem gemessen || Ida y vuelta al dispositivo remoto, según lo mide él
+Time to decode a frame here || Czas dekodowania klatki tutaj || Temps de décodage d'une image ici || Dauer der Dekodierung eines Bildes hier || Tiempo para decodificar un fotograma aquí

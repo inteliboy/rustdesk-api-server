@@ -270,19 +270,28 @@ const listFixtures = (items) => ({
     assert.deepStrictEqual(JSON.parse(env.posted("/api/v1/devices/bulk")[0].body), { ids: [7], action: "set_owner", owner_id: null });
   });
 
+  await test("devices: an administrator is told about devices waiting for approval; a user is not asked", async () => {
+    const env = await new Env("devices.html", "devices.js", { user: admin, fixtures: listFixtures([device()]) }).run();
+    assert.ok(env.requests.some((r) => r.url === "/api/v1/devices?status=pending&page_size=1"));
+    assert.ok(!env.element("pending-banner").classList.contains("hidden"));
+    assert.match(env.element("pending-count").textContent, /1 new device/);
+    const other = await new Env("devices.html", "devices.js", { user: alice, fixtures: listFixtures([device()]) }).run();
+    assert.ok(!other.requests.some((r) => r.url.includes("status=pending")));
+  });
+
   await test("devices: filters and sort reach the list request; applying a saved view restores them", async () => {
     const env = await new Env("devices.html", "devices.js", { user: admin, fixtures: listFixtures([device()]) }).run();
     env.element("status-filter").value = "offline";
     await env.fire("status-filter", "change", { target: env.element("status-filter") });
     env.element("sort-select").value = "name";
     await env.fire("sort-select", "change", { target: env.element("sort-select") });
-    const last = env.requests.filter((r) => r.url.startsWith("/api/v1/devices?")).pop().url;
+    const last = env.requests.filter((r) => r.url.startsWith("/api/v1/devices?") && !r.url.includes("page_size=1")).pop().url;
     assert.match(last, /status=offline/);
     assert.match(last, /sort=name/);
 
     env.element("view-select").value = "5";
     await env.fire("view-select", "change", { target: env.element("view-select") });
-    const afterView = env.requests.filter((r) => r.url.startsWith("/api/v1/devices?")).pop().url;
+    const afterView = env.requests.filter((r) => r.url.startsWith("/api/v1/devices?") && !r.url.includes("page_size=1")).pop().url;
     assert.match(afterView, /status=offline/);
     assert.match(afterView, /group_id=4/);
     assert.strictEqual(env.element("status-filter").value, "offline");

@@ -10,7 +10,7 @@ export type SessionConfig = { peerId:string; serverKeyB64:string; wsIdUrl:string
 export type ResolutionInfo = { width:number; height:number };
 export type DisplayInfo = { index:number; x:number; y:number; width:number; height:number; name:string; scale:number; online:boolean; cursorEmbedded:boolean; originalResolution?:ResolutionInfo; resolutions:ResolutionInfo[] };
 // hardware: true = decoding in hardware, false = in software, absent = the browser does not say.
-export type SessionStats = { codec:string; width:number; height:number; fps:number; mbps:number; framesDropped:number; startedAtMs:number; hardware?:boolean };
+export type SessionStats = { codec:string; width:number; height:number; fps:number; mbps:number; framesDropped:number; startedAtMs:number; hardware?:boolean; decodeMs?:number };
 export type SessionState = 'connecting'|'rendezvous'|'relay'|'handshake'|'login'|'streaming'|'error'|'closed'|'needAccept';
 // File transfer: plain-object mirrors of the protobuf FileEntry/FileDirectory
 // (bigints down-converted to number — file sizes/mtimes fit in 2^53).
@@ -29,6 +29,8 @@ export type SessionEvent =                       // worker -> main
   | { t:'followDisplay'; index:number }
   | { t:'codecSupport'; codecs:Array<'auto'|'vp9'|'h264'|'h265'|'vp8'|'av1'> }
   | { t:'stats'; stats:SessionStats }
+  // The round trip to the remote device as the peer itself measures it (TestDelay.last_delay), in ms.
+  | { t:'delay'; ms:number }
   | { t:'cursor'; pngDataUrl:string; hotx:number; hoty:number } | { t:'cursorPos'; x:number; y:number }
   | { t:'clipboard'; text:string } | { t:'permission'; kind:string; enabled:boolean }
   | { t:'privacyMode'; state:number; details:string; implKey:string }

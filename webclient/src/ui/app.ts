@@ -1,13 +1,13 @@
-// RustDesk API Server web client — main-thread UI shell: top bar, command dock, side panel, connect overlay.
+// RustDesk API Server web client — main-thread UI shell: top bar, command dock, chat window, connect overlay.
 //
 // DOM id contract (the Blade view provides some; each is created here if missing, and
-// #rd-canvas / #rd-side / #rd-overlay are normalized INTO #rd-viewport on mount):
+// #rd-canvas / #rd-chat / #rd-overlay are normalized INTO #rd-viewport on mount):
 //   #rd-root       page wrapper (toolbar + viewport); gets data-state="<SessionState>"
 //   #rd-toolbar    top bar — the device, view controls and Disconnect, rendered by this module
-//   #rd-viewport   region between toolbar and page bottom; holds canvas, side panel, dock, overlay, toast
+//   #rd-viewport   region between toolbar and page bottom; holds canvas, chat window, dock, overlay, toast
 //   #rd-canvas     <canvas> transferred to the session worker (replaced with a fresh node on reconnect)
 //   #rd-dock       floating bottom command bar — input, clipboard, panels
-//   #rd-side       right slide-out with Chat / Details tabs; .rd-open = visible
+//   #rd-chat       floating chat window, bottom right, resizable; .rd-open = visible, .rd-min = title bar only
 //   #rd-ft-overlay the file manager, a window over the remote screen (file-panel.ts)
 //   #rd-overlay    connect overlay — rendered children: #rd-peer-id (row #rd-field-id, hidden when
 //                  the peer id is server-injected or in ?id=), #rd-password, #rd-connect,
@@ -90,7 +90,6 @@ export * from './common';
 
 type RdWindow = Window & { __RD__?: RdGlobalConfig };
 
-type SideTab = 'chat' | 'details';
 type InputMode = 'pointer' | 'touch';
 type FitMode = 'fit' | 'actual';
 
@@ -112,7 +111,7 @@ type Els = {
   toolbar: HTMLElement;
   viewport: HTMLElement;
   dock: HTMLElement;
-  side: HTMLElement;
+  chat: HTMLElement;
   overlay: HTMLElement;
   toast: HTMLElement;
   remoteCursor: HTMLImageElement;
@@ -133,9 +132,8 @@ type Els = {
   statDropped: HTMLElement;
   statDuration: HTMLElement;
   statVersion: HTMLElement;
-  statDevice: HTMLElement;
-  statUser: HTMLElement;
-  statPlatform: HTMLElement;
+  statLatency: HTMLElement;
+  statDecode: HTMLElement;
   fieldId: HTMLElement;
   peerIdInput: HTMLInputElement;
   passwordInput: HTMLInputElement;
@@ -243,7 +241,7 @@ export class RdApp {
   private cursorScale = 1;
   private remoteCursorHot = { x: 0, y: 0 };
   private platformAdditions = '';
-  private sideTab: SideTab = 'chat';
+  private chatMinimized = false;
   private chatLog: ChatEntry[] = [];
   private chatUnread = 0;
   private voiceCall: VoiceCaptureController | undefined;
@@ -263,7 +261,7 @@ export class RdApp {
     this.ensureDom();
     this.renderTopBar();
     this.renderDock();
-    this.renderSide();
+    this.renderChat();
     this.renderOverlay();
 
     const attr = document
@@ -369,7 +367,7 @@ export class RdApp {
       viewport.appendChild(n);
       return n;
     };
-    const side = make('rd-side');
+    const chat = make('rd-chat');
     const overlay = make('rd-overlay');
     const toast = make('rd-toast');
     let remoteCursor = document.getElementById('rd-remote-cursor') as HTMLImageElement | null;
@@ -398,7 +396,7 @@ export class RdApp {
       toolbar,
       viewport,
       dock,
-      side,
+      chat,
       overlay,
       toast,
       remoteCursor,
@@ -411,32 +409,16 @@ export class RdApp {
    * Fullscreen bar toggles (PR #45). In fullscreen both bars slide off-screen
    * and a 60px arrow at each edge slides them back on click — hover-reveal kept
    * stealing the pointer from the remote desktop's own menus and tabs. The
-   * side panel dims until hovered and gives back the rows a shown bar covers.
    * Everything resets when fullscreen ends so the windowed layout is untouched.
    */
   private setupFullscreenBars(): void {
     const rootEl = document.getElementById('rd-root');
     const dockEl = document.getElementById('rd-dock');
     const toolbarEl = document.getElementById('rd-toolbar');
-    const sideEl = document.getElementById('rd-side');
     if (!rootEl) return;
 
     let bottomOpen = false;
     let topOpen = false;
-
-    // The side panel loses the rows a shown bar covers.
-    const updateSideLayout = () => {
-      if (!sideEl) return;
-      if (document.fullscreenElement) {
-        const top = topOpen && toolbarEl ? toolbarEl.offsetHeight : 0;
-        const bottom = bottomOpen && dockEl ? dockEl.offsetHeight : 0;
-        sideEl.style.top = `${top}px`;
-        sideEl.style.height = `calc(100vh - ${top}px - ${bottom}px)`;
-      } else {
-        sideEl.style.top = '';
-        sideEl.style.height = '';
-      }
-    };
 
     const makeArrow = (id: string, glyph: string): HTMLButtonElement => {
       const btn = document.createElement('button');
@@ -454,7 +436,6 @@ export class RdApp {
       dockEl!.style.transform = bottomOpen ? 'translateY(0)' : 'translateY(100%)';
       bottomArrow.textContent = bottomOpen ? '\u25bc' : '\u25b2';
       bottomArrow.style.bottom = bottomOpen ? `${dockEl!.offsetHeight}px` : '0px';
-      updateSideLayout();
     });
 
     const topArrow = toolbarEl ? makeArrow('rd-toolbar-arrow', '\u25bc') : null;
@@ -463,7 +444,6 @@ export class RdApp {
       toolbarEl!.style.transform = topOpen ? 'translateY(0)' : 'translateY(-100%)';
       topArrow.textContent = topOpen ? '\u25b2' : '\u25bc';
       topArrow.style.top = topOpen ? `${toolbarEl!.offsetHeight}px` : '0px';
-      updateSideLayout();
     });
 
     const onFullscreenChange = () => {
@@ -481,7 +461,6 @@ export class RdApp {
         if (bottomArrow) bottomArrow.style.bottom = '';
         if (topArrow) topArrow.style.top = '';
       }
-      updateSideLayout();
     };
 
     document.addEventListener('fullscreenchange', onFullscreenChange);
@@ -491,6 +470,8 @@ export class RdApp {
   // --- top bar -----------------------------------------------------------------
 
   private renderTopBar(): void {
+    const stat = (id: string, label: string, cls = '', title = label): string =>
+      `<span class="rd-tb-stat ${cls}" title="${title}"><i>${label}</i><b id="${id}">—</b></span>`;
     this.el.toolbar.innerHTML = `
       <span class="rd-peer-chip">
         <span class="rd-status-dot" aria-hidden="true"></span>
@@ -498,6 +479,17 @@ export class RdApp {
           <span class="rd-peer" id="rd-peer-label">—</span>
           <span class="rd-peer-sub" id="rd-peer-sub"></span>
         </span>
+      </span>
+      <span class="rd-tb-stats rd-stream-only" role="group" aria-label="Stream">
+        ${stat('rd-stat-codec', 'Codec')}
+        ${stat('rd-stat-res', 'Resolution')}
+        ${stat('rd-stat-fps', 'FPS')}
+        ${stat('rd-stat-bitrate', 'Bitrate')}
+        ${stat('rd-stat-latency', 'Latency', '', 'Round trip to the remote device, as it measures it')}
+        ${stat('rd-stat-decode', 'Decode', 'rd-stat-opt', 'Time to decode a frame here')}
+        ${stat('rd-stat-dropped', 'Dropped', 'rd-stat-opt', 'Frames dropped')}
+        ${stat('rd-stat-duration', 'Time', 'rd-stat-opt', 'Time connected')}
+        ${stat('rd-stat-version', 'Client', 'rd-stat-opt', 'RustDesk version on the remote device')}
       </span>
       <span class="rd-tb-actions">
         <span class="rd-recording-indicator rd-stream-only" id="rd-recording-indicator" hidden aria-live="polite">REC <span>00:00</span></span>
@@ -515,6 +507,15 @@ export class RdApp {
     const t = this.el.toolbar;
     this.el.peerLabel = q(t, '#rd-peer-label');
     this.el.peerSub = q(t, '#rd-peer-sub');
+    this.el.statCodec = q(t, '#rd-stat-codec');
+    this.el.statRes = q(t, '#rd-stat-res');
+    this.el.statFps = q(t, '#rd-stat-fps');
+    this.el.statBitrate = q(t, '#rd-stat-bitrate');
+    this.el.statDropped = q(t, '#rd-stat-dropped');
+    this.el.statDuration = q(t, '#rd-stat-duration');
+    this.el.statVersion = q(t, '#rd-stat-version');
+    this.el.statLatency = q(t, '#rd-stat-latency');
+    this.el.statDecode = q(t, '#rd-stat-decode');
     this.el.recordingIndicator = q(t, '#rd-recording-indicator');
     this.el.btnMonitors = q(t, '#rd-btn-monitors');
     this.el.btnFit = q(t, '#rd-btn-fit');
@@ -580,7 +581,6 @@ export class RdApp {
       <div class="rd-dock-group" role="group" aria-label="Panels">
         ${db('rd-btn-files', 'folderTransfer', 'Files', 'File transfer')}
         ${db('rd-btn-chat', 'chat', 'Chat')}
-        ${db('rd-btn-session', 'info', 'Details', 'Session details')}
       </div>`;
     const d = this.el.dock;
     q<HTMLButtonElement>(d, '#rd-lat-ctrl').addEventListener('click', () =>
@@ -605,8 +605,7 @@ export class RdApp {
       void this.sendClipboard();
     });
     q<HTMLButtonElement>(d, '#rd-btn-files').addEventListener('click', () => this.toggleFiles());
-    q<HTMLButtonElement>(d, '#rd-btn-chat').addEventListener('click', () => this.openSide('chat'));
-    q<HTMLButtonElement>(d, '#rd-btn-session').addEventListener('click', () => this.openSide('details'));
+    q<HTMLButtonElement>(d, '#rd-btn-chat').addEventListener('click', () => this.toggleChat());
   }
 
   private setInputMode(mode: InputMode): void {
@@ -634,129 +633,158 @@ export class RdApp {
     if (note) this.toast(note);
   }
 
-  // --- side panel (Files / Chat / Details) ----------------------------------------
+  // --- chat window ------------------------------------------------------------------
 
-  private renderSide(): void {
-    const tab = (id: SideTab, icon: IconName, label: string): string =>
-      `<button type="button" class="rd-tab" data-tab="${id}" role="tab" aria-selected="false">` +
-      `${iconHtml(icon)}<span>${label}</span><i class="rd-badge" hidden></i></button>`;
-    const row = (label: string, id: string): string =>
-      `<div class="rd-stat-row"><dt>${label}</dt><dd id="${id}">—</dd></div>`;
-    this.el.side.innerHTML = `
-      <header class="rd-side-head">
-        <div class="rd-side-tabs" role="tablist">
-          ${tab('chat', 'chat', 'Chat')}
-          ${tab('details', 'info', 'Details')}
-        </div>
-        <button type="button" class="rd-ib" id="rd-side-close" title="Close panel" aria-label="Close panel">${iconHtml('close')}</button>
+  private static readonly CHAT_SIZE_KEY = 'rd_chat_size';
+  private static readonly CHAT_MIN = { w: 260, h: 220 };
+
+  private renderChat(): void {
+    this.el.chat.innerHTML = `
+      <span class="rd-chat-grip" data-dir="nw" aria-hidden="true"></span>
+      <span class="rd-chat-edge rd-chat-edge-n" data-dir="n" aria-hidden="true"></span>
+      <span class="rd-chat-edge rd-chat-edge-w" data-dir="w" aria-hidden="true"></span>
+      <header class="rd-chat-head" id="rd-chat-head" title="Click to minimize or restore">
+        <span class="rd-chat-title">${iconHtml('chat')}<span>Chat</span><i class="rd-badge" hidden></i></span>
+        <span class="rd-chat-tools">
+          <button type="button" class="rd-ib" id="rd-chat-min" title="Minimize" aria-label="Minimize chat">${iconHtml('chevronDown')}</button>
+          <button type="button" class="rd-ib" id="rd-chat-close" title="Close chat" aria-label="Close chat">${iconHtml('close')}</button>
+        </span>
       </header>
-      <div class="rd-side-body">
-        <section class="rd-pane rd-pane-chat" data-pane="chat" hidden>
-          <div class="rd-voice-call">
-            <button type="button" class="rd-voice-call-btn" id="rd-voice-call" aria-describedby="rd-voice-call-status">Voice call</button>
-            <span id="rd-voice-call-status" role="status" aria-live="polite">Voice calls are off</span>
-          </div>
-          <div class="rd-chat-list" id="rd-chat-list"></div>
-          <form class="rd-chat-compose" id="rd-chat-form">
-            <input type="text" id="rd-chat-input" autocomplete="off" placeholder="Message the remote user…" maxlength="2000">
-            <button type="submit" class="rd-chat-send" id="rd-chat-send" disabled>Send</button>
-          </form>
-        </section>
-        <section class="rd-pane rd-pane-details" data-pane="details" hidden>
-          <h4 class="rd-group-title">Device</h4>
-          <dl class="rd-stats-body">
-            ${row('Device', 'rd-stat-device')}
-            ${row('User', 'rd-stat-user')}
-            ${row('Platform', 'rd-stat-platform')}
-            ${row('Client version', 'rd-stat-version')}
-          </dl>
-          <h4 class="rd-group-title">Stream</h4>
-          <dl class="rd-stats-body">
-            ${row('Codec', 'rd-stat-codec')}
-            ${row('Resolution', 'rd-stat-res')}
-            ${row('FPS', 'rd-stat-fps')}
-            ${row('Bitrate', 'rd-stat-bitrate')}
-            ${row('Frames dropped', 'rd-stat-dropped')}
-            ${row('Duration', 'rd-stat-duration')}
-          </dl>
-        </section>
+      <div class="rd-chat-body">
+        <div class="rd-voice-call">
+          <button type="button" class="rd-voice-call-btn" id="rd-voice-call" aria-describedby="rd-voice-call-status">Voice call</button>
+          <span id="rd-voice-call-status" role="status" aria-live="polite">Voice calls are off</span>
+        </div>
+        <div class="rd-chat-list" id="rd-chat-list"></div>
+        <form class="rd-chat-compose" id="rd-chat-form">
+          <input type="text" id="rd-chat-input" autocomplete="off" placeholder="Message the remote user…" maxlength="2000">
+          <button type="submit" class="rd-chat-send" id="rd-chat-send" disabled>Send</button>
+        </form>
       </div>`;
 
-    const s = this.el.side;
-    this.el.chatList = q(s, '#rd-chat-list');
-    this.el.chatInput = q(s, '#rd-chat-input');
-    this.el.voiceCallButton = q(s, '#rd-voice-call');
-    this.el.voiceCallStatus = q(s, '#rd-voice-call-status');
+    const c = this.el.chat;
+    this.el.chatList = q(c, '#rd-chat-list');
+    this.el.chatInput = q(c, '#rd-chat-input');
+    this.el.voiceCallButton = q(c, '#rd-voice-call');
+    this.el.voiceCallStatus = q(c, '#rd-voice-call-status');
     this.renderVoiceCall();
-    this.el.statDevice = q(s, '#rd-stat-device');
-    this.el.statUser = q(s, '#rd-stat-user');
-    this.el.statPlatform = q(s, '#rd-stat-platform');
-    this.el.statVersion = q(s, '#rd-stat-version');
-    this.el.statCodec = q(s, '#rd-stat-codec');
-    this.el.statRes = q(s, '#rd-stat-res');
-    this.el.statFps = q(s, '#rd-stat-fps');
-    this.el.statBitrate = q(s, '#rd-stat-bitrate');
-    this.el.statDropped = q(s, '#rd-stat-dropped');
-    this.el.statDuration = q(s, '#rd-stat-duration');
+    this.applyChatSize(this.loadChatSize());
 
-    for (const b of s.querySelectorAll<HTMLButtonElement>('.rd-tab')) {
-      b.addEventListener('click', () => this.openSide(b.dataset.tab as SideTab));
+    q<HTMLElement>(c, '#rd-chat-head').addEventListener('click', (e) => {
+      if ((e.target as HTMLElement).closest('.rd-chat-tools')) return;
+      this.setChatMinimized(!this.chatMinimized);
+    });
+    q<HTMLButtonElement>(c, '#rd-chat-min').addEventListener('click', () => this.setChatMinimized(!this.chatMinimized));
+    q<HTMLButtonElement>(c, '#rd-chat-close').addEventListener('click', () => this.closeChat());
+    for (const h of c.querySelectorAll<HTMLElement>('[data-dir]')) {
+      h.addEventListener('pointerdown', (e) => this.startChatResize(e, h.dataset.dir as string));
     }
-    q<HTMLButtonElement>(s, '#rd-side-close').addEventListener('click', () => this.closeSide());
     this.el.chatInput.addEventListener('input', () => this.updateChatSend());
-    q<HTMLFormElement>(s, '#rd-chat-form').addEventListener('submit', (e) => {
+    q<HTMLFormElement>(c, '#rd-chat-form').addEventListener('submit', (e) => {
       e.preventDefault();
       this.sendChatFromInput();
     });
     this.el.voiceCallButton.addEventListener('click', () => { void this.toggleVoiceCall(); });
   }
 
-  private get sideOpen(): boolean {
-    return this.el.side.classList.contains('rd-open');
+  private get chatOpen(): boolean {
+    return this.el.chat.classList.contains('rd-open');
   }
 
-  private openSide(tabName: SideTab): void {
+  /** Open and readable: the state in which a new message needs no badge. */
+  private get chatVisible(): boolean {
+    return this.chatOpen && !this.chatMinimized;
+  }
+
+  private toggleChat(): void {
     if (this.state !== 'streaming') {
       this.toast('Connect to a device first');
       return;
     }
-    // Same tab, already open -> the dock button acts as a toggle.
-    if (this.sideOpen && this.sideTab === tabName) {
-      this.closeSide();
+    // The dock button: closed -> open, minimized -> restored, open -> closed.
+    if (this.chatVisible) {
+      this.closeChat();
       return;
     }
-    this.filePanel?.close();
-    this.sideTab = tabName;
-    this.el.side.classList.add('rd-open');
-    this.el.root.classList.add('rd-side-is-open');
-    for (const b of this.el.side.querySelectorAll<HTMLButtonElement>('.rd-tab')) {
-      const active = b.dataset.tab === tabName;
-      b.classList.toggle('rd-active', active);
-      b.setAttribute('aria-selected', String(active));
-    }
-    for (const p of this.el.side.querySelectorAll<HTMLElement>('.rd-pane')) {
-      p.hidden = p.dataset.pane !== tabName;
-    }
-    for (const [id, on] of [
-      ['rd-btn-chat', tabName === 'chat'],
-      ['rd-btn-session', tabName === 'details'],
-    ] as const) {
-      this.el.dock.querySelector(`#${id}`)?.classList.toggle('rd-on', on);
-    }
-    if (tabName === 'chat') {
+    this.el.chat.classList.add('rd-open');
+    this.setChatMinimized(false);
+  }
+
+  private setChatMinimized(min: boolean): void {
+    this.chatMinimized = min;
+    this.el.chat.classList.toggle('rd-min', min);
+    const b = q<HTMLButtonElement>(this.el.chat, '#rd-chat-min');
+    b.title = min ? 'Restore' : 'Minimize';
+    b.setAttribute('aria-label', min ? 'Restore chat' : 'Minimize chat');
+    this.el.dock.querySelector('#rd-btn-chat')?.classList.toggle('rd-on', this.chatOpen && !min);
+    if (!min) {
       this.chatUnread = 0;
       this.renderChatBadges();
       this.renderChatList();
       this.el.chatInput.focus();
+    } else if (this.chatOpen) {
+      this.canvas.focus();
     }
   }
 
-  private closeSide(): void {
-    this.el.side.classList.remove('rd-open');
-    this.el.root.classList.remove('rd-side-is-open');
-    for (const id of ['rd-btn-chat', 'rd-btn-session']) {
-      this.el.dock.querySelector(`#${id}`)?.classList.remove('rd-on');
+  private closeChat(): void {
+    const wasOpen = this.chatOpen;
+    this.el.chat.classList.remove('rd-open');
+    this.el.dock.querySelector('#rd-btn-chat')?.classList.remove('rd-on');
+    if (wasOpen && this.state === 'streaming') this.canvas.focus();
+  }
+
+  private loadChatSize(): { w: number; h: number } {
+    try {
+      const raw = JSON.parse(localStorage.getItem(RdApp.CHAT_SIZE_KEY) || 'null') as { w?: unknown; h?: unknown } | null;
+      if (raw && typeof raw.w === 'number' && typeof raw.h === 'number') return { w: raw.w, h: raw.h };
+    } catch {
+      /* a preference only: storage may be blocked or hold something else */
     }
+    return { w: 300, h: 360 };
+  }
+
+  private applyChatSize(size: { w: number; h: number }): { w: number; h: number } {
+    // The window never outgrows the remote screen area it floats over.
+    const room = this.el.viewport.getBoundingClientRect();
+    const maxW = Math.max(RdApp.CHAT_MIN.w, (room.width || window.innerWidth) - 32);
+    const maxH = Math.max(RdApp.CHAT_MIN.h, (room.height || window.innerHeight) - 32);
+    const w = Math.round(Math.min(maxW, Math.max(RdApp.CHAT_MIN.w, size.w)));
+    const h = Math.round(Math.min(maxH, Math.max(RdApp.CHAT_MIN.h, size.h)));
+    this.el.chat.style.setProperty('--rd-chat-w', `${w}px`);
+    this.el.chat.style.setProperty('--rd-chat-h', `${h}px`);
+    return { w, h };
+  }
+
+  /** Drag a top or left edge, or the corner between them: the window is anchored bottom right. */
+  private startChatResize(e: PointerEvent, dir: string): void {
+    if (e.button !== 0 || this.chatMinimized) return;
+    e.preventDefault();
+    const handle = e.currentTarget as HTMLElement;
+    const start = { x: e.clientX, y: e.clientY, w: this.el.chat.offsetWidth, h: this.el.chat.offsetHeight };
+    let size = { w: start.w, h: start.h };
+    handle.setPointerCapture(e.pointerId);
+    this.el.chat.classList.add('rd-resizing');
+    const move = (ev: PointerEvent): void => {
+      size = this.applyChatSize({
+        w: dir.includes('w') ? start.w + (start.x - ev.clientX) : start.w,
+        h: dir.includes('n') ? start.h + (start.y - ev.clientY) : start.h,
+      });
+    };
+    const done = (): void => {
+      handle.removeEventListener('pointermove', move);
+      handle.removeEventListener('pointerup', done);
+      handle.removeEventListener('pointercancel', done);
+      this.el.chat.classList.remove('rd-resizing');
+      try {
+        localStorage.setItem(RdApp.CHAT_SIZE_KEY, JSON.stringify(size));
+      } catch {
+        /* not remembered; nothing depends on it */
+      }
+    };
+    handle.addEventListener('pointermove', move);
+    handle.addEventListener('pointerup', done);
+    handle.addEventListener('pointercancel', done);
   }
 
   // The file manager is a window over the remote screen (two panes need the width). Its FILE_TRANSFER
@@ -774,7 +802,6 @@ export class RdApp {
       this.toast('This device does not permit file transfer');
       return;
     }
-    this.closeSide();
     this.closePop();
     if (!this.filePanel) {
       this.filePanel = new FilePanel({
@@ -844,7 +871,7 @@ export class RdApp {
 
   /** The Send button waits for something to send. */
   private updateChatSend(): void {
-    q<HTMLButtonElement>(this.el.side, '#rd-chat-send').disabled = this.el.chatInput.value.trim() === '';
+    q<HTMLButtonElement>(this.el.chat, '#rd-chat-send').disabled = this.el.chatInput.value.trim() === '';
   }
 
   /** Called directly by the Voice call button so getUserMedia retains its user gesture. */
@@ -946,12 +973,12 @@ export class RdApp {
 
   private onChat(text: string): void {
     this.chatLog.push({ who: 'peer', text, at: Date.now() });
-    if (this.sideOpen && this.sideTab === 'chat') {
+    if (this.chatVisible) {
       this.renderChatList();
     } else {
       this.chatUnread++;
       this.renderChatBadges();
-      this.toast(`Chat: ${text.length > 80 ? text.slice(0, 77) + '…' : text}`);
+      if (!this.chatOpen) this.toast(`Chat: ${text.length > 80 ? text.slice(0, 77) + '…' : text}`);
     }
   }
 
@@ -1632,7 +1659,7 @@ export class RdApp {
     this.clearSecurityState();
     this.filePanel?.destroy();
     this.filePanel = undefined;
-    this.closeSide();
+    this.closeChat();
     this.closePop();
 
     const elapsed = Date.now() - flow.startedAt;
@@ -1705,7 +1732,7 @@ export class RdApp {
     // and everything else that belonged to the previous session.
     this.filePanel?.destroy();
     this.filePanel = undefined;
-    this.closeSide();
+    this.closeChat();
     this.closePop();
     this.chatLog = [];
     this.chatUnread = 0;
@@ -1754,7 +1781,6 @@ export class RdApp {
       isTouchMode: () => this.inputMode === 'touch',
     });
     this.el.peerLabel.textContent = this.peerId;
-    this.el.statDevice.textContent = this.peerId;
     this.resetPermissions();
     this.setState('connecting');
   }
@@ -1905,8 +1931,6 @@ export class RdApp {
         this.el.peerLabel.textContent = this.peerWho || this.peerId;
         this.refreshPeerSub();
         this.el.statVersion.textContent = ev.version || '—';
-        this.el.statUser.textContent = this.peerWho || '—';
-        this.el.statPlatform.textContent = this.peerPlatform || '—';
         const currentDisplay = this.displays[this.current];
         const hasDisplayControls = !!currentDisplay?.resolutions.length || !!currentDisplay?.originalResolution ||
           !!parseVirtualDisplayCapability(this.peerPlatform, this.platformAdditions);
@@ -1942,6 +1966,9 @@ export class RdApp {
         break;
       case 'stats':
         this.onStats(ev.stats);
+        break;
+      case 'delay':
+        this.el.statLatency.textContent = `${ev.ms} ms`;
         break;
       case 'audioPcm':
         if (this.remoteAudioEnabled && this.permissions.Audio !== false) {
@@ -2049,8 +2076,11 @@ export class RdApp {
   /** The line under the peer name: state while in flight, identity once live. */
   private refreshPeerSub(): void {
     if (this.state === 'streaming') {
-      const bits = ['Online'];
+      // The name above is the remote user when known, so the ID and system are said here.
+      const bits: string[] = [];
+      if (this.peerWho && this.peerWho !== this.peerId) bits.push(this.peerId);
       if (this.peerPlatform) bits.push(this.peerPlatform);
+      if (!bits.length) bits.push('Online');
       this.el.peerSub.textContent = bits.join(' · ');
     } else {
       this.el.peerSub.textContent = STATE_LABEL[this.state];
@@ -2087,7 +2117,7 @@ export class RdApp {
         this.destroyAdvancedPanels();
         this.filePanel?.destroy();
         this.filePanel = undefined;
-        this.closeSide();
+        this.closeChat();
         this.closePop();
         this.showOverlay();
         this.setOverlayBusy(false);
@@ -2099,7 +2129,7 @@ export class RdApp {
         this.destroyAdvancedPanels();
         this.filePanel?.destroy();
         this.filePanel = undefined;
-        this.closeSide();
+        this.closeChat();
         this.closePop();
         this.showOverlay();
         this.setOverlayBusy(false);
@@ -2115,9 +2145,11 @@ export class RdApp {
   private onStats(s: SessionStats): void {
     this.stats = s;
     this.el.statCodec.textContent =
-      (s.codec || '—') + (s.codec && s.hardware !== undefined ? (s.hardware ? ' (hardware)' : ' (software)') : '');
+      (s.codec || '—') + (s.codec && s.hardware !== undefined ? (s.hardware ? ' · HW' : ' · SW') : '');
+    this.el.statCodec.title = s.hardware === undefined ? '' : s.hardware ? 'Hardware decoding' : 'Software decoding';
     this.el.statRes.textContent = s.width && s.height ? `${s.width}×${s.height}` : '—';
     this.el.statFps.textContent = String(Math.round(s.fps));
+    if (s.decodeMs !== undefined) this.el.statDecode.textContent = `${s.decodeMs} ms`;
     this.el.statBitrate.textContent = formatMbps(s.mbps);
     this.el.statDropped.textContent = String(s.framesDropped);
     if (this.adaptiveFps) {

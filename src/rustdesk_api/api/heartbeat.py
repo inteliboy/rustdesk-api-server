@@ -110,6 +110,23 @@ def rustdesk_heartbeat(
         # disconnects, or a say in which connections are recorded - and the
         # heartbeat does not even make the device look online.
         return response
+    if not device.is_approved:
+        # Waiting for an administrator (or turned down): all it gets is an "OK". A
+        # pending device still shows when it was last heard from, so the person
+        # deciding can tell it is alive; it is given no policy, no disconnects and no
+        # say in the logs, and it is not announced to the Devices page.
+        if device.approval == device_service.PENDING:
+            heartbeat_service.handle_heartbeat(
+                db,
+                rustdesk_id=payload.id,
+                uuid=payload.uuid,
+                ip_address=client_ip,
+                online_timeout=settings.device_online_timeout,
+            )
+            if not device_service.has_reported_sysinfo(device):
+                response["sysinfo"] = True
+            db.commit()
+        return response
     scheme = resolve_client_scheme(request, settings)
     heartbeat_service.handle_heartbeat(
         db,
@@ -222,27 +239,46 @@ def rustdesk_sysinfo(
         and session_obj.user.is_active
         and (existing is None or session_obj.user.is_admin or existing.owner_id == session_obj.user.id)
     )
-    device = device_service.register_or_update(
-        db,
-        rustdesk_id=payload.id,
-        uuid=payload.uuid,
-        hostname=payload.hostname,
-        username=payload.username,
-        platform=platform,
-        os_version=os_version,
-        client_version=payload.version,
-        ip_address=client_ip,
-        cpu=payload.cpu,
-        memory=payload.memory,
-        owner_id=owner_id,
-        uuid_policy=settings.device_uuid_rebind,
-        trusted=trusted,
-        online_timeout=settings.device_online_timeout,
-    )
-    if is_new and settings.allow_sysinfo_presets:
+    # An administrator's login vouches for the device; otherwise a device this server
+    # has not seen waits for approval when NEW_DEVICE_POLICY says so.
+    vouched = device_service.vouches(session_obj.user if session_obj is not None else None)
+    try:
+        device = device_service.register_or_update(
+            db,
+            rustdesk_id=payload.id,
+            uuid=payload.uuid,
+            hostname=payload.hostname,
+            username=payload.username,
+            platform=platform,
+            os_version=os_version,
+            client_version=payload.version,
+            ip_address=client_ip,
+            cpu=payload.cpu,
+            memory=payload.memory,
+            owner_id=owner_id,
+            uuid_policy=settings.device_uuid_rebind,
+            trusted=trusted,
+            online_timeout=settings.device_online_timeout,
+            require_approval=settings.new_device_policy == "approve" and not vouched,
+            vouched=vouched,
+            pending_limit=settings.new_device_pending_limit,
+        )
+    except device_service.PendingDevicesFull:
+        # Answered like a success (the client would otherwise repeat the upload every
+        # couple of minutes), but nothing is recorded.
+        logger.warning(
+            "Not recording device %s: %d devices already wait for approval",
+            payload.id,
+            settings.new_device_pending_limit,
+        )
+        return PlainTextResponse("SYSINFO_UPDATED")
+    if is_new and settings.allow_sysinfo_presets and device.is_approved:
+        # Never for a device still waiting for approval: presets are chosen by whoever
+        # sends the upload, which is exactly what the approval is there to distrust.
         _apply_presets(db, device, payload.model_extra or {}, settings)
     db.commit()
-    _schedule_broadcast(request, background_tasks, device, settings)
+    if device.is_approved:
+        _schedule_broadcast(request, background_tasks, device, settings)
     # The client compares the body with this exact text (`hbbs_http/sync.rs`).
     # Anything else counts as "not uploaded" and it sends the same data again
     # every ~2 minutes. See docs/rustdesk-compatibility.md for the side effect.

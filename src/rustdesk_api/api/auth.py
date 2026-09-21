@@ -244,19 +244,28 @@ def _finish_rustdesk_login(
     # services.devices.register_or_update).
     if payload.id:
         existing = device_service.get_by_rustdesk_id(db, payload.id)
-        device_service.register_or_update(
-            db,
-            rustdesk_id=payload.id,
-            uuid=payload.uuid,
-            ip_address=client_ip,
-            owner_id=user.id,
-            uuid_policy=settings.device_uuid_rebind,
-            # Signing in proves the account, so it may re-bind a device it owns
-            # (or any device, for an administrator) - but not someone else's or
-            # an unowned one, which would let any account take over a stranger's id.
-            trusted=existing is None or user.is_admin or existing.owner_id == user.id,
-            online_timeout=settings.device_online_timeout,
-        )
+        vouched = device_service.vouches(user)
+        try:
+            device_service.register_or_update(
+                db,
+                rustdesk_id=payload.id,
+                uuid=payload.uuid,
+                ip_address=client_ip,
+                owner_id=user.id,
+                uuid_policy=settings.device_uuid_rebind,
+                # Signing in proves the account, so it may re-bind a device it owns
+                # (or any device, for an administrator) - but not someone else's or
+                # an unowned one, which would let any account take over a stranger's id.
+                trusted=existing is None or user.is_admin or existing.owner_id == user.id,
+                online_timeout=settings.device_online_timeout,
+                require_approval=settings.new_device_policy == "approve" and not vouched,
+                vouched=vouched,
+                pending_limit=settings.new_device_pending_limit,
+            )
+        except device_service.PendingDevicesFull:
+            # The sign-in itself must not fail because the device could not be
+            # recorded; it simply is not (see NEW_DEVICE_PENDING_LIMIT).
+            logger.warning("Not recording device %s: the approval queue is full", payload.id)
 
     audit_service.record(
         db,

@@ -50,8 +50,9 @@ CHANGES MADE HERE (AGPL section 5(a))
 - The connect screen is reduced to the device's ID and the password, in the WebUI's sign-in card style, with no top
   bar (the bar appears with the remote screen). The client shows no version and no source text of its own; its
   source, licence and origin are documented in this repository (this folder and the README).
-- The bar, the dock, the side panel (Chat and Details, no longer a Files tab) and the menus are redrawn in the
-  WebUI's flat style: solid accent, 1px borders, no gradients, no floating island, no avatar, no edge strip.
+- The bar (which now also shows the stream's numbers), the dock, the chat (a small, resizable window in the bottom
+  right corner in place of the Chat and Details side panel) and the menus are redrawn in the WebUI's flat style:
+  solid accent, 1px borders, no gradients, no floating island, no avatar, no edge strip.
 - The file transfer window is redrawn as a two-pane manager over the remote screen: a cursor row and keyboard
   navigation, sortable columns, Send and Receive between the panes, drag and drop from one pane to the other, new
   folder, rename and delete in either pane, and a collapsible queue.

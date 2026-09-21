@@ -82,6 +82,7 @@ def _to_out(device: Device, settings: Settings, default_strategy_name: str | Non
         online=device.is_online(timeout),
         watch_offline=device.watch_offline,
         archived=device.archived_at is not None,
+        approval=device.approval,
         outdated=is_older(device.client_version, settings.min_client_version),
     )
 
@@ -105,7 +106,7 @@ def list_devices(
     search: str | None = Query(default=None),
     group_id: int | None = Query(default=None),
     tag_id: int | None = Query(default=None),
-    status: Literal["online", "offline", "archived"] | None = Query(default=None),
+    status: Literal["online", "offline", "archived", "pending", "rejected"] | None = Query(default=None),
     sort: Literal["last_seen", "created", "name", "id"] = Query(default="last_seen"),
     order: Literal["asc", "desc"] | None = Query(default=None),
     owner_id: int | None = Query(
@@ -117,6 +118,8 @@ def list_devices(
     user: User = Depends(get_current_user),
     settings: Settings = Depends(get_settings_dep),
 ) -> DeviceListResponse:
+    if status in ("pending", "rejected") and not user.is_admin:
+        raise ApiError("FORBIDDEN", "Only administrators may list devices awaiting approval.", 403)
     # A non-admin can only ever see their own (+ shared) devices, regardless
     # of what `owner_id` they pass - the server enforces this, never the
     # client (CLAUDE.md section 66).

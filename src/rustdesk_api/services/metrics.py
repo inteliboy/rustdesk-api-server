@@ -65,11 +65,17 @@ def render(db: Session, settings: Settings, counters: Counters) -> str:
     metric("info", "gauge", "Server version.", [({"version": __version__}, 1)])
 
     online_cutoff = now - datetime.timedelta(seconds=settings.device_online_timeout)
-    total = count(select(func.count(Device.id)))
-    online = count(select(func.count(Device.id)).where(Device.last_seen >= online_cutoff))
+    approved = Device.approval == "approved"
+    total = count(select(func.count(Device.id)).where(approved))
+    online = count(select(func.count(Device.id)).where(approved, Device.last_seen >= online_cutoff))
     gauge("devices", "Known devices.", total)
     gauge("devices_online", "Devices seen within DEVICE_ONLINE_TIMEOUT.", online)
     gauge("devices_offline", "Devices not seen within DEVICE_ONLINE_TIMEOUT.", total - online)
+    gauge(
+        "devices_pending_approval",
+        "New devices waiting for an administrator (NEW_DEVICE_POLICY=approve).",
+        count(select(func.count(Device.id)).where(Device.approval == "pending")),
+    )
     gauge(
         "devices_uuid_change_pending",
         "Devices waiting for a decision on a uuid change.",

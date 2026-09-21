@@ -265,6 +265,8 @@ export class Session {
     const u = msg.union;
     switch (u?.$case) {
       case 'test_delay':
+        // The peer reports the round trip it measured last time (0 until it has one).
+        if (u.test_delay.last_delay > 0) this.sinks.emit({ t: 'delay', ms: u.test_delay.last_delay });
         // Echo verbatim, immediately — the peer measures RTT from this.
         if (!u.test_delay.from_client) {
           this.sealSend(

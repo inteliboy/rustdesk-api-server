@@ -84,6 +84,14 @@ class Device(Base):
     pending_uuid_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     pending_uuid_ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
+    # "approved" (managed as usual), "pending" (an unknown device that arrived while
+    # NEW_DEVICE_POLICY=approve: recorded, but given no policy and not reachable from
+    # the WebUI) or "rejected" (an administrator turned it down: its uploads are
+    # ignored). Devices that existed before this column stay "approved".
+    approval: Mapped[str] = mapped_column(
+        String(10), nullable=False, default="approved", server_default="approved", index=True
+    )
+
     last_seen: Mapped[datetime.datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, index=True
     )
@@ -152,6 +160,11 @@ class Device(Base):
     @property
     def pending_disconnect_ids(self) -> list[int]:
         return _load_ids(self.pending_disconnect)
+
+    @property
+    def is_approved(self) -> bool:
+        # A device not yet flushed has no value: the column default makes it "approved".
+        return self.approval in (None, "approved")
 
     def is_online(self, timeout_seconds: int) -> bool:
         if self.last_seen is None:

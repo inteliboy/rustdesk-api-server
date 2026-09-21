@@ -157,6 +157,10 @@ export class VideoPipeline {
   private windowStartMs = Date.now();
   private windowFrames = 0;
   private windowBytes = 0;
+  // When each chunk went into the decoder (by its timestamp), to time how long decoding takes.
+  private readonly decodeStarted = new Map<number, number>();
+  private windowDecodeMs = 0;
+  private windowDecoded = 0;
   private lastW = 0;
   private lastH = 0;
   private closed = false;
@@ -232,13 +236,9 @@ export class VideoPipeline {
       }
       try {
         this.windowBytes += f.data.byteLength;
-        this.decoder!.decode(
-          new EncodedVideoChunk({
-            type: f.key ? 'key' : 'delta',
-            timestamp: Number(f.pts) * 1000, // pts is ms; WebCodecs wants µs
-            data: f.data,
-          }),
-        );
+        const timestamp = Number(f.pts) * 1000; // pts is ms; WebCodecs wants µs
+        this.noteDecodeStart(timestamp);
+        this.decoder!.decode(new EncodedVideoChunk({ type: f.key ? 'key' : 'delta', timestamp, data: f.data }));
         this.awaitingKey = false;
         this.checkStall();
       } catch {
@@ -249,6 +249,7 @@ export class VideoPipeline {
   }
 
   reset(): void {
+    this.decodeStarted.clear();
     this.teardownDecoder();
     this.currentCase = null;
     this.awaitingKey = true;
@@ -314,7 +315,22 @@ export class VideoPipeline {
     this.fatal(kase);
   }
 
+  private noteDecodeStart(timestamp: number): void {
+    // A chunk the decoder drops never comes out: the oldest entries are forgotten, not kept forever.
+    if (this.decodeStarted.size >= 256) this.decodeStarted.delete(this.decodeStarted.keys().next().value as number);
+    this.decodeStarted.set(timestamp, performance.now());
+  }
+
+  private noteDecodeEnd(timestamp: number): void {
+    const started = this.decodeStarted.get(timestamp);
+    if (started === undefined) return;
+    this.decodeStarted.delete(timestamp);
+    this.windowDecodeMs += performance.now() - started;
+    this.windowDecoded++;
+  }
+
   private handleOutput(frame: VideoFrame): void {
+    this.noteDecodeEnd(frame.timestamp);
     this.failStreak = 0;
     this.framesOut++;
     this.lastOutputMs = Date.now();
@@ -414,7 +430,12 @@ export class VideoPipeline {
       framesDropped: this.framesDropped,
       startedAtMs: this.startedAtMs,
       ...this.hardwareStat(),
+      ...(this.windowDecoded > 0
+        ? { decodeMs: Math.round((this.windowDecodeMs / this.windowDecoded) * 10) / 10 }
+        : {}),
     });
+    this.windowDecodeMs = 0;
+    this.windowDecoded = 0;
     this.windowStartMs = now;
     this.windowFrames = 0;
     this.windowBytes = 0;

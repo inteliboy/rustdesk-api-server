@@ -15,6 +15,14 @@ from rustdesk_api.models.user import User
 from rustdesk_api.services import audit as audit_service
 from rustdesk_api.services import notifications
 
+APPROVED = "approved"
+PENDING = "pending"
+REJECTED = "rejected"
+
+
+class PendingDevicesFull(Exception):
+    """NEW_DEVICE_PENDING_LIMIT devices are already waiting: one more is not recorded."""
+
 
 def _utcnow() -> datetime.datetime:
     return datetime.datetime.now(datetime.timezone.utc)
@@ -91,6 +99,9 @@ def register_or_update(
     uuid_policy: str = "allow",
     trusted: bool = False,
     online_timeout: int | None = None,
+    require_approval: bool = False,
+    vouched: bool = False,
+    pending_limit: int | None = None,
 ) -> Device:
     """Idempotent upsert keyed on rustdesk_id (CLAUDE.md section 43: repeated
     sysinfo/heartbeat reports for the same id must not create duplicate
@@ -100,14 +111,27 @@ def register_or_update(
     an unauthenticated upload must not be able to take it over. Unless the
     caller is `trusted` (it proved it is the owner or an administrator) or the
     policy is "allow", nothing is changed: with "approve" the new uuid is parked
-    on the device for its owner to accept, with "deny" it is dropped."""
+    on the device for its owner to accept, with "deny" it is dropped.
+
+    A device this server has not seen is recorded as pending when `require_approval`
+    (NEW_DEVICE_POLICY=approve and the caller is not an administrator): its details
+    are kept so an administrator can recognise it, and nothing else happens until it
+    is approved. `vouched` (an administrator made the request) approves a pending
+    device that reports in. A rejected device is left exactly as it is. Raises
+    PendingDevicesFull when `pending_limit` devices are already waiting."""
     device = get_by_rustdesk_id(db, rustdesk_id)
     created = device is None
     now = _utcnow()
     if device is None:
-        device = Device(rustdesk_id=rustdesk_id, owner_id=owner_id)
+        if require_approval and pending_limit is not None and count_pending(db) >= pending_limit:
+            raise PendingDevicesFull
+        device = Device(
+            rustdesk_id=rustdesk_id, owner_id=owner_id, approval=PENDING if require_approval else APPROVED
+        )
         db.add(device)
     else:
+        if device.approval == REJECTED:
+            return device
         if (
             uuid is not None
             and device.uuid is not None
@@ -149,25 +173,100 @@ def register_or_update(
     device.last_seen = now
     if changed:
         device.updated_at = now
+    if vouched and not created and device.approval == PENDING:
+        approve(db, device, actor_id=None, via="administrator sign-in")
 
     db.flush()
     if created:
-        record_event(db, device, "registered", {"ip": ip_address} if ip_address else None)
-        _announce_new_device(device, ip_address)
+        detail: dict = {"ip": ip_address} if ip_address else {}
+        if device.approval == PENDING:
+            detail["pending"] = True
+        record_event(db, device, "registered", detail or None)
+        _announce_new_device(db, device, ip_address)
     return device
 
 
-def _announce_new_device(device: Device, ip_address: str | None) -> None:
+def vouches(user: User | None) -> bool:
+    """A request made with an active administrator's login is the administrator's own
+    doing, so a device it brings in needs no approval."""
+    return user is not None and user.is_active and user.is_admin
+
+
+def count_pending(db: Session) -> int:
+    return db.execute(select(func.count(Device.id)).where(Device.approval == PENDING)).scalar_one()
+
+
+def _announce_new_device(db: Session, device: Device, ip_address: str | None) -> None:
     name = device.hostname or device.alias
+    pending = device.approval == PENDING
+    if pending:
+        audit_service.record(
+            db,
+            action="device_registration_pending",
+            target_type="device",
+            target_id=device.id,
+            ip_address=ip_address,
+            detail={"rustdesk_id": device.rustdesk_id},
+        )
     notifications.dispatch(
         "new_device",
-        "New device registered",
+        "New device waiting for approval" if pending else "New device registered",
         f"Device {device.rustdesk_id}"
         + (f" ({name})" if name else "")
-        + " registered"
+        + (" is waiting for approval" if pending else " registered")
         + (f" from {ip_address}." if ip_address else "."),
-        data={"rustdesk_id": device.rustdesk_id, "hostname": device.hostname, "ip": ip_address},
+        data={
+            "rustdesk_id": device.rustdesk_id,
+            "hostname": device.hostname,
+            "ip": ip_address,
+            "pending": pending,
+        },
     )
+
+
+def approve(db: Session, device: Device, *, actor_id: int | None, via: str | None = None) -> bool:
+    """Let a pending (or rejected) device be managed. False if it already is."""
+    if device.approval == APPROVED:
+        return False
+    was = device.approval
+    device.approval = APPROVED
+    device.updated_at = _utcnow()
+    record_event(db, device, "approved", {"was": was, **({"via": via} if via else {})})
+    audit_service.record(
+        db,
+        action="device_approved",
+        actor_id=actor_id,
+        target_type="device",
+        target_id=device.id,
+        detail={"rustdesk_id": device.rustdesk_id, **({"via": via} if via else {})},
+    )
+    db.flush()
+    return True
+
+
+def reject(db: Session, device: Device, *, actor_id: int | None) -> bool:
+    """Turn a device down: it stays on record (so it is not simply re-created on its
+    next upload) but nothing it sends is used. False if it already is rejected."""
+    if device.approval == REJECTED:
+        return False
+    was = device.approval
+    device.approval = REJECTED
+    device.updated_at = _utcnow()
+    device.watch_offline = False
+    device.offline_notified_at = None
+    device.live_connections = None
+    device.pending_disconnect = None
+    record_event(db, device, "rejected", {"was": was})
+    audit_service.record(
+        db,
+        action="device_rejected",
+        actor_id=actor_id,
+        target_type="device",
+        target_id=device.id,
+        detail={"rustdesk_id": device.rustdesk_id},
+    )
+    db.flush()
+    return True
 
 
 def _clear_pending(device: Device) -> None:
@@ -302,9 +401,20 @@ def list_devices(
         stmt = stmt.where(Device.tags.any(Tag.id == tag_id))
         count_stmt = count_stmt.where(Device.tags.any(Tag.id == tag_id))
 
+    # Devices waiting for a decision (or turned down) have a list of their own; every
+    # other view is of approved devices only, so neither shows up in the counts.
+    if status in (PENDING, REJECTED):
+        stmt = stmt.where(Device.approval == status)
+        count_stmt = count_stmt.where(Device.approval == status)
+    else:
+        stmt = stmt.where(Device.approval == APPROVED)
+        count_stmt = count_stmt.where(Device.approval == APPROVED)
+
     # Archived devices (silent for DEVICE_STALE_DAYS) are left out unless asked for, or
     # unless the user is searching: looking up an id must find it wherever it is.
-    if status == "archived":
+    if status in (PENDING, REJECTED):
+        pass
+    elif status == "archived":
         stmt = stmt.where(Device.archived_at.is_not(None))
         count_stmt = count_stmt.where(Device.archived_at.is_not(None))
     elif not search:

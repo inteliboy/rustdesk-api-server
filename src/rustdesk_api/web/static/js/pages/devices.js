@@ -5,13 +5,19 @@ let state = {
   search: "",
   groupId: urlParams.get("group_id") || "",
   tagId: urlParams.get("tag_id") || "",
-  status: ["online", "offline", "archived"].includes(urlParams.get("status")) ? urlParams.get("status") : "",
+  status: ["online", "offline", "archived", "pending", "rejected"].includes(urlParams.get("status")) ? urlParams.get("status") : "",
   sort: ["last_seen", "created", "name", "id"].includes(urlParams.get("sort")) ? urlParams.get("sort") : "last_seen",
 };
 
 // What the bulk bar can do. `needs` says which list fills the second dropdown.
 let lookups = { groups: [], tags: [], users: [], strategies: [], views: [] };
 const selected = new Set();
+
+function approvalBadge(approval) {
+  return approval === "rejected"
+    ? `<span class="badge badge-offline" title="An administrator turned this device down; nothing it sends is used"><span class="badge-dot"></span>Rejected</span>`
+    : `<span class="badge" title="Waiting for an administrator to approve it" style="background:#d9770622;color:#d97706"><span class="badge-dot" style="background:#d97706"></span>Pending</span>`;
+}
 
 function statusBadge(online) {
   return online
@@ -89,9 +95,9 @@ async function loadDevices() {
       .map(
         (d) => `<tr id="device-row-${d.id}" class="hover:bg-slate-50 cursor-pointer" data-href="/devices/${d.id}">
           <td class="px-4 py-3"><input type="checkbox" class="row-select" value="${Number(d.id)}" aria-label="Select this device" /></td>
-          <td class="px-4 py-3" data-cell="status"><span data-status-badge>${statusBadge(d.online)}</span>${deviceFlags(d)}</td>
+          <td class="px-4 py-3" data-cell="status"><span data-status-badge>${d.approval && d.approval !== "approved" ? approvalBadge(d.approval) : statusBadge(d.online)}</span>${deviceFlags(d)}</td>
           <td class="px-4 py-3" data-cell="scheme">${apiSchemeBadge(d.api_scheme)}</td>
-          <td class="px-4 py-3">${connectLink(d.rustdesk_id, d.id)}</td>
+          <td class="px-4 py-3">${connectLink(d.rustdesk_id, d.approval === "approved" ? d.id : null)}</td>
           <td class="px-4 py-3 whitespace-nowrap">${escapeHtml(d.alias || d.hostname || "-")}</td>
           <td class="px-4 py-3">${escapeHtml(d.platform ? fmtPlatform(d.platform) : "-")}</td>
           <td class="px-4 py-3 text-slate-500 whitespace-nowrap">${escapeHtml(d.cpu ? fmtCpuName(d.cpu) : "-")}</td>
@@ -106,6 +112,7 @@ async function loadDevices() {
       .join("");
   }
   updateBulkBar();
+  refreshPendingBanner();
 
   const totalPages = Math.max(1, Math.ceil(data.total / data.page_size));
   document.getElementById("page-info").textContent = `Page ${data.page} of ${totalPages} (${data.total} total)`;
@@ -122,6 +129,19 @@ function reload(resetPage = true) {
 
 function bulkActions() {
   const admin = currentUser && currentUser.is_admin;
+  if (state.status === "pending") {
+    return [
+      { key: "approve", label: "Approve", needs: null },
+      { key: "reject", label: "Reject", needs: null },
+      { key: "delete", label: "Delete", needs: null },
+    ];
+  }
+  if (state.status === "rejected") {
+    return [
+      { key: "approve", label: "Approve", needs: null },
+      { key: "delete", label: "Delete", needs: null },
+    ];
+  }
   const actions = [
     { key: "add_tag", label: "Add tag...", needs: "tags" },
     { key: "remove_tag", label: "Remove tag...", needs: "tags" },
@@ -129,6 +149,7 @@ function bulkActions() {
   ];
   if (admin) {
     actions.push(
+      { key: "reject", label: "Reject", needs: null },
       { key: "set_owner", label: "Set owner...", needs: "users", clearLabel: "(no owner)" },
       { key: "set_strategy", label: "Set strategy...", needs: "strategies", clearLabel: "(no strategy)" },
       { key: "watch", label: "Notify when offline", needs: null },
@@ -301,6 +322,28 @@ document.getElementById("view-delete").addEventListener("click", async () => {
   }
 });
 
+// ------------------------------------------------- devices waiting for approval
+
+// Administrators are told, above the list, that new devices are waiting.
+async function refreshPendingBanner() {
+  const banner = document.getElementById("pending-banner");
+  if (!banner || !(currentUser && currentUser.is_admin)) return;
+  try {
+    const data = await api("/api/v1/devices?status=pending&page_size=1");
+    banner.classList.toggle("hidden", data.total === 0 || state.status === "pending");
+    document.getElementById("pending-count").textContent = t("{1} new device(s) are waiting for your approval.", [data.total]);
+  } catch (err) {
+    banner.classList.add("hidden"); // a banner that fails is not worth an error of its own
+  }
+}
+
+document.getElementById("pending-review").addEventListener("click", () => {
+  state.status = "pending";
+  showFilters();
+  fillBulkActions();
+  reload();
+});
+
 // ------------------------------------------------------------------ import
 
 function importSummary(result) {
@@ -351,7 +394,10 @@ document.getElementById("import-run").addEventListener("click", () => runImport(
   const user = await requireAuth();
   if (!user) return;
   renderNav("devices", user);
-  if (user.is_admin) document.getElementById("import-toggle").classList.remove("hidden");
+  if (user.is_admin) {
+    document.getElementById("import-toggle").classList.remove("hidden");
+    for (const opt of document.querySelectorAll("#status-filter [data-admin-only]")) opt.hidden = false;
+  }
   await loadFilterOptions();
   showFilters(); // status and sort may come from the address (the dashboard links here)
   fillBulkActions();
@@ -366,7 +412,7 @@ document.getElementById("import-run").addEventListener("click", () => runImport(
     if (!row) return;
     const statusCell = row.querySelector('[data-cell="status"]');
     const badge = statusCell && statusCell.querySelector("[data-status-badge]");
-    if (badge) badge.innerHTML = statusBadge(msg.device.online);
+    if (badge && !badge.querySelector(".badge[style]")) badge.innerHTML = statusBadge(msg.device.online);
     const schemeCell = row.querySelector('[data-cell="scheme"]');
     if (schemeCell) schemeCell.innerHTML = apiSchemeBadge(msg.device.api_scheme);
     const lastSeenCell = row.querySelector('[data-cell="last-seen"]');
@@ -391,6 +437,7 @@ for (const [id, key] of [
 ]) {
   document.getElementById(id).addEventListener("change", (evt) => {
     state[key] = evt.target.value;
+    if (key === "status") fillBulkActions();
     reload();
   });
 }

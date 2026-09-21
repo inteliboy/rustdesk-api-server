@@ -68,6 +68,8 @@ class BulkRequest(BaseModel):
         "unwatch",
         "archive",
         "unarchive",
+        "approve",
+        "reject",
         "delete",
     ]
     tag_id: int | None = None
@@ -89,7 +91,7 @@ class BulkRequest(BaseModel):
 
 class Skipped(BaseModel):
     id: int
-    reason: str  # "not_found" | "forbidden"
+    reason: str  # "not_found" | "forbidden" | "unchanged" (already in the state asked for)
 
 
 class BulkResult(BaseModel):
@@ -142,10 +144,19 @@ def bulk_update(
             skipped.append(Skipped(id=device_id, reason="not_found"))
             continue
         allowed = can_delete_device(user, device) if action == "delete" else can_edit_device(user, device)
-        if action in ("set_owner", "set_strategy", "watch", "unwatch"):
+        if action in ("set_owner", "set_strategy", "watch", "unwatch", "approve", "reject"):
             allowed = user.is_admin
         if not allowed:
             skipped.append(Skipped(id=device_id, reason="forbidden"))
+            continue
+
+        if action in ("approve", "reject"):
+            # These write their own audit entries (and timeline events).
+            decide = device_service.approve if action == "approve" else device_service.reject
+            if decide(db, device, actor_id=user.id):
+                updated.append(device_id)
+            else:
+                skipped.append(Skipped(id=device_id, reason="unchanged"))
             continue
 
         detail: dict = {"rustdesk_id": device.rustdesk_id, "via": "bulk"}
@@ -244,6 +255,44 @@ def set_archived(
     )
     db.commit()
     return {"archived": device.archived_at is not None}
+
+
+# ---------------------------------------------------------------------------
+# A new device waiting for approval
+# ---------------------------------------------------------------------------
+
+
+class ApprovalOut(BaseModel):
+    approval: str
+
+
+def _decide_approval(db: Session, device_id: int, admin: User, approve: bool) -> ApprovalOut:
+    device = device_service.get_by_id(db, device_id)
+    if device is None:
+        raise ApiError("DEVICE_NOT_FOUND", "The requested device does not exist.", 404)
+    decide = device_service.approve if approve else device_service.reject
+    if not decide(db, device, actor_id=admin.id):
+        state = "approved" if approve else "rejected"
+        raise ApiError("NO_CHANGE", f"This device is already {state}.", 409)
+    db.commit()
+    return ApprovalOut(approval=device.approval)
+
+
+@router.post("/{device_id}/approve", response_model=ApprovalOut, dependencies=[Depends(verify_csrf)])
+def approve_device(
+    device_id: int, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)
+) -> ApprovalOut:
+    """Let a device that is waiting (or was rejected) be managed. Administrators only."""
+    return _decide_approval(db, device_id, admin, approve=True)
+
+
+@router.post("/{device_id}/reject", response_model=ApprovalOut, dependencies=[Depends(verify_csrf)])
+def reject_device(
+    device_id: int, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)
+) -> ApprovalOut:
+    """Turn a device down: it stays on record, and nothing it uploads is used, until it
+    is approved or deleted. Administrators only."""
+    return _decide_approval(db, device_id, admin, approve=False)
 
 
 # ---------------------------------------------------------------------------

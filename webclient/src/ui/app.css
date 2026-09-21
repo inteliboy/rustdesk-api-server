@@ -21,7 +21,6 @@
   --rd-warn: #d97706;
   --rd-shadow: rgba(15, 23, 42, 0.18);
   --rd-toolbar-h: 48px;
-  --rd-side-w: 360px;
 }
 
 html[data-theme='dark'] {
@@ -75,11 +74,42 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
 /* Streaming-only chrome: the bar's controls, the dock and the panel exist only while a session is live. */
 #rd-root:not([data-state='streaming']) .rd-stream-only,
 #rd-root:not([data-state='streaming']) #rd-dock,
-#rd-root:not([data-state='streaming']) #rd-side {
+#rd-root:not([data-state='streaming']) #rd-chat {
   display: none !important;
 }
 
 /* --- top bar ----------------------------------------------------------------- */
+
+/* The stream's numbers: a small label over a value, between the device and the controls. */
+.rd-tb-stats {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-left: 4px;
+  padding-left: 16px;
+  border-left: 1px solid var(--rd-border);
+  overflow: hidden;
+}
+.rd-tb-stat {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  cursor: default;
+}
+.rd-tb-stat i {
+  font-style: normal;
+  font-size: 10px;
+  color: var(--rd-muted);
+}
+.rd-tb-stat b {
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 
 /* The connect and status screens have no bar; it appears with the remote screen. */
 #rd-root:not([data-state='streaming']) #rd-toolbar {
@@ -243,7 +273,7 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
 /* Chrome labels are controls, not copy — a drag must not select "Details". */
 #rd-toolbar,
 #rd-dock,
-.rd-side-head,
+.rd-chat-head,
 .rd-pop {
   user-select: none;
   -webkit-user-select: none;
@@ -508,103 +538,125 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
   text-align: center;
 }
 
-/* --- side panel (Files / Chat / Details) --------------------------------------- */
+/* --- chat window ---------------------------------------------------------------- */
 
-#rd-side {
+/* A small window over the bottom right of the remote screen, like a messenger. The size
+   is the person's to change (the top and left edges, or the corner) and is remembered. */
+#rd-chat {
+  box-sizing: border-box;
   position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: var(--rd-side-w);
-  max-width: 100vw;
+  right: 16px;
+  bottom: 16px;
+  width: var(--rd-chat-w, 300px);
+  height: var(--rd-chat-h, 360px);
+  max-width: calc(100% - 32px);
+  max-height: calc(100% - 32px);
   z-index: 22;
   display: flex;
   flex-direction: column;
   background: var(--rd-surface);
-  border-left: 1px solid var(--rd-border);
-  box-shadow: -10px 0 28px var(--rd-shadow);
-  transform: translateX(calc(100% + 30px));
-  transition: transform 0.22s ease;
-}
-#rd-side.rd-open {
-  transform: none;
-}
-/* Parked = genuinely gone: not focusable, not scroll-revealable. The delay
-   keeps the slide-out animation visible before visibility cuts. */
-#rd-side {
+  border: 1px solid var(--rd-border-strong);
+  border-radius: 12px;
+  box-shadow: 0 8px 28px var(--rd-shadow);
+  overflow: hidden;
   visibility: hidden;
-  transition: transform 0.22s ease, visibility 0s linear 0.22s;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0s linear 0.15s;
 }
-#rd-side.rd-open {
+#rd-chat.rd-open {
   visibility: visible;
-  transition: transform 0.22s ease;
+  opacity: 1;
+  transform: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+#rd-chat.rd-min {
+  height: auto;
+  width: min(var(--rd-chat-w, 300px), 240px);
+}
+#rd-chat.rd-min .rd-chat-body,
+#rd-chat.rd-min .rd-chat-grip,
+#rd-chat.rd-min .rd-chat-edge {
+  display: none;
+}
+#rd-chat.rd-resizing {
+  transition: none;
+  user-select: none;
 }
 
-.rd-side-head {
+.rd-chat-head {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
-  height: 44px;
-  padding: 0 8px 0 16px;
+  height: 40px;
+  padding: 0 6px 0 12px;
   border-bottom: 1px solid var(--rd-border);
+  cursor: pointer;
 }
-.rd-side-tabs {
-  display: flex;
-  align-self: stretch;
-  gap: 18px;
-  flex: 1;
-  min-width: 0;
+#rd-chat.rd-min .rd-chat-head {
+  border-bottom: 0;
 }
-.rd-tab {
-  appearance: none;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  background: transparent;
-  color: var(--rd-muted);
+.rd-chat-title {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 0;
+  gap: 8px;
   font-size: 13px;
   font-weight: 600;
-  cursor: pointer;
-  position: relative;
 }
-.rd-tab:hover {
-  color: var(--rd-fg);
-}
-.rd-tab.rd-active {
-  color: var(--rd-fg);
-  border-bottom-color: var(--rd-accent);
-}
-.rd-tab.rd-active svg,
-.rd-tab.rd-active i {
+.rd-chat-title svg {
   color: var(--rd-accent);
 }
-.rd-tab .rd-badge {
+.rd-chat-title .rd-badge {
   position: static;
-  margin-left: 2px;
+}
+.rd-chat-tools {
+  display: inline-flex;
+  gap: 2px;
+}
+#rd-chat.rd-min #rd-chat-min svg {
+  transform: rotate(180deg);
 }
 
-.rd-side-body {
-  flex: 1;
-  min-height: 0;
-  display: flex;
+/* Resize handles: the window is anchored bottom right, so it grows up and to the left. */
+.rd-chat-grip,
+.rd-chat-edge {
+  position: absolute;
+  z-index: 2;
+  touch-action: none;
 }
-.rd-pane {
+.rd-chat-grip {
+  top: 0;
+  left: 0;
+  width: 14px;
+  height: 14px;
+  cursor: nwse-resize;
+}
+.rd-chat-edge-n {
+  top: 0;
+  left: 14px;
+  right: 0;
+  height: 5px;
+  cursor: ns-resize;
+}
+.rd-chat-edge-w {
+  top: 14px;
+  left: 0;
+  bottom: 0;
+  width: 5px;
+  cursor: ew-resize;
+}
+
+.rd-chat-body {
   flex: 1;
-  min-width: 0;
   min-height: 0;
   display: flex;
   flex-direction: column;
 }
 
 /* Chat */
-.rd-pane-chat {
-  padding: 0;
-}
 .rd-voice-call {
   display: flex;
   align-items: center;
@@ -736,47 +788,6 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
 .rd-chat-send:disabled {
   opacity: 0.45;
   cursor: default;
-}
-
-/* Details */
-.rd-pane-details {
-  overflow-y: auto;
-}
-.rd-group-title {
-  margin: 0;
-  padding: 16px 16px 6px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--rd-muted);
-}
-.rd-stats-body {
-  margin: 0;
-  padding: 0 16px;
-}
-.rd-stat-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--rd-border);
-  font-size: 12.5px;
-}
-.rd-stat-row:last-child {
-  border-bottom: 0;
-}
-.rd-stat-row dt {
-  color: var(--rd-muted);
-}
-.rd-stat-row dd {
-  margin: 0;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 60%;
 }
 
 /* --- popovers ------------------------------------------------------------------ */
@@ -1171,6 +1182,18 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
 
 /* --- small screens ------------------------------------------------------------ */
 
+@media (max-width: 1240px) {
+  .rd-stat-opt {
+    display: none; /* the least useful numbers go first */
+  }
+}
+
+@media (max-width: 1000px) {
+  .rd-tb-stats {
+    gap: 12px;
+  }
+}
+
 @media (max-width: 900px) {
   .rd-peer,
   .rd-peer-sub {
@@ -1194,28 +1217,27 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
     padding: 0 8px;
     gap: 8px;
   }
-  #rd-side {
-    width: 100vw;
-    border-left: 0;
+  .rd-tb-stats {
+    display: none; /* no room on a phone; the remote screen matters more */
   }
 }
 
 /* Dark, thin scrollbars
 /* Dark, thin scrollbars — the UA default renders as white slabs here. */
-.rd-pane * {
+#rd-chat * {
   scrollbar-width: thin;
   scrollbar-color: var(--rd-surface-3) transparent;
 }
-.rd-pane *::-webkit-scrollbar {
+#rd-chat *::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
-.rd-pane *::-webkit-scrollbar-thumb {
+#rd-chat *::-webkit-scrollbar-thumb {
   background: var(--rd-surface-3);
   border-radius: 4px;
 }
-.rd-pane *::-webkit-scrollbar-track,
-.rd-pane *::-webkit-scrollbar-corner {
+#rd-chat *::-webkit-scrollbar-track,
+#rd-chat *::-webkit-scrollbar-corner {
   background: transparent;
 }
 

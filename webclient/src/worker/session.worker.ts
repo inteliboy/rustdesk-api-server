@@ -624,6 +624,7 @@ export class WorkerHost {
         framesDropped: p.framesDropped ?? 0,
         startedAtMs: p.startedAtMs ?? Date.now(),
         ...(p.hardware === undefined ? {} : { hardware: p.hardware }),
+        ...(p.decodeMs === undefined ? {} : { decodeMs: p.decodeMs }),
       },
     });
   }

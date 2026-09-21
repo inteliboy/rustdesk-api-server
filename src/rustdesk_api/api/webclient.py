@@ -103,6 +103,12 @@ def _device_for_web_session(db: Session, user: User, settings: Settings, device_
     if device is None or not can_view_device(user, device):
         # Same answer for "no such device" and "not yours", like the rest of the API.
         raise ApiError("DEVICE_NOT_FOUND", "The requested device does not exist.", 404)
+    if not device.is_approved:
+        raise ApiError(
+            "DEVICE_NOT_APPROVED",
+            "This device has not been approved yet. Approve it on the Devices page first.",
+            409,
+        )
     if not webclient_service.can_connect(user, device):
         raise ApiError(
             "SHARE_NOT_ALLOWED",

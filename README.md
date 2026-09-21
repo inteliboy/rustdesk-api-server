@@ -375,7 +375,7 @@ The settings added by client management are `ALLOW_SYSINFO_PRESETS` (see Managin
 two-factor authentication and saved address-book passwords, `DATA_ENCRYPTION_KEY`. Accounts and access add
 `ALLOW_REGISTRATION`, `REGISTRATION_REQUIRES_APPROVAL`, `PASSWORD_RESET_LIFETIME_MINUTES`,
 `LOGIN_LOCKOUT_THRESHOLD`, `LOGIN_LOCKOUT_MINUTES`, `WEBUI_ALLOWED_NETWORKS` and `METRICS_TOKEN`;
-device identity adds `DEVICE_UUID_REBIND`. Each is described in `.env.example`; the `OIDC_*` settings are
+device identity adds `DEVICE_UUID_REBIND`, `NEW_DEVICE_POLICY` and `NEW_DEVICE_PENDING_LIMIT`. Each is described in `.env.example`; the `OIDC_*` settings are
 explained under [Single sign-on](#single-sign-on-openid-connect). The `NOTIFY_*`, `BACKUP_*`,
 `DEVICE_STALE_DAYS` and `MIN_CLIENT_VERSION` settings are explained under [Notifications](#notifications),
 [Database backups](#database-backups) and [Default strategy and fleet hygiene](#default-strategy-and-fleet-hygiene).
@@ -600,6 +600,34 @@ with the default `DEVICE_UUID_REBIND=approve`:
 `deny` ignores such uploads instead; `allow` restores the old behaviour. A brand-new ID always registers freely.
 The residual risk is the first upload for an ID nobody has registered yet: whoever sends it first owns the
 identity. Import or `rustdesk --assign` a device beforehand if that matters.
+
+## Approving new devices
+
+By default a device this server has never heard of registers itself: the client's `/api/sysinfo` upload carries no
+credentials, so anything that can reach the server becomes a device and gets its policy. To require a decision,
+set `NEW_DEVICE_POLICY=approve` (default `allow`):
+
+- an unknown ID is recorded as **pending**: the host name, OS, client version and address it reported are kept so you
+  can recognise it, and it appears under **Devices → Waiting for approval** (with a banner above the list, a note on
+  the Dashboard, a `new_device` notification and an audit entry). It is **not** counted as a device;
+- until it is approved it gets no strategy, no disconnect handling and no say in the connection and file-transfer
+  logs, its `preset-*` options are ignored, and nobody, an administrator included, can open it in the browser. Its
+  heartbeats still update *last seen*, so you can tell it is alive;
+- an administrator **approves** it (from the row, the device page or the bulk bar) and it becomes an ordinary
+  device from its next heartbeat; or **rejects** it. A rejected device stays on record (so it is not simply
+  created again by its next upload) with everything it sends ignored; you can still approve it later, or delete it;
+- a device an **administrator brings in** needs no approval: a sysinfo upload or a client sign-in that carries an
+  administrator's login, or `rustdesk --assign` with an administrator's token, approves it (and approves a pending one
+  it belongs to). A device registered through an ordinary user's login still waits, and is not visible to that user
+  until approved. Signing in to the *account* always works; only the device is held back;
+- devices that exist when you turn this on stay approved. At most `NEW_DEVICE_PENDING_LIMIT` (500) devices wait at once;
+  further unknown IDs are not recorded, so a flood of fake IDs cannot fill the database. With `DEVICE_STALE_DAYS` set,
+  a waiting device that has been silent that long is forgotten.
+
+This gates what **this server** does. RustDesk clients also talk to `hbbs`/`hbbr`, which this project does not
+control: an unapproved machine can still be reached by its ID and password, and can still use your relay. To keep
+strangers off those, run `hbbs` with its `-k` option so that only clients holding your key may register (and set the
+key on your clients, see *RustDesk client configuration*).
 
 ## Monitoring and network access
 
@@ -857,9 +885,14 @@ works from here), a reverse proxy that does not pass WebSocket upgrades, and a k
 **Look.** The client wears the WebUI's theme: light or dark (including "system") and the accent color chosen under
 **Appearance**, read from the same per-browser setting, so it matches the pages around it. The connect screen is the
 sign-in card's twin: the device's ID (fixed, chosen by the WebUI) and the password field, no bar above it. When the
-remote screen appears, so do a flat bar (the device, view controls, **Disconnect**) and a dock along the bottom (keys,
-input mode, type text, clipboard, and the panels **Files**, **Chat** and **Details**), all drawn with the WebUI's
-surfaces and icons. **Chat** and **Details** slide in from the right.
+remote screen appears, so do a flat bar and a dock along the bottom (keys, input mode, type text, clipboard, and
+**Files** and **Chat**), all drawn with the WebUI's surfaces and icons. The bar carries the device (the remote user, its
+ID and system), the stream's numbers (codec with hardware or software decoding, resolution, frames per second, bitrate,
+the round trip the remote device reports, and on wider windows decode time, dropped frames, time connected and the remote
+RustDesk version) and the view controls with
+**Disconnect**. **Chat** is a small window in the bottom right corner of the remote screen, like a messenger: drag its
+top or left edge (or the corner) to resize it, click its title to minimize it to a bar (a badge counts unread
+messages), and close it with the cross; its size is remembered in the browser.
 
 **File transfer.** **Files** opens a file manager over the remote screen with two panes: this computer on the left and
 the remote computer on the right, each with its own path, sortable columns (folders stay on top), and buttons for a
@@ -1090,7 +1123,8 @@ A self-signed cert is untrusted by default:
   `REGISTRATION_REQUIRES_APPROVAL=true` when you do
 - If you use single sign-on, keep `OIDC_LINK_BY_EMAIL` off unless you trust the provider, and never use
   `OIDC_AUTO_CREATE_USERS` without `OIDC_ALLOWED_EMAIL_DOMAINS` (the server will not start that way)
-- Keep `DEVICE_UUID_REBIND=approve` (the default), and consider `WEBUI_ALLOWED_NETWORKS` if the WebUI need not be
+- Keep `DEVICE_UUID_REBIND=approve` (the default), consider `NEW_DEVICE_POLICY=approve` if strangers might reach
+  the server, and consider `WEBUI_ALLOWED_NETWORKS` if the WebUI need not be
   reachable from everywhere
 - Treat API keys like passwords; prefer *read* keys, and revoke ones that are no longer used
 - Run behind TLS in production (`SECURE_COOKIES=true`)

@@ -87,6 +87,7 @@ def archive_stale(db: Session, settings: Settings, *, now: datetime.datetime | N
     cutoff = now - datetime.timedelta(days=settings.device_stale_days)
     stale = db.execute(
         select(Device).where(
+            Device.approval == device_service.APPROVED,
             Device.archived_at.is_(None),
             Device.watch_offline.is_(False),
             func.coalesce(Device.last_seen, Device.created_at) < cutoff,
@@ -108,6 +109,40 @@ def archive_stale(db: Session, settings: Settings, *, now: datetime.datetime | N
         )
     db.commit()
     return len(archived)
+
+
+def drop_stale_pending(db: Session, settings: Settings, *, now: datetime.datetime | None = None) -> int:
+    """Forgets devices that have waited for approval and have been silent for
+    DEVICE_STALE_DAYS: a machine that gave up should not hold one of the
+    NEW_DEVICE_PENDING_LIMIT places (or sit in the list) forever. If it comes back it
+    is simply a new pending device. Rejected devices are kept: they are the record
+    of what was turned down."""
+    if settings.device_stale_days <= 0:
+        return 0
+    now = now or _utcnow()
+    cutoff = now - datetime.timedelta(days=settings.device_stale_days)
+    stale = list(
+        db.execute(
+            select(Device).where(
+                Device.approval == device_service.PENDING,
+                func.coalesce(Device.last_seen, Device.created_at) < cutoff,
+            )
+        ).scalars()
+    )
+    for device in stale:
+        device_service.delete_device(db, device)
+    if stale:
+        audit_service.record(
+            db,
+            action="devices_pending_dropped",
+            detail={
+                "count": len(stale),
+                "stale_days": settings.device_stale_days,
+                "rustdesk_ids": [d.rustdesk_id for d in stale[:20]],
+            },
+        )
+    db.commit()
+    return len(stale)
 
 
 def set_archived(db: Session, device: Device, archived: bool) -> None:
@@ -135,7 +170,11 @@ def count_outdated(db: Session, settings: Settings) -> int:
         return 0
     rows = db.execute(
         select(Device.client_version, func.count(Device.id))
-        .where(Device.archived_at.is_(None), Device.client_version.is_not(None))
+        .where(
+            Device.approval == device_service.APPROVED,
+            Device.archived_at.is_(None),
+            Device.client_version.is_not(None),
+        )
         .group_by(Device.client_version)
     ).all()
     return sum(count for version, count in rows if is_older(version, settings.min_client_version))

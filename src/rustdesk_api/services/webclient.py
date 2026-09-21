@@ -87,8 +87,9 @@ def available(settings: Settings) -> bool:
 
 def can_connect(user: User, device: Device) -> bool:
     """Administrator, owner, or a share with "control". A "view" share is about
-    seeing the device, not about taking it over."""
-    return can_edit_device(user, device)
+    seeing the device, not about taking it over. Never a device that is still waiting
+    for approval (or was turned down): that is checked again when the socket opens."""
+    return device.is_approved and can_edit_device(user, device)
 
 
 @dataclasses.dataclass(frozen=True)

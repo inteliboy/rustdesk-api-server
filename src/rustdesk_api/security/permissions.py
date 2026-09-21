@@ -32,9 +32,17 @@ def _active_share_permission(user: User, device: Device) -> str | None:
     return None
 
 
+def _not_yet_approved(user: User, device: Device) -> bool:
+    """A device waiting for (or refused) an administrator's decision belongs to nobody
+    else: not even to the user it was registered under."""
+    return not user.is_admin and not device.is_approved
+
+
 def can_view_device(user: User, device: Device) -> bool:
     if user.is_admin:
         return True
+    if _not_yet_approved(user, device):
+        return False
     if device.owner_id == user.id:
         return True
     return _active_share_permission(user, device) is not None
@@ -45,6 +53,8 @@ def can_edit_device(user: User, device: Device) -> bool:
     owner, an admin, or a share with "control" permission."""
     if user.is_admin:
         return True
+    if _not_yet_approved(user, device):
+        return False
     if device.owner_id == user.id:
         return True
     return _active_share_permission(user, device) == "control"
@@ -55,6 +65,8 @@ def can_delete_device(user: User, device: Device) -> bool:
     regardless of permission level - only the owner or an admin."""
     if user.is_admin:
         return True
+    if _not_yet_approved(user, device):
+        return False
     return device.owner_id == user.id
 
 
@@ -63,6 +75,8 @@ def can_manage_shares(user: User, device: Device) -> bool:
     shared user, even with "control", cannot re-share the device further."""
     if user.is_admin:
         return True
+    if _not_yet_approved(user, device):
+        return False
     return device.owner_id == user.id
 
 
@@ -72,4 +86,6 @@ def can_manage_connections(user: User, device: Device) -> bool:
     whoever is using the machine."""
     if user.is_admin:
         return True
+    if _not_yet_approved(user, device):
+        return False
     return device.owner_id == user.id

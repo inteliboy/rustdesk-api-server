@@ -813,6 +813,36 @@ The `secret` is a single-use, five-minute challenge stored hashed and bound to t
 different username, or expiry kill it. The code field of the client's dialog takes six digits, so recovery codes
 are accepted in the WebUI only. Failures are `200 {"error": ...}` like the rest of the login.
 
+## New devices waiting for approval (implemented 2026-09-21, not yet exercised by a live client)
+
+`NEW_DEVICE_POLICY=approve` (default `allow`) applies to an id the server has no record of. Nothing in the client
+protocol changes: every request is still answered the way the client expects, so a pending device does not start
+retrying.
+
+| Request | Result while the device is `pending` |
+| --- | --- |
+| `sysinfo`, unknown id, no administrator token | a `devices` row with `approval='pending'` (fields kept); **`SYSINFO_UPDATED`** as usual. A `registered` timeline event (`pending: true`), a `device_registration_pending` audit entry and a `new_device` notification are written once. `preset-*` keys are ignored |
+| `sysinfo`, unknown id, `Authorization: Bearer` of an administrator | registered as `approved` |
+| `sysinfo`, known pending id | fields updated (so the administrator sees current details) |
+| `sysinfo`, unknown id while `NEW_DEVICE_PENDING_LIMIT` devices already wait | nothing stored; still **`SYSINFO_UPDATED`** (any other body makes the client re-send every ~2 minutes) |
+| `heartbeat` | `{"data": "OK"}` (plus `"sysinfo": true` if no details were ever uploaded): no `strategy`, no `disconnect`, no connection recording. `last_seen` and the address are updated |
+| `POST /api/audit/conn` / `file` / `alarm` | accepted (`200`, empty) and dropped |
+| `POST /api/login` carrying `id` | the sign-in succeeds either way; the device is registered as `approved` for an administrator, otherwise `pending` |
+| `POST /api/devices/cli` (`--assign`) | `approved` when the token belongs to an administrator (also approves a pending one), otherwise `pending`; a rejected id answers `409`, a full queue `503` |
+
+`rejected` devices are left exactly as they are: `sysinfo` changes nothing, `heartbeat` answers `{"data": "OK"}` and
+does not touch `last_seen`.
+
+Management API (administrators only): `GET /api/v1/devices?status=pending|rejected`, `POST
+/api/v1/devices/{id}/approve|reject` (`409 NO_CHANGE` if already in that state), and `approve`/`reject` in
+`POST /api/v1/devices/bulk`. Non-approved devices are excluded from every other list and count (`GET
+/api/v1/devices`, the dashboard, `/metrics` - which adds `rustdesk_api_devices_pending_approval` - and archiving), a
+non-administrator gets `404` for one even if it is registered under them, and the browser client answers `409
+DEVICE_NOT_APPROVED`. `devices.approval` defaults to `approved`, so the migration leaves every existing device alone.
+
+Untested against a real client, like the rest of this file; the design relies only on the client accepting
+`SYSINFO_UPDATED` and `{"data": "OK"}`, which the captured 1.4.9 traffic confirms.
+
 ## Device identity: a different `uuid` (implemented 2026-09-20, not yet exercised by a live client)
 
 `/api/sysinfo` and `/api/heartbeat` carry no credentials, and a RustDesk id is a short number, so the client's own

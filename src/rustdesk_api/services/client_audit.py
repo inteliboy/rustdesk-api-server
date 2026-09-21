@@ -76,7 +76,8 @@ def resolve_reporting_device(db: Session, rustdesk_id: str, uuid: str | None) ->
     registered the device and uuid in the first place.
     """
     device = device_service.get_by_rustdesk_id(db, rustdesk_id)
-    if device is None:
+    if device is None or not device.is_approved:
+        # A device still waiting for approval (or turned down) has no say in the logs.
         return None
     if device.uuid and device.uuid != uuid:
         return None

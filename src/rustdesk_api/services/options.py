@@ -284,6 +284,15 @@ def _devices(s: Settings) -> list[Option]:
         ),
         Option(
             DEVICES,
+            ("NEW_DEVICE_POLICY", "NEW_DEVICE_PENDING_LIMIT"),
+            "Approval of new devices",
+            "With approve, a device this server has not seen before waits on the Devices page for an administrator: it gets no policy and cannot be opened in the browser until approved.",
+            s.new_device_policy == "approve",
+            "mode: {1}",
+            (s.new_device_policy,),
+        ),
+        Option(
+            DEVICES,
             ("ALLOW_SYSINFO_PRESETS",),
             "Presets in a new device's first upload",
             "Clients built with preset options may place a new device in a user's address book or group.",

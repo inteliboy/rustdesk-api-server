@@ -178,7 +178,8 @@ class Settings(BaseSettings):
 
     # Fleet hygiene. A device unseen for this many days is archived: hidden from the
     # default device list and the counts, back the moment it reports again. 0 = never.
-    # Devices flagged "notify when offline" are never archived.
+    # Devices flagged "notify when offline" are never archived. A device still waiting
+    # for approval after this long silent is forgotten instead (NEW_DEVICE_POLICY).
     device_stale_days: int = Field(default=0, ge=0, alias="DEVICE_STALE_DAYS")
     # Clients older than this (e.g. 1.4.0) are flagged as outdated. Empty turns it off.
     min_client_version: str = Field(default="", alias="MIN_CLIENT_VERSION")
@@ -236,6 +237,19 @@ class Settings(BaseSettings):
     # An upload that carries a valid login token of the owner or an
     # administrator is trusted in every mode.
     device_uuid_rebind: str = Field(default="approve", alias="DEVICE_UUID_REBIND")
+
+    # What happens to a device id this server has never seen.
+    #   allow   - it registers and is managed at once (the behaviour before this option)
+    #   approve - it is recorded as "pending": the server keeps its details so an
+    #             administrator can recognise it, but sends it no policy and lets nobody
+    #             open it in the browser until it is approved on the Devices page.
+    # A device an administrator brings in (a sysinfo upload or a client sign-in that
+    # carries an administrator's login) is approved at once. Devices already known when
+    # this is turned on stay approved.
+    new_device_policy: str = Field(default="allow", alias="NEW_DEVICE_POLICY")
+    # At most this many devices may wait for approval; further unknown ids are not
+    # recorded (an unauthenticated upload must not be able to fill the database).
+    new_device_pending_limit: int = Field(default=500, ge=1, le=100000, alias="NEW_DEVICE_PENDING_LIMIT")
 
     # Self-registration (the /register page and POST /api/v1/auth/register).
     # Only if ALLOW_REGISTRATION is on. With approval on, a new account cannot
@@ -376,6 +390,14 @@ class Settings(BaseSettings):
         value = value.strip().lower()
         if value not in ("approve", "deny", "allow"):
             raise ValueError("DEVICE_UUID_REBIND must be approve, deny or allow")
+        return value
+
+    @field_validator("new_device_policy")
+    @classmethod
+    def _check_new_device_policy(cls, value: str) -> str:
+        value = value.strip().lower()
+        if value not in ("allow", "approve"):
+            raise ValueError("NEW_DEVICE_POLICY must be allow or approve")
         return value
 
     @field_validator("webui_allowed_networks")

@@ -119,6 +119,9 @@ class DeviceOut(BaseModel):
     watch_offline: bool = False
     # Silent for DEVICE_STALE_DAYS: hidden from the default list until it reports again.
     archived: bool = False
+    # "approved", "pending" (waiting for an administrator; see NEW_DEVICE_POLICY) or
+    # "rejected". Only administrators ever see a device that is not approved.
+    approval: str = "approved"
     # Older than MIN_CLIENT_VERSION.
     outdated: bool = False
 
@@ -154,6 +157,8 @@ class DashboardStats(BaseModel):
     # Devices that would receive no strategy at all: nothing of their own, none through
     # their group, no default. Worth a look once strategies are in use.
     devices_without_strategy: int = 0
+    # New devices waiting for an administrator's decision.
+    pending_devices: int = 0
 
 
 class GroupOut(BaseModel):
