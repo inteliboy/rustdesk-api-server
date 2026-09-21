@@ -174,6 +174,22 @@ export function codecPreferenceValue(codec: string): SupportedDecoding_PreferCod
   } as Record<string, SupportedDecoding_PreferCodec>)[codec] ?? null;
 }
 
+const CODEC_LABELS: Record<string, string> = {
+  auto: 'Automatic',
+  h264: 'H.264',
+  h265: 'H.265 (HEVC)',
+  vp9: 'VP9',
+  vp8: 'VP8',
+  av1: 'AV1',
+};
+
+/** How a codec is named to a person; the short form (no HEVC note) is for the bar's numbers. */
+export function codecLabel(codec: string, short = false): string {
+  const label = CODEC_LABELS[codec.toLowerCase()];
+  if (!label) return codec ? codec.toUpperCase() : '—';
+  return short ? label.replace(' (HEVC)', '') : label;
+}
+
 /** Native peers only accept physical modes they advertised; virtual displays accept a valid local size. */
 export function bestFitResolution(
   width: number,

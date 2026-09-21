@@ -56,7 +56,17 @@ CHANGES MADE HERE (AGPL section 5(a))
 - The Ctrl, Alt and Del keys and the Keys menu of the dock are replaced by an on-screen keyboard (a movable window
   over the remote screen, new code in input/virtual-keyboard.ts and ui/keyboard-panel.ts): a full US keyboard,
   Ctrl/Shift/Alt/Win as latches (one-shot, or held after a second tap) merged into the modifiers of the keys and
-  clicks sent, key repeat, and one-tap shortcuts.
+  clicks sent, key repeat, and one-tap shortcuts. A layout list (US, Polski) makes the right Alt key AltGr, which
+  types the Polish letters as characters.
+- The dock gains Terminal, Camera and Record buttons (they were menu items); Clipboard opens a menu of its own
+  (send, share on/off) and the question about syncing the clipboard after connecting is gone; Type opens a movable
+  window with a text area (ui/type-panel.ts, ui/type-text.ts: keys sent in batches at a chosen speed, stoppable,
+  text not kept) in place of the small flyout; the remote-control menu items have readable names and tooltips, and
+  the privacy modes are named by method instead of by the device's internal keys.
+- H.265 is offered to the device (it was switched off): where the browser can decode it, with a check that gives it
+  up for the session if the decoder gives no picture within 5 seconds; and the picture is sized from the decoded
+  frame's visible rectangle, because a hardware HEVC decoder reports a default display size (1280x720) for a
+  smaller picture.
 - The file transfer window is redrawn as a two-pane manager over the remote screen: a cursor row and keyboard
   navigation, sortable columns, Send and Receive between the panes, drag and drop from one pane to the other, new
   folder, rename and delete in either pane, and a collapsible queue.

@@ -154,3 +154,50 @@ describe('SHORTCUTS', () => {
     expect(by('Lock')[0]).toMatchObject({ value: ControlKey.LockScreen, modifiers: [] });
   });
 });
+
+describe('AltGr and the Polish layout', () => {
+  const key = (ch: string) => ({ t: 'chr', ch, shifted: ch.toUpperCase() }) as const;
+  const cp = (s: string) => s.codePointAt(0);
+
+  it('types the Polish letters as characters, with no modifiers', () => {
+    const typed = [...'acelnosxz'].map((ch) => commandsForKey(key(ch), ['altgr'], 'pl')[0]);
+    expect(typed.map((c) => (c && c.c === 'key' ? String.fromCodePoint(c.value) : ''))).toEqual([...'ąćęłńóśźż']);
+    for (const c of typed) expect(c).toMatchObject({ keyKind: 'unicode', modifiers: [] });
+    expect(commandsForKey(key('u'), ['altgr'], 'pl')[0]).toMatchObject({ keyKind: 'unicode', value: cp('€') });
+  });
+
+  it('with Shift they are capitals', () => {
+    expect(commandsForKey(key('a'), ['shift', 'altgr'], 'pl')[0]).toMatchObject({ keyKind: 'unicode', value: cp('Ą'), modifiers: [] });
+    expect(commandsForKey(key('z'), ['shift', 'altgr'], 'pl')[0]).toMatchObject({ value: cp('Ż') });
+  });
+
+  it('is Ctrl+Alt on a key with no national character, and a plain Alt in the US layout', () => {
+    expect(commandsForKey(key('q'), ['altgr'], 'pl')[0]).toMatchObject({
+      keyKind: 'chr', value: cp('q'), modifiers: [ControlKey.Control, ControlKey.Alt],
+    });
+    expect(commandsForKey(key('a'), ['altgr'], 'us')[0]).toMatchObject({ keyKind: 'chr', value: cp('a'), modifiers: [ControlKey.Alt] });
+  });
+
+  it('the plain keys are unchanged without AltGr', () => {
+    expect(commandsForKey(key('a'), [], 'pl')[0]).toMatchObject({ keyKind: 'chr', value: cp('a'), modifiers: [] });
+  });
+
+  it('the latch stands for Ctrl+Alt in Polish (a click), an Alt in US, and is used up by one key', () => {
+    const l = new ModifierLatches();
+    l.layout = 'pl';
+    l.tap('altgr', 0);
+    expect(l.keys()).toEqual([ControlKey.Control, ControlKey.Alt]);
+    l.layout = 'us';
+    expect(l.keys()).toEqual([ControlKey.Alt]);
+    l.releaseOnce();
+    expect(l.state('altgr')).toBe('off');
+  });
+
+  it('the right Alt key is the AltGr latch; the left one stays Alt', () => {
+    const all = MAIN_LAYOUT.filter((s) => 'act' in s);
+    const right = all.find((s) => 'id' in s && s.id === 'alt-r');
+    const left = all.find((s) => 'id' in s && s.id === 'alt-l');
+    expect(right && 'act' in right ? right.act : null).toEqual({ t: 'mod', mod: 'altgr' });
+    expect(left && 'act' in left ? left.act : null).toEqual({ t: 'mod', mod: 'alt' });
+  });
+});

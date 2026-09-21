@@ -4,15 +4,46 @@ import { ControlKey } from '../gen/message';
 import type { UiCommand } from '../core/contracts';
 import { MouseType } from './mouse-keyboard';
 
-export type Mod = 'ctrl' | 'shift' | 'alt' | 'meta';
+/** `altgr` is the right Alt key: what it does depends on the keyboard layout (see KeyboardLayout). */
+export type Mod = 'ctrl' | 'shift' | 'alt' | 'altgr' | 'meta';
 
-const MOD_KEYS: Record<Mod, ControlKey> = {
+/** Which national characters AltGr types. The keys drawn are the same for every layout. */
+export type KeyboardLayout = 'us' | 'pl';
+
+// Polish (programmers): AltGr with a letter is that letter's Polish form, and AltGr+U is the euro sign.
+const ALTGR_PL: Record<string, string> = {
+  a: 'ą', c: 'ć', e: 'ę', l: 'ł', n: 'ń', o: 'ó', s: 'ś', x: 'ź', z: 'ż', u: '€',
+};
+
+/** The national character AltGr gives this key in this layout (Shift makes it a capital), or null. */
+export function altGrChar(layout: KeyboardLayout, ch: string, shift: boolean): string | null {
+  if (layout !== 'pl') return null;
+  const nat = ALTGR_PL[ch.toLowerCase()];
+  if (!nat) return null;
+  return shift ? nat.toUpperCase() : nat;
+}
+
+// The protocol has no key for AltGr: on a Windows host it is Ctrl+Alt. In the US layout the right Alt is a plain Alt.
+const MOD_KEYS: Record<Exclude<Mod, 'altgr'>, ControlKey> = {
   ctrl: ControlKey.Control,
   shift: ControlKey.Shift,
   alt: ControlKey.Alt,
   meta: ControlKey.Meta,
 };
-const MOD_ORDER: Mod[] = ['ctrl', 'shift', 'alt', 'meta'];
+const MOD_ORDER: Mod[] = ['ctrl', 'shift', 'alt', 'altgr', 'meta'];
+
+/** The protocol modifiers a latched modifier stands for in a layout. */
+function protocolMods(mods: Mod[], layout: KeyboardLayout): Array<Exclude<Mod, 'altgr'>> {
+  const out = new Set<Exclude<Mod, 'altgr'>>();
+  for (const m of mods) {
+    if (m !== 'altgr') out.add(m);
+    else {
+      out.add('alt');
+      if (layout === 'pl') out.add('ctrl');
+    }
+  }
+  return MOD_ORDER.filter((m): m is Exclude<Mod, 'altgr'> => m !== 'altgr' && out.has(m));
+}
 
 /** The control keys that are modifiers themselves: pressing one must not use up a one-shot latch. */
 const MODIFIER_CONTROLS = new Set<number>([
@@ -40,8 +71,10 @@ export const LOCK_TAP_MS = 400;
  * cannot leave one stuck on the peer.
  */
 export class ModifierLatches {
-  private readonly states: Record<Mod, LatchState> = { ctrl: 'off', shift: 'off', alt: 'off', meta: 'off' };
-  private readonly armedAt: Record<Mod, number> = { ctrl: 0, shift: 0, alt: 0, meta: 0 };
+  private readonly states: Record<Mod, LatchState> = { ctrl: 'off', shift: 'off', alt: 'off', altgr: 'off', meta: 'off' };
+  private readonly armedAt: Record<Mod, number> = { ctrl: 0, shift: 0, alt: 0, altgr: 0, meta: 0 };
+  /** The layout the right Alt key follows. */
+  layout: KeyboardLayout = 'us';
   /** Called after any change, so the keyboard can redraw. */
   onChange: (() => void) | undefined;
 
@@ -60,7 +93,7 @@ export class ModifierLatches {
 
   /** The active modifiers as the protocol's control keys. */
   keys(): ControlKey[] {
-    return this.active().map((m) => MOD_KEYS[m]);
+    return protocolMods(this.active(), this.layout).map((m) => MOD_KEYS[m]);
   }
 
   /** off -> once; once -> locked when tapped again quickly, else off; locked -> off. */
@@ -186,7 +219,7 @@ export const MAIN_LAYOUT: Slot[] = [
   mod('meta-l', 'Win', 'meta', 5),
   mod('alt-l', 'Alt', 'alt', 5),
   ctl('space', '', ControlKey.Space, 25, true, 'Space'),
-  mod('alt-r', 'Alt', 'alt', 5),
+  mod('alt-r', 'Alt', 'altgr', 5),
   mod('meta-r', 'Win', 'meta', 5),
   ctl('menu', 'Menu', ControlKey.Apps, 5),
   mod('ctrl-r', 'Ctrl', 'ctrl', 5),
@@ -209,13 +242,13 @@ export const NAV_LAYOUT: Slot[] = [
 // --- what a tap sends ---------------------------------------------------------------
 
 const keyCmd = (
-  keyKind: 'chr' | 'control',
+  keyKind: 'chr' | 'control' | 'unicode',
   value: number,
   modifiers: ControlKey[],
 ): UiCommand => ({ c: 'key', down: false, press: true, keyKind, value, modifiers });
 
 /** True when Ctrl+Alt (and nothing else) sit on Delete: the peer has one key for that, and it is the only way in. */
-const isCtrlAltDel = (act: KeyAction, mods: Mod[]): boolean =>
+const isCtrlAltDel = (act: KeyAction, mods: Array<Exclude<Mod, 'altgr'>>): boolean =>
   act.t === 'ctl' &&
   act.key === ControlKey.Delete &&
   mods.length === 2 &&
@@ -226,10 +259,17 @@ const isCtrlAltDel = (act: KeyAction, mods: Mod[]): boolean =>
  * The commands for a key with the given modifiers held. Shift picks the shifted character, like a real
  * keyboard (the physical-keyboard path also sends the character the key produced, plus Shift).
  */
-export function commandsForKey(act: KeyAction, mods: Mod[]): UiCommand[] {
+export function commandsForKey(act: KeyAction, latched: Mod[], layout: KeyboardLayout = 'us'): UiCommand[] {
   if (act.t === 'mod') return [];
+  // A national character is sent as that character, with no modifiers: the host's own layout may not have it
+  // under AltGr, and Ctrl+Alt+A would be a shortcut there.
+  if (act.t === 'chr' && latched.includes('altgr')) {
+    const nat = altGrChar(layout, act.ch, latched.includes('shift'));
+    if (nat) return [keyCmd('unicode', nat.codePointAt(0) ?? 0, [])];
+  }
+  const mods = protocolMods(latched, layout);
   if (isCtrlAltDel(act, mods)) return [{ c: 'ctrlAltDel' }];
-  const modifiers = MOD_ORDER.filter((m) => mods.includes(m)).map((m) => MOD_KEYS[m]);
+  const modifiers = mods.map((m) => MOD_KEYS[m]);
   if (act.t === 'ctl') return [keyCmd('control', act.key, modifiers)];
   const ch = mods.includes('shift') ? act.shifted : act.ch;
   return [keyCmd('chr', ch.codePointAt(0) ?? 0, modifiers)];

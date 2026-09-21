@@ -5,18 +5,34 @@ import type { UiCommand } from '../core/contracts';
 import {
   MAIN_LAYOUT,
   NAV_LAYOUT,
+  altGrChar,
   SHORTCUTS,
   commandsForKey,
   isGap,
+  type KeyboardLayout,
   type ModifierLatches,
   type Slot,
   type VKey,
 } from '../input/virtual-keyboard';
 import { iconHtml } from './common';
+import { WindowDrag } from './window-drag';
 
 /** A held key repeats after this long, then this often. */
 const REPEAT_DELAY_MS = 400;
 const REPEAT_EVERY_MS = 60;
+
+const LAYOUT_KEY = 'rd_kbd_layout';
+
+/** The layout kept from last time, else Polish for a Polish browser, else US. */
+function initialLayout(): KeyboardLayout {
+  try {
+    const saved = localStorage.getItem(LAYOUT_KEY);
+    if (saved === 'us' || saved === 'pl') return saved;
+  } catch {
+    // storage blocked: fall through to the browser's language
+  }
+  return (typeof navigator !== 'undefined' ? navigator.language : '').toLowerCase().startsWith('pl') ? 'pl' : 'us';
+}
 
 export type KeyboardPanelOptions = {
   /** The window's element, already inside the viewport. */
@@ -24,6 +40,8 @@ export type KeyboardPanelOptions = {
   viewport: HTMLElement;
   latches: ModifierLatches;
   send: (cmd: UiCommand) => void;
+  /** Give the keyboard focus back to the remote screen (after the layout list has had it). */
+  refocus?: () => void;
   onVisibility: (open: boolean) => void;
 };
 
@@ -31,10 +49,11 @@ export class KeyboardPanel {
   private readonly keys = new Map<string, { vk: VKey; button: HTMLButtonElement; label: HTMLElement }>();
   private repeatTimer: ReturnType<typeof setTimeout> | undefined;
   private repeatKey: VKey | undefined;
-  private dx = 0;
-  private dy = 0;
+  private readonly drag: WindowDrag;
 
   constructor(private readonly o: KeyboardPanelOptions) {
+    this.drag = new WindowDrag(o.host, o.viewport, '--rd-kbd');
+    o.latches.layout = initialLayout();
     this.render();
     o.latches.onChange = () => this.refresh();
   }
@@ -45,7 +64,7 @@ export class KeyboardPanel {
 
   open(): void {
     this.o.host.classList.add('rd-open');
-    this.clampPosition();
+    this.drag.clamp();
     this.o.onVisibility(true);
   }
 
@@ -66,14 +85,19 @@ export class KeyboardPanel {
   /** Redraw what the latches change: the modifier keys' state, and the shifted characters. */
   refresh(): void {
     const shift = this.o.latches.state('shift') !== 'off';
+    const altgr = this.o.latches.state('altgr') !== 'off';
+    const layout = this.o.latches.layout;
     for (const { vk, button, label } of this.keys.values()) {
       if (vk.act.t === 'mod') {
+        if (vk.act.mod === 'altgr') label.textContent = layout === 'pl' ? 'AltGr' : 'Alt';
         const st = this.o.latches.state(vk.act.mod);
         button.classList.toggle('rd-once', st === 'once');
         button.classList.toggle('rd-locked', st === 'locked');
         button.setAttribute('aria-pressed', String(st !== 'off'));
       } else if (vk.act.t === 'chr') {
-        label.textContent = shift ? vk.act.shifted : vk.act.ch;
+        // With AltGr latched the letters show the national characters they will type.
+        const national = altgr ? altGrChar(layout, vk.act.ch, shift) : null;
+        label.textContent = national ?? (shift ? vk.act.shifted : vk.act.ch);
       }
     }
   }
@@ -97,8 +121,12 @@ export class KeyboardPanel {
       (s, i) => `<button type="button" class="rd-kbd-chip" data-shortcut="${i}" title="${s.title}"><span data-i18n-skip>${s.label}</span></button>`,
     ).join('');
     this.o.host.innerHTML = `
-      <header class="rd-kbd-head" id="rd-kbd-head">
-        <span class="rd-kbd-title">${iconHtml('keyboard')}<span>Keyboard</span></span>
+      <header class="rd-win-head" id="rd-kbd-head">
+        <span class="rd-win-title">${iconHtml('keyboard')}<span>Keyboard</span></span>
+        <select class="rd-kbd-layout" id="rd-kbd-layout" title="Keyboard layout" aria-label="Keyboard layout">
+          <option value="us">US</option>
+          <option value="pl">Polski</option>
+        </select>
         <button type="button" class="rd-ib" id="rd-kbd-close" title="Close keyboard" aria-label="Close keyboard">${iconHtml('close')}</button>
       </header>
       <div class="rd-kbd-body">
@@ -114,6 +142,20 @@ export class KeyboardPanel {
       const vk = byId.get(button.dataset.key ?? '');
       if (vk) this.keys.set(vk.id, { vk, button, label: button.firstElementChild as HTMLElement });
     }
+    const layoutSelect = q<HTMLSelectElement>(this.o.host, '#rd-kbd-layout');
+    layoutSelect.value = this.o.latches.layout;
+    layoutSelect.addEventListener('change', () => {
+      this.o.latches.layout = layoutSelect.value === 'pl' ? 'pl' : 'us';
+      try {
+        localStorage.setItem(LAYOUT_KEY, this.o.latches.layout);
+      } catch {
+        // not remembered; nothing depends on it
+      }
+      this.refresh();
+      layoutSelect.blur();
+      this.o.refocus?.();
+    });
+    this.refresh();
     this.wire();
   }
 
@@ -121,7 +163,7 @@ export class KeyboardPanel {
     const host = this.o.host;
     // Taps must not take the keyboard focus from the remote screen: a physical key pressed next would go nowhere.
     host.addEventListener('mousedown', (e) => {
-      if (!(e.target as HTMLElement).closest('.rd-kbd-head')) e.preventDefault();
+      if (!(e.target as HTMLElement).closest('.rd-win-head')) e.preventDefault();
     });
     host.addEventListener('pointerdown', (e) => {
       const key = this.keyOf(e.target);
@@ -144,7 +186,7 @@ export class KeyboardPanel {
       if (key) this.press(key);
     });
     q(host, '#rd-kbd-close').addEventListener('click', () => this.close());
-    this.wireDrag(q(host, '#rd-kbd-head'));
+    this.drag.attach(q(host, '#rd-kbd-head'));
   }
 
   private keyOf(target: EventTarget | null): VKey | undefined {
@@ -160,7 +202,7 @@ export class KeyboardPanel {
       return;
     }
     // The commands are built with the latches as they are; the app merges them again and then uses up the one-shot ones.
-    for (const cmd of commandsForKey(vk.act, this.o.latches.active())) this.o.send(cmd);
+    for (const cmd of commandsForKey(vk.act, this.o.latches.active(), this.o.latches.layout)) this.o.send(cmd);
   }
 
   private shortcut(index: number): void {
@@ -187,50 +229,6 @@ export class KeyboardPanel {
     clearInterval(this.repeatTimer);
     this.repeatTimer = undefined;
     this.repeatKey = undefined;
-  }
-
-  // --- moving -----------------------------------------------------------------------
-
-  private wireDrag(handle: HTMLElement): void {
-    handle.addEventListener('pointerdown', (e) => {
-      if (e.button !== 0 || (e.target as HTMLElement).closest('button')) return;
-      e.preventDefault();
-      const start = { x: e.clientX, y: e.clientY, dx: this.dx, dy: this.dy };
-      handle.setPointerCapture(e.pointerId);
-      this.o.host.classList.add('rd-dragging');
-      const move = (ev: PointerEvent): void => {
-        this.dx = start.dx + (ev.clientX - start.x);
-        this.dy = start.dy + (ev.clientY - start.y);
-        this.clampPosition();
-      };
-      const done = (): void => {
-        handle.removeEventListener('pointermove', move);
-        handle.removeEventListener('pointerup', done);
-        handle.removeEventListener('pointercancel', done);
-        this.o.host.classList.remove('rd-dragging');
-      };
-      handle.addEventListener('pointermove', move);
-      handle.addEventListener('pointerup', done);
-      handle.addEventListener('pointercancel', done);
-    });
-  }
-
-  /** The window stays inside the remote screen area, so its title bar can always be grabbed again. */
-  private clampPosition(): void {
-    const host = this.o.host;
-    host.style.setProperty('--rd-kbd-dx', `${this.dx}px`);
-    host.style.setProperty('--rd-kbd-dy', `${this.dy}px`);
-    const room = this.o.viewport.getBoundingClientRect();
-    const box = host.getBoundingClientRect();
-    if (!room.width || !box.width) return;
-    const fixX = Math.max(room.left - box.left, Math.min(0, room.right - box.right));
-    const fixY = Math.max(room.top - box.top, Math.min(0, room.bottom - box.bottom));
-    if (fixX || fixY) {
-      this.dx += fixX;
-      this.dy += fixY;
-      host.style.setProperty('--rd-kbd-dx', `${this.dx}px`);
-      host.style.setProperty('--rd-kbd-dy', `${this.dy}px`);
-    }
   }
 }
 

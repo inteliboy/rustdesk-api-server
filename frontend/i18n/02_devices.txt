@@ -273,3 +273,84 @@ Space || Spacja || Espace || Leertaste || Espacio
 Up || W górę || Haut || Nach oben || Arriba
 Down || W dół || Bas || Nach unten || Abajo
 Right || W prawo || Droite || Rechts || Derecha
+Type or paste text to send to the remote device as keystrokes || Wpisz lub wklej tekst, który zostanie wysłany do zdalnego urządzenia jako naciśnięcia klawiszy || Saisissez ou collez du texte à envoyer à l'appareil distant sous forme de frappes || Text eingeben oder einfügen, der als Tastenanschläge an das entfernte Gerät gesendet wird || Escriba o pegue texto para enviarlo al dispositivo remoto como pulsaciones de teclas
+Camera || Kamera || Caméra || Kamera || Cámara
+Record || Nagraj || Enregistrer || Aufnehmen || Grabar
+Stop || Zatrzymaj || Arrêter || Stopp || Detener
+Tools || Narzędzia || Outils || Werkzeuge || Herramientas
+Open a terminal on the remote device || Otwórz terminal na zdalnym urządzeniu || Ouvrir un terminal sur l'appareil distant || Terminal auf dem entfernten Gerät öffnen || Abrir un terminal en el dispositivo remoto
+View the remote device’s camera || Podgląd kamery zdalnego urządzenia || Voir la caméra de l'appareil distant || Kamera des entfernten Geräts anzeigen || Ver la cámara del dispositivo remoto
+Record this session to a file on this computer || Nagraj tę sesję do pliku na tym komputerze || Enregistrer cette session dans un fichier sur cet ordinateur || Diese Sitzung in einer Datei auf diesem Computer aufzeichnen || Grabar esta sesión en un archivo en este equipo
+Terminal is unavailable in view-only mode || Terminal jest niedostępny w trybie tylko do podglądu || Le terminal n'est pas disponible en mode lecture seule || Das Terminal ist im Nur-Ansicht-Modus nicht verfügbar || El terminal no está disponible en modo de solo lectura
+Stop recording and save the file || Zatrzymaj nagrywanie i zapisz plik || Arrêter l'enregistrement et sauvegarder le fichier || Aufnahme beenden und Datei speichern || Detener la grabación y guardar el archivo
+Recording is not permitted by this device || To urządzenie nie zezwala na nagrywanie || Cet appareil n'autorise pas l'enregistrement || Dieses Gerät erlaubt keine Aufzeichnung || Este dispositivo no permite la grabación
+Send my clipboard to the remote device || Wyślij mój schowek do zdalnego urządzenia || Envoyer mon presse-papiers à l'appareil distant || Meine Zwischenablage an das entfernte Gerät senden || Enviar mi portapapeles al dispositivo remoto
+Share clipboard text || Udostępniaj tekst schowka || Partager le texte du presse-papiers || Text der Zwischenablage teilen || Compartir el texto del portapapeles
+Copies the text on this computer’s clipboard to the remote device’s clipboard || Kopiuje tekst ze schowka tego komputera do schowka zdalnego urządzenia || Copie le texte du presse-papiers de cet ordinateur dans celui de l'appareil distant || Kopiert den Text der Zwischenablage dieses Computers in die Zwischenablage des entfernten Geräts || Copia el texto del portapapeles de este equipo al portapapeles del dispositivo remoto
+Off: nothing is copied between the two clipboards, in either direction || Wyłączone: nic nie jest kopiowane między schowkami, w żadną stronę || Désactivé : rien n'est copié entre les deux presse-papiers, dans aucun sens || Aus: Zwischen den beiden Zwischenablagen wird in keine Richtung etwas kopiert || Desactivado: no se copia nada entre los dos portapapeles, en ninguna dirección
+Text you copy on the remote device is placed on this computer’s clipboard by itself. To go the other way, use the button above. || Tekst skopiowany na zdalnym urządzeniu trafia do schowka tego komputera automatycznie. W drugą stronę użyj przycisku powyżej. || Le texte copié sur l'appareil distant arrive tout seul dans le presse-papiers de cet ordinateur. Pour l'autre sens, utilisez le bouton ci-dessus. || Text, den Sie auf dem entfernten Gerät kopieren, landet automatisch in der Zwischenablage dieses Computers. Für die andere Richtung nutzen Sie die Schaltfläche oben. || El texto que copia en el dispositivo remoto llega solo al portapapeles de este equipo. Para el sentido contrario, use el botón de arriba.
+Clipboard sharing is off for this session. || Udostępnianie schowka jest wyłączone w tej sesji. || Le partage du presse-papiers est désactivé pour cette session. || Die Freigabe der Zwischenablage ist für diese Sitzung aus. || El uso compartido del portapapeles está desactivado en esta sesión.
+Clipboard sharing on || Udostępnianie schowka włączone || Partage du presse-papiers activé || Zwischenablage-Freigabe an || Portapapeles compartido activado
+Clipboard sharing off || Udostępnianie schowka wyłączone || Partage du presse-papiers désactivé || Zwischenablage-Freigabe aus || Portapapeles compartido desactivado
+Type text || Wpisz tekst || Saisir du texte || Text eingeben || Escribir texto
+Close type window || Zamknij okno wpisywania || Fermer la fenêtre de saisie || Eingabefenster schließen || Cerrar la ventana de escritura
+Text to type on the remote device || Tekst do wpisania na zdalnym urządzeniu || Texte à saisir sur l'appareil distant || Auf dem entfernten Gerät einzugebender Text || Texto que escribir en el dispositivo remoto
+Write or paste the text here. It is typed as key presses, so it works where the clipboard does not: sign-in screens, password fields, remote sessions. || Wpisz lub wklej tekst tutaj. Jest wpisywany jako naciśnięcia klawiszy, więc działa tam, gdzie schowek nie działa: na ekranach logowania, w polach haseł, w sesjach zdalnych. || Écrivez ou collez le texte ici. Il est saisi sous forme de frappes, donc il fonctionne là où le presse-papiers ne fonctionne pas : écrans de connexion, champs de mot de passe, sessions distantes. || Text hier eingeben oder einfügen. Er wird als Tastenanschläge getippt und funktioniert daher auch dort, wo die Zwischenablage nicht geht: Anmeldebildschirme, Passwortfelder, Remote-Sitzungen. || Escriba o pegue aquí el texto. Se escribe como pulsaciones de teclas, así que funciona donde el portapapeles no: pantallas de inicio de sesión, campos de contraseña, sesiones remotas.
+Press Enter afterwards || Naciśnij Enter na końcu || Appuyer sur Entrée ensuite || Danach Enter drücken || Pulsar Intro después
+Speed || Szybkość || Vitesse || Geschwindigkeit || Velocidad
+Fast || Szybko || Rapide || Schnell || Rápida
+Normal || Normalnie || Normale || Normal || Normal
+Slow || Wolno || Lente || Langsam || Lenta
+Slow is for remote applications that lose keys || Wolno jest dla zdalnych aplikacji, które gubią klawisze || Lente convient aux applications distantes qui perdent des touches || Langsam ist für Remote-Anwendungen, die Tasten verlieren || Lenta es para aplicaciones remotas que pierden teclas
+Clear || Wyczyść || Effacer || Leeren || Borrar
+Type on remote device || Wpisz na zdalnym urządzeniu || Saisir sur l'appareil distant || Auf entferntem Gerät eingeben || Escribir en el dispositivo remoto
+Text typed on the remote device || Tekst wpisany na zdalnym urządzeniu || Texte saisi sur l'appareil distant || Text auf dem entfernten Gerät eingegeben || Texto escrito en el dispositivo remoto
+Typing stopped || Wpisywanie zatrzymane || Saisie interrompue || Eingabe gestoppt || Escritura detenida
+Remote device || Zdalne urządzenie || Appareil distant || Entferntes Gerät || Dispositivo remoto
+Frame rate || Liczba klatek na sekundę || Fréquence d'images || Bildrate || Velocidad de fotogramas
+Video codec || Kodek wideo || Codec vidéo || Video-Codec || Códec de vídeo
+Sound || Dźwięk || Son || Ton || Sonido
+Automatic || Automatycznie || Automatique || Automatisch || Automático
+Adapt the frame rate to the connection || Dostosuj liczbę klatek do połączenia || Adapter la fréquence d'images à la connexion || Bildrate an die Verbindung anpassen || Adaptar la velocidad de fotogramas a la conexión
+Maximum frame rate || Maksymalna liczba klatek na sekundę || Fréquence d'images maximale || Maximale Bildrate || Velocidad máxima de fotogramas
+Play the remote device’s sound || Odtwarzaj dźwięk zdalnego urządzenia || Lire le son de l'appareil distant || Ton des entfernten Geräts wiedergeben || Reproducir el sonido del dispositivo remoto
+Sharper at the same bitrate, but needs a decoder in this browser and on this computer’s graphics hardware || Ostrzejszy obraz przy tej samej przepływności, ale wymaga dekodera w tej przeglądarce i w sprzęcie graficznym tego komputera || Plus net à débit égal, mais nécessite un décodeur dans ce navigateur et dans le matériel graphique de cet ordinateur || Schärferes Bild bei gleicher Bitrate, benötigt aber einen Decoder in diesem Browser und in der Grafikhardware dieses Computers || Más nítido con la misma tasa de bits, pero necesita un decodificador en este navegador y en el hardware gráfico de este equipo
+Restart the remote device || Uruchom ponownie zdalne urządzenie || Redémarrer l'appareil distant || Entferntes Gerät neu starten || Reiniciar el dispositivo remoto
+Restarts the remote computer, then this page reconnects by itself || Uruchamia ponownie zdalny komputer, po czym ta strona łączy się ponownie sama || Redémarre l'ordinateur distant, puis cette page se reconnecte toute seule || Startet den entfernten Computer neu, danach verbindet sich diese Seite von selbst wieder || Reinicia el equipo remoto y esta página se vuelve a conectar sola
+Ask for administrator rights || Poproś o uprawnienia administratora || Demander les droits d'administrateur || Administratorrechte anfordern || Pedir derechos de administrador
+Asks the remote user to approve running RustDesk as administrator || Prosi zdalnego użytkownika o zatwierdzenie uruchomienia RustDesk jako administrator || Demande à l'utilisateur distant d'approuver l'exécution de RustDesk en tant qu'administrateur || Bittet den entfernten Benutzer, die Ausführung von RustDesk als Administrator zu bestätigen || Pide al usuario remoto que apruebe ejecutar RustDesk como administrador
+Privacy mode || Tryb prywatności || Mode confidentialité || Datenschutzmodus || Modo de privacidad
+Privacy mode (magnifier method) || Tryb prywatności (metoda lupy) || Mode confidentialité (méthode loupe) || Datenschutzmodus (Lupen-Methode) || Modo de privacidad (método de lupa)
+Privacy mode (virtual display method) || Tryb prywatności (metoda wirtualnego ekranu) || Mode confidentialité (méthode écran virtuel) || Datenschutzmodus (Methode mit virtuellem Bildschirm) || Modo de privacidad (método de pantalla virtual)
+Privacy mode (exclude-from-capture method) || Tryb prywatności (metoda wykluczenia z przechwytywania) || Mode confidentialité (méthode d'exclusion de la capture) || Datenschutzmodus (Methode „Von Aufnahme ausschließen“) || Modo de privacidad (método de excluir de la captura)
+Blanks the remote computer’s own display while you work, so nobody there can watch || Wygasza ekran zdalnego komputera na czas pracy, aby nikt tam nie mógł patrzeć || Éteint l'écran de l'ordinateur distant pendant que vous travaillez, pour que personne sur place ne puisse regarder || Schaltet den Bildschirm des entfernten Computers während Ihrer Arbeit dunkel, damit dort niemand zusehen kann || Apaga la pantalla del equipo remoto mientras trabaja, para que nadie allí pueda mirar
+Block the remote user’s keyboard and mouse || Zablokuj klawiaturę i mysz zdalnego użytkownika || Bloquer le clavier et la souris de l'utilisateur distant || Tastatur und Maus des entfernten Benutzers sperren || Bloquear el teclado y el ratón del usuario remoto
+The person at the remote computer cannot type or move the mouse while this is on || Osoba przy zdalnym komputerze nie może pisać ani ruszać myszą, dopóki ta opcja jest włączona || La personne devant l'ordinateur distant ne peut ni taper ni bouger la souris tant que c'est activé || Die Person am entfernten Computer kann weder tippen noch die Maus bewegen, solange dies aktiv ist || La persona del equipo remoto no puede escribir ni mover el ratón mientras esté activado
+Locks the remote computer now; its user has to sign in again || Blokuje zdalny komputer teraz; jego użytkownik musi zalogować się ponownie || Verrouille l'ordinateur distant maintenant ; son utilisateur doit se reconnecter || Sperrt den entfernten Computer sofort; der Benutzer muss sich neu anmelden || Bloquea ahora el equipo remoto; su usuario tendrá que volver a iniciar sesión
+Lock the screen when I disconnect || Zablokuj ekran po moim rozłączeniu || Verrouiller l'écran quand je me déconnecte || Bildschirm sperren, wenn ich die Verbindung trenne || Bloquear la pantalla cuando me desconecte
+Asks the remote computer to lock when this session ends (best effort; it does not confirm) || Prosi zdalny komputer o zablokowanie po zakończeniu sesji (w miarę możliwości; nie potwierdza) || Demande à l'ordinateur distant de se verrouiller à la fin de la session (au mieux ; sans confirmation) || Bittet den entfernten Computer, sich nach Ende der Sitzung zu sperren (nach Möglichkeit; ohne Bestätigung) || Pide al equipo remoto que se bloquee al terminar la sesión (en la medida de lo posible; no confirma)
+Refresh video || Odśwież obraz || Actualiser la vidéo || Video aktualisieren || Actualizar el vídeo
+Fullscreen || Pełny ekran || Plein écran || Vollbild || Pantalla completa
+Exit fullscreen || Zamknij pełny ekran || Quitter le plein écran || Vollbild beenden || Salir de pantalla completa
+Image quality || Jakość obrazu || Qualité de l'image || Bildqualität || Calidad de imagen
+Best || Najlepsza || Meilleure || Beste || La mejor
+Balanced || Zrównoważona || Équilibrée || Ausgewogen || Equilibrada
+Custom quality || Własna jakość || Qualité personnalisée || Eigene Qualität || Calidad personalizada
+Volume || Głośność || Volume || Lautstärke || Volumen
+Mute playback || Wycisz odtwarzanie || Couper la lecture || Wiedergabe stummschalten || Silenciar la reproducción
+Start remote audio || Uruchom dźwięk zdalny || Démarrer l'audio distant || Remote-Audio starten || Iniciar el audio remoto
+Remote audio ready || Dźwięk zdalny gotowy || Audio distant prêt || Remote-Audio bereit || Audio remoto listo
+Remote cursor || Kursor zdalny || Curseur distant || Entfernter Mauszeiger || Cursor remoto
+Show remote cursor || Pokaż kursor zdalny || Afficher le curseur distant || Entfernten Mauszeiger anzeigen || Mostrar el cursor remoto
+Follow remote cursor || Śledź kursor zdalny || Suivre le curseur distant || Entferntem Mauszeiger folgen || Seguir el cursor remoto
+Follow remote window focus || Śledź aktywne okno zdalne || Suivre la fenêtre active distante || Dem aktiven entfernten Fenster folgen || Seguir la ventana activa remota
+Enlarge remote cursor || Powiększ kursor zdalny || Agrandir le curseur distant || Entfernten Mauszeiger vergrößern || Agrandar el cursor remoto
+Select monitor || Wybierz monitor || Sélectionner l'écran || Monitor wählen || Seleccionar monitor
+Actual size || Rzeczywisty rozmiar || Taille réelle || Originalgröße || Tamaño real
+More options || Więcej opcji || Plus d'options || Weitere Optionen || Más opciones
+Touch || Dotyk || Tactile || Touch || Táctil
+Monitor || Monitor || Écran || Monitor || Monitor
+Scale mode || Tryb skalowania || Mode d'échelle || Skalierungsmodus || Modo de escala
+Block all input to the remote device || Zablokuj całe wejście do zdalnego urządzenia || Bloquer toute saisie vers l'appareil distant || Jede Eingabe an das entfernte Gerät blockieren || Bloquear toda la entrada al dispositivo remoto
+Save password on this device || Zapisz hasło na tym urządzeniu || Enregistrer le mot de passe sur cet appareil || Passwort auf diesem Gerät speichern || Guardar la contraseña en este dispositivo
+Keyboard layout || Układ klawiatury || Disposition du clavier || Tastaturlayout || Distribución del teclado

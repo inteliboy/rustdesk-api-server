@@ -47,6 +47,19 @@ const MAX_DECODE_QUEUE = 30;
  */
 const STALL_TIMEOUT_MS = 2500;
 
+/**
+ * How long a freshly configured decoder may take to put out its first picture.
+ *
+ * Some decoders (hardware HEVC above all) accept a configuration the probe said
+ * was fine, take the chunks, and then never output a frame and never report an
+ * error. That is the one failure the error callback cannot catch, and the stall
+ * check only runs while chunks keep arriving, which a still screen does not
+ * send. So the first picture has its own clock: past it the decoder is treated
+ * as failed (a hardware one is retried without the preference, then the codec is
+ * given up and the peer is told to send another).
+ */
+const FIRST_FRAME_TIMEOUT_MS = 5000;
+
 async function supported(config: VideoDecoderConfig): Promise<boolean> {
   try {
     const res = await VideoDecoder.isConfigSupported(config);
@@ -113,12 +126,14 @@ export async function probeSupportedDecoding(): Promise<SupportedDecoding> {
   let vp9 = false;
   let vp8 = false;
   let h264 = false;
+  let h265 = false;
   let av1 = false;
   if (typeof VideoDecoder !== 'undefined') {
-    [vp9, vp8, h264, av1] = await Promise.all([
+    [vp9, vp8, h264, h265, av1] = await Promise.all([
       probe('vp9s'),
       probe('vp8s'),
       probe('h264s'),
+      probe('h265s'),
       probe('av1s'),
     ]);
   } else if (mseH264Available()) {
@@ -127,15 +142,17 @@ export async function probeSupportedDecoding(): Promise<SupportedDecoding> {
     // this client can never display.
     h264 = true;
   }
-  // ability_h265 deliberately stays 0 even where 'hev1.1.6.L93.B0' probes ok:
-  // hardware HEVC decoders routinely accept the config then fail on real
-  // streams. Never set i444/prefer_chroma either — I420 default only.
+  // H.265 is offered where the browser says it can decode it. That claim is not always true of
+  // real streams (a hardware decoder can accept the configuration and then fail), which is what
+  // the pipeline's error handling and its first-picture check are for: a codec that does not
+  // deliver is dropped and the peer is told to use another. Never set i444/prefer_chroma —
+  // I420 default only.
   return SupportedDecoding.fromPartial({
     ability_vp9: vp9 ? 1 : 0,
     ability_vp8: vp8 ? 1 : 0,
     ability_h264: h264 ? 1 : 0,
     ability_av1: av1 ? 1 : 0,
-    ability_h265: 0,
+    ability_h265: h265 ? 1 : 0,
     prefer: SupportedDecoding_PreferCodec.Auto,
   });
 }
@@ -169,6 +186,9 @@ export class VideoPipeline {
   // Stall detection: frames rendered out, and when the last one arrived.
   private framesOut = 0;
   private lastOutputMs = Date.now();
+  // First-picture check of the current decoder (see FIRST_FRAME_TIMEOUT_MS).
+  private outSinceConfigure = 0;
+  private firstFrameTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(
     private readonly canvas: OffscreenCanvas,
@@ -240,6 +260,7 @@ export class VideoPipeline {
         this.noteDecodeStart(timestamp);
         this.decoder!.decode(new EncodedVideoChunk({ type: f.key ? 'key' : 'delta', timestamp, data: f.data }));
         this.awaitingKey = false;
+        this.watchFirstFrame(kase);
         this.checkStall();
       } catch {
         this.noteFailure(kase);
@@ -269,6 +290,7 @@ export class VideoPipeline {
     this.teardownDecoder();
     this.awaitingKey = true;
     this.failStreak = 0;
+    this.outSinceConfigure = 0;
     try {
       const hardware = decodeMode[kase] === 'hardware';
       const dec = new VideoDecoder({
@@ -329,14 +351,32 @@ export class VideoPipeline {
     this.windowDecoded++;
   }
 
+  /** Start the first-picture clock once, on the first chunk a decoder is given. */
+  private watchFirstFrame(kase: EncodedCase): void {
+    if (this.outSinceConfigure > 0 || this.firstFrameTimer !== undefined) return;
+    this.firstFrameTimer = setTimeout(() => {
+      this.firstFrameTimer = undefined;
+      if (this.closed || this.currentCase !== kase || this.outSinceConfigure > 0) return;
+      this.decoderError(kase);
+    }, FIRST_FRAME_TIMEOUT_MS);
+  }
+
   private handleOutput(frame: VideoFrame): void {
     this.noteDecodeEnd(frame.timestamp);
     this.failStreak = 0;
+    this.outSinceConfigure++;
+    clearTimeout(this.firstFrameTimer);
+    this.firstFrameTimer = undefined;
     this.framesOut++;
     this.lastOutputMs = Date.now();
     try {
-      const w = frame.displayWidth;
-      const h = frame.displayHeight;
+      // The picture's own size, not its display size: a hardware HEVC decoder reports the display
+      // size from a default (1280x720 for a 640x480 picture, seen on Edge 153) because the config
+      // carries no size, which would stretch the screen. Screen content has square pixels, so the
+      // visible rectangle is the picture.
+      const visible = frame.visibleRect;
+      const w = visible?.width || frame.displayWidth;
+      const h = visible?.height || frame.displayHeight;
       if (this.canvas.width !== w || this.canvas.height !== h) {
         this.canvas.width = w;
         this.canvas.height = h;
@@ -344,7 +384,7 @@ export class VideoPipeline {
       // Opaque: there is no alpha to blend. (`desynchronized: true` would also cut the delay to
       // the screen, but its effect on latency and tearing was not measured, so it is not set.)
       this.ctx ??= this.canvas.getContext('2d', { alpha: false });
-      this.ctx?.drawImage(frame, 0, 0);
+      this.ctx?.drawImage(frame, 0, 0, w, h);
       this.lastW = w;
       this.lastH = h;
     } finally {
@@ -374,6 +414,8 @@ export class VideoPipeline {
   }
 
   private teardownDecoder(): void {
+    clearTimeout(this.firstFrameTimer);
+    this.firstFrameTimer = undefined;
     const dec = this.decoder;
     this.decoder = null;
     if (dec && dec.state !== 'closed') {

@@ -72,6 +72,7 @@ them is fictional demo data: made-up people, devices and addresses, made-up hard
 | A device: details, strategy, sharing | [device-detail-light.png](screenshots/device-detail-light.png) | [device-detail-dark.png](screenshots/device-detail-dark.png) |
 | The [web client](#web-client-control-a-device-in-the-browser): the password screen of a session in the browser (it follows the WebUI's theme and accent color) | [webclient-light.png](screenshots/webclient-light.png) | [webclient-dark.png](screenshots/webclient-dark.png) |
 | The web client in a session: the stream's numbers in the bar (codec, resolution, FPS, bitrate, latency, decode time), the dock, and the chat window (the remote screen here is a drawn placeholder) | [webclient-session-light.png](screenshots/webclient-session-light.png) | [webclient-session-dark.png](screenshots/webclient-session-dark.png) |
+| The web client's Type window: text to write or paste, sent to the remote device as key presses (the remote screen is a drawn placeholder) | [webclient-type-light.png](screenshots/webclient-type-light.png) | [webclient-type-dark.png](screenshots/webclient-type-dark.png) |
 | The web client's on-screen keyboard, with Ctrl armed for the next key (the remote screen is a drawn placeholder) | [webclient-keyboard-light.png](screenshots/webclient-keyboard-light.png) | [webclient-keyboard-dark.png](screenshots/webclient-keyboard-dark.png) |
 | The web client's file manager: two panes, Send and Receive, the transfer queue | [webclient-files-light.png](screenshots/webclient-files-light.png) | [webclient-files-dark.png](screenshots/webclient-files-dark.png) |
 | Logs: Activity (what happened in the WebUI and the API) | [logs-activity-light.png](screenshots/logs-activity-light.png) | [logs-activity-dark.png](screenshots/logs-activity-dark.png) |
@@ -870,8 +871,16 @@ second used about 5% of one CPU core in hardware (H.264, VP9, AV1) and 23-26% (H
 in software; VP8 has no hardware decoder there and used 26%. On that machine the browser's own default already
 chose hardware, so asking for it changed nothing; it matters only where the default would not.
 
+**H.265.** H.265 (HEVC) is offered to the device where the browser says it can decode it; Chromium has no software
+decoder for it, so that means the graphics hardware (on Edge 153 with a GPU a test stream from x265, sent through the
+client's own video code, decoded to every picture, at the right size). It has not been tried against a real RustDesk
+device, and a hardware decoder can accept H.265 and still fail on a real stream, so the client watches for it: if the
+decoder errors, or gives no picture within 5 seconds of its first data, the client first retries without asking for
+hardware, then stops offering H.265 for that session and the device switches to another codec. **Video codec** in the
+menu (the three dots) shows what is on offer and lets you pick one; *Automatic* leaves the choice to the device.
+
 **When it does not connect.** The client itself only says "ID server connection lost", which means a socket closed
-before hbbs answered. So **Open in browser** first runs a check (`GET /api/v1/webclient/check?device_id=...`): this
+before hbbs answered. So opening the client from a device first runs a check (`GET /api/v1/webclient/check?device_id=...`): this
 server opens a WebSocket to hbbs and to hbbr, sends hbbs the same request the browser will send for that device
 and says what came back, in words: *cannot resolve the host*, *connection refused*, *no answer within 4 s*, *answered
 HTTP 404, not a WebSocket*, *hbbs says the device is offline*, *the ID server does not know this ID*, *refused the
@@ -888,8 +897,9 @@ works from here), a reverse proxy that does not pass WebSocket upgrades, and a k
 **Look.** The client wears the WebUI's theme: light or dark (including "system") and the accent color chosen under
 **Appearance**, read from the same per-browser setting, so it matches the pages around it. The connect screen is the
 sign-in card's twin: the device's ID (fixed, chosen by the WebUI) and the password field, no bar above it. When the
-remote screen appears, so do a flat bar and a dock along the bottom (**Keyboard**, input mode, type text, clipboard, and
-**Files** and **Chat**), all drawn with the WebUI's surfaces and icons. The bar carries the device (the remote user, its
+remote screen appears, so do a flat bar and a dock along the bottom (**Keyboard**, input mode, **Type**, **Clipboard**,
+**Terminal**, **Camera** and **Record** where the device and the browser offer them, and **Files** and **Chat**), all
+drawn with the WebUI's surfaces and icons. The bar carries the device (the remote user, its
 ID and system), the stream's numbers (codec with hardware or software decoding, resolution, frames per second, bitrate,
 the round trip the remote device reports, and on wider windows decode time, dropped frames, time connected and the remote
 RustDesk version) and the view controls with
@@ -905,8 +915,31 @@ Ctrl+C; Ctrl, Alt, then Del is Ctrl+Alt+Del, sent as the remote device's own key
 click the remote screen is a Ctrl-click. Above the keys, one tap sends a common combination: Ctrl+Alt+Del,
 Ctrl+Shift+Esc, Alt+Tab, Alt+F4, Win+D, Win+R, Lock, and Ctrl+C, V, X, Z and A. A held key repeats. Your own keyboard
 still works while it is open, and closing it lets go of anything latched. It follows the device's keyboard permission
-and is unavailable in view-only mode. Only the US layout is drawn: keys send the character shown, so a remote layout
-that differs types what it maps that character to.
+and is unavailable in view-only mode. The keys drawn are the US ones and send the character shown, so a remote layout
+that differs types what it maps that character to. For national characters the title bar has a layout list (**US** or
+**Polski**; Polski is the first choice for a Polish browser, and the choice is remembered): in **Polski** the right Alt
+key is **AltGr**, and AltGr then a letter types its Polish form (ą ć ę ł ń ó ś ź ż, and € on U; with Shift the
+capitals) as that character, whatever layout the remote device has, and the letters on the keys change to show it.
+AltGr with any other key is Ctrl+Alt, as on a Windows keyboard; in **US** the right Alt is a plain Alt.
+
+**Type, Clipboard, Record.** **Type** opens a window to write or paste text into; **Type on remote device** (or
+Ctrl+Enter) sends it as key presses, so it works where the clipboard does not: a sign-in screen, a password field,
+a session inside a session. It can press Enter afterwards, has a speed (Fast, Normal, Slow, for remote applications
+that lose keys), shows how far it is and can be stopped. The text is not kept: it is cleared once typed, when the
+window is closed (Esc) and when the session ends, and nothing latched on the on-screen keyboard joins it.
+**Clipboard** opens a small menu: **Send my clipboard to the remote device** copies what is on this computer's clipboard
+(the browser asks for permission the first time), and **Share clipboard text** turns clipboard sharing on or off for
+the session; while it is on, text copied on the remote device lands on this computer's clipboard by itself. There is
+no question about the clipboard when a session starts. **Terminal** (a shell on the remote device), **Camera** (its
+camera) and **Record** (the session to a file on this computer; nothing is uploaded, and the button turns red and
+says **Stop** while it runs) sit in the dock and are shown only where the device and browser support them; they are
+greyed out where the device or view-only mode forbids them.
+
+**The menu.** The three dots hold what changes the picture and the remote device: image quality, frame rate, video
+codec, the remote cursor, sound and a **Remote device** section (restart, ask for administrator rights, privacy
+mode, block the remote user's keyboard and mouse, lock the screen, lock when disconnecting), each with a tooltip
+that says what it does. A device that offers several privacy modes shows them by the method's name (magnifier,
+virtual display, exclude from capture) instead of the internal name it reports.
 
 **File transfer.** **Files** opens a file manager over the remote screen with two panes: this computer on the left and
 the remote computer on the right, each with its own path, sortable columns (folders stay on top), and buttons for a
