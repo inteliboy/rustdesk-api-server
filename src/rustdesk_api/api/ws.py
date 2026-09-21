@@ -25,7 +25,7 @@ from rustdesk_api.services import tokens as token_service
 router = APIRouter(tags=["ws"])
 
 
-def _same_origin(websocket: WebSocket) -> bool:
+def same_origin(websocket: WebSocket) -> bool:
     origin = websocket.headers.get("origin")
     host = websocket.headers.get("host")
     if origin is None or host is None:
@@ -47,7 +47,7 @@ async def devices_ws(
     if networks and not network_policy.is_allowed(resolve_client_ip(websocket, settings), networks):
         await websocket.close(code=1008)
         return
-    if not _same_origin(websocket):
+    if not same_origin(websocket):
         await websocket.close(code=1008)
         return
 

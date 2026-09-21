@@ -271,11 +271,13 @@ function uuidBanner(d, canManage) {
 }
 
 async function render() {
-  const [d, groups, tags, strategies] = await Promise.all([
+  const [d, groups, tags, strategies, webClient] = await Promise.all([
     api(`/api/v1/devices/${deviceId}`),
     api("/api/v1/groups"),
     api("/api/v1/tags"),
     currentUser && currentUser.is_admin ? api("/api/v1/strategies") : Promise.resolve([]),
+    // Whether the server offers the browser client at all; the button is only shown if it does.
+    api("/api/v1/webclient/status").catch(() => ({ available: false })),
   ]);
   const canManage = currentUser && (currentUser.is_admin || d.owner_id === currentUser.id);
   const statusBadge = d.online
@@ -312,7 +314,14 @@ async function render() {
   document.getElementById("content").innerHTML = `
     <div class="flex items-center justify-between">
       <h1 class="text-lg font-semibold">${escapeHtml(d.alias || d.hostname || d.rustdesk_id)}</h1>
-      ${statusBadge}
+      <span class="inline-flex items-center gap-3">
+        ${
+          webClient.available
+            ? `<a href="/webclient?device=${d.id}" target="_blank" rel="noopener" class="px-3 py-1.5 rounded-md border border-slate-300 text-sm hover:bg-slate-100" title="Control this device in a browser tab. You type the device's password there; it goes to the device, not to this server.">Open in browser</a>`
+            : ""
+        }
+        ${statusBadge}
+      </span>
     </div>
     ${uuidBanner(d, canManage)}
     <div class="card p-4">

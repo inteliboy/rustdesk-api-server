@@ -176,7 +176,7 @@ Treat it as a young project: run it against a test client first, and please repo
 [Working with many devices](#working-with-many-devices) · [Device identity](#device-identity) ·
 [Monitoring](#monitoring-and-network-access) · [Log retention](#log-retention) ·
 [Notifications](#notifications) · [Database backups](#database-backups) ·
-[Deploying clients](#deploying-many-clients) · [Windows installer](#windows-installer) · [Default strategy](#default-strategy-and-fleet-hygiene) ·
+[Deploying clients](#deploying-many-clients) · [Windows installer](#windows-installer) · [Web client](#web-client-control-a-device-in-the-browser) · [Default strategy](#default-strategy-and-fleet-hygiene) ·
 [Languages](#languages) · [Database](#database) ·
 [First-run setup](#first-run-setup) · [Client configuration](#rustdesk-client-configuration) ·
 [Older API servers](#moving-clients-from-an-older-api-server) · [Reverse proxy](#reverse-proxy-setup) · [Security](#security-recommendations) ·
@@ -186,7 +186,7 @@ Treat it as a young project: run it against a test client first, and please repo
 
 ## Status
 
-Version 0.1.0. Phases 1 and 2 of the plan are done (application bootstrap, authentication, the
+Version 0.2.0. Phases 1 and 2 of the plan are done (application bootstrap, authentication, the
 RustDesk-compatible API, device registration and heartbeat, groups, tags, sharing, admin UI, audit logs),
 plus the account, fleet-management and hardening work described below, and OpenID Connect single sign-on from
 Phase 3. LDAP sign-in and webhook notifications are not implemented.
@@ -196,6 +196,7 @@ Phase 3. LDAP sign-in and webhook notifications are not implemented.
 - Python backend (FastAPI), SQLite by default
 - RustDesk-compatible API endpoints (`/api/login`, `/api/heartbeat`, `/api/sysinfo`, ...)
 - Project management REST API (`/api/v1/...`) with an OpenAPI spec
+- A browser web client: control a device from a tab, bridged to hbbs/hbbr (opt-in; [details](#web-client-control-a-device-in-the-browser))
 - Argon2id password hashing, revocable/expirable session tokens, CSRF protection for
   cookie-authenticated WebUI requests
 - Device registration, heartbeat-based online/offline detection, search, pagination
@@ -247,6 +248,9 @@ Phase 3. LDAP sign-in and webhook notifications are not implemented.
   (`rustdesk://connect/<id>`); usernames link to the user's details (administrators)
 - Server-rendered WebUI (dashboard, devices, groups, tags, users) with light/dark/system themes
   and a selectable accent color (blue by default), chosen per browser under **Appearance**
+- The menu can run along the top or down the left side (**Appearance > Menu**, remembered per browser), with an
+  icon per page; on the left it narrows to icons only with the button under it. On a narrow screen the top menu is
+  used whatever was chosen. The icons are [Remix Icon](https://remixicon.com) (Apache-2.0).
 - Fully self-contained WebUI: the stylesheet is compiled ahead of time and served locally, so
   pages load nothing from third-party origins and work on an isolated network
 - Strict Content-Security-Policy (`script-src 'self'`): the WebUI runs no inline script, so an
@@ -306,7 +310,7 @@ docker compose up -d
   such as `TRUSTED_PROXIES`, under `environment:` in that file. Set `EXTERNAL_URL` to the address people type into
   the browser (password reset and sign-in links use it), and `SECURE_COOKIES=true` once it is served over HTTPS.
 - **Prebuilt image.** `ghcr.io/inteliboy/rustdesk-api-server`, for amd64 and arm64, tagged `latest`,
-  a short commit hash (`sha-1a2b3c4`) and, for releases, the version (`0.1.0`). Use it instead of `build: .`
+  a short commit hash (`sha-1a2b3c4`) and, for releases, the version (`0.2.0`). Use it instead of `build: .`
   by putting `image:` in the compose file. If the repository is private the package is private too: run
   `docker login ghcr.io` with a token that has the `read:packages` scope first.
 - **Management commands.** The image's entrypoint is the `rustdesk-api` CLI, so:
@@ -778,6 +782,74 @@ the WebUI in the automated tests. **Not verified:** running a generated installe
 real certificate authority (so Windows' own verdict on the signature), and (until the CI jobs for them have run) NSIS
 and `osslsigncode` from Debian inside the Docker image. Try the installer on one machine first.
 
+## Web client: control a device in the browser
+
+**Open in browser** on a device's page starts a RustDesk session in a browser tab: screen, keyboard and mouse,
+clipboard, file transfer and audio, with nothing to install. It is off until you switch it on:
+
+```env
+WEB_CLIENT_ENABLED=true
+RUSTDESK_ID_SERVER=rustdesk.example.com   # already needed for the Deploy page
+RUSTDESK_KEY=<the contents of hbbs's id_ed25519.pub>
+```
+
+**How it works.** A browser cannot open the RustDesk TCP connections, but `hbbs` and `hbbr` also listen on
+WebSocket ports (21118 and 21119). The client (source in [`webclient/`](webclient/), built into
+`src/rustdesk_api/web/static/webclient/`) speaks the RustDesk protocol over WebSockets, and this server bridges
+the browser to those two ports: the browser opens `/api/v1/webclient/ws/id` and `.../relay` here, and the server
+opens the matching socket to hbbs / hbbr and copies frames both ways. So `hbbs` and `hbbr` must be reachable from
+the machine this server runs on. It dials `ws://<host of RUSTDESK_ID_SERVER>:21118` and
+`ws://<host of RUSTDESK_RELAY_SERVER, else the ID server>:21119`; if they are elsewhere (another container, a
+private address) set `WEB_CLIENT_HBBS_URL` and `WEB_CLIENT_HBBR_URL` (`ws://` or `wss://`). The video always goes
+through the relay: a browser cannot hole-punch to a peer.
+
+**Who may use it, and what the server checks.**
+
+- Administrators, the owner of a device, and users a device is shared with the **control** permission. A **view**
+  share does not get a browser session: a session is control of the machine, and its view-only mode would only be
+  the browser's own setting, which the person using it could change.
+- Starting one is `POST /api/v1/webclient/sessions`: it needs a signed-in browser session (not an API key) and
+  the CSRF header, and it is written to the audit log (*Logs > Activity*: "opened the web client on device ...").
+  It answers with a two-minute ticket for that one device, set as an `HttpOnly` cookie (not in the WebSocket
+  address, which ends up in access logs).
+- The bridge accepts a WebSocket only with the session, that ticket and a same-origin `Origin`, and re-checks the
+  device permission when it connects, so a share withdrawn meanwhile counts. It reads the two plain messages that
+  name a device, the request on the ID socket and the request to be paired on the relay, and closes the socket if
+  they name another device, so a ticket for one device cannot be used to reach another. It cannot look inside the
+  rest of a session: that is encrypted end to end between the browser and the device.
+- At most `WEB_CLIENT_MAX_SESSIONS` (10) sessions are open at once.
+- The device's password is typed into the client's own screen and goes to the device, not to this server. The
+  client's "Save password on this device" is switched off, because what it stored (a salted hash of the password)
+  logs in like the password does.
+
+**Browsers.** The client needs WebCodecs, which browsers only offer on **HTTPS** (or `localhost`): put the server
+behind TLS (see [Reverse proxy setup](#reverse-proxy-setup)). On plain `http://` it falls back to H.264 through the
+browser's media player, without frame statistics and with fewer features. Chrome and Edge are what the client was
+written for; recent Firefox and Safari implement WebCodecs too, but nothing was tried in them, and audio needs
+`AudioDecoder`, which Safari may lack. The statistics panel shows the codec and whether it decodes in **hardware
+or software**; on Chromium the client asks for the hardware decoder where the browser reports one, and falls back
+to whatever the browser picks if that fails. Measured on Edge 153 with a GPU, decoding 1080p at 60 frames per
+second used about 5% of one CPU core in hardware (H.264, VP9, AV1) and 23-26% (H.264), 35-39% (VP9) or 55-61% (AV1)
+in software; VP8 has no hardware decoder there and used 26%. On that machine the browser's own default already
+chose hardware, so asking for it changed nothing; it matters only where the default would not.
+
+**Reverse proxy.** Let the WebSocket upgrade through on `/api/v1/webclient/ws/` (Nginx: `proxy_http_version 1.1;`
+`proxy_set_header Upgrade $http_upgrade;` `proxy_set_header Connection "upgrade";`, and a long `proxy_read_timeout`).
+Do not expose 21118 and 21119 to the internet for this: community guides warn that hbbs and hbbr take the peer's
+address from a header on those ports, so anyone who can reach them directly could forge it. Keep them reachable
+only from this server.
+
+**Verified and not.** Verified with the real client in a real browser: the page and its WebAssembly load under the
+server's content security policy, the ticket and session open the bridge, and the client's first message reaches a
+stand-in hbbs for the right device (the bridge is also tested with real WebSocket servers standing in for hbbs and
+hbbr, using frames encoded by the client's own code). **Not verified:** a whole session against a real `hbbs`,
+`hbbr` and RustDesk client (sign-in, video, input, files), Firefox and Safari, and hardware other than one test
+machine. Try it on a spare device first.
+
+**Licence.** The client is AGPL-3.0, taken from [CortenDesk](https://github.com/Vaso73/cortendesk)'s web client and
+changed (see [`webclient/NOTICE`](webclient/NOTICE)); the rest of this repository is MIT. To change the client:
+`cd webclient && npm ci && npm run build` (it needs Node.js 20; running the server does not).
+
 ## Default strategy and fleet hygiene
 
 - **Default strategy.** Mark one strategy as the default (**Strategies**, *Make default*): every device that has no
@@ -933,6 +1005,8 @@ behind Nginx/Caddy/Traefik/Apache with TLS termination, and:
 - set `SECURE_COOKIES=true`
 - set `TRUSTED_PROXIES` to the proxy's IP so `X-Forwarded-For` is honored (never trusted from
   arbitrary clients otherwise)
+- pass WebSocket upgrades on `/api/v1/ws/devices` (live device status) and, if you use the
+  [web client](#web-client-control-a-device-in-the-browser), `/api/v1/webclient/ws/`
 
 ### Local HTTPS testing (self-signed, no reverse proxy)
 
@@ -1131,4 +1205,5 @@ hostnames, keys or passwords in issues, tests or docs. To report a security prob
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE), except the browser client in [`webclient/`](webclient/) (and its built files in
+`src/rustdesk_api/web/static/webclient/`), which is AGPL-3.0-only; see [`webclient/NOTICE`](webclient/NOTICE).

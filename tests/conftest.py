@@ -37,6 +37,8 @@ def settings(tmp_path, monkeypatch) -> Iterator[Settings]:
     monkeypatch.setenv("SESSION_LIFETIME_SECONDS", "3600")
     # No scheduled backups running behind a test's back (the tests that want one call the service).
     monkeypatch.setenv("BACKUP_INTERVAL_HOURS", "0")
+    # No test asks GitHub whether a newer build exists; the ones that cover it opt in, with a fake.
+    monkeypatch.setenv("UPDATE_CHECK_ENABLED", "false")
     clear_settings_cache()
     yield get_settings()
     clear_settings_cache()

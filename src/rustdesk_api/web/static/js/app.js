@@ -515,6 +515,8 @@ function describeActivity(item, { includeActor = true } = {}) {
       return `${prefix}exported ${safe.rows} ${safe.what} row${item.detail && item.detail.rows === 1 ? "" : "s"}`;
     case "devices_imported":
       return `${prefix}imported devices (${safe.created} created, ${safe.updated} updated)`;
+    case "webclient_session":
+      return `${prefix}opened the web client on device <span class="whitespace-nowrap">${safe.rustdesk_id}</span>`;
     case "installer_build":
       return `${prefix}built a Windows installer (RustDesk ${safe.tag}, ${safe.arch}${item.detail && item.detail.signed ? ", signed" : ""})`;
     case "installer_kit":
@@ -588,7 +590,7 @@ function renderThemeMenu() {
   if (!host || !window.appTheme) return;
 
   host.innerHTML = `<button id="theme-toggle" type="button" aria-haspopup="true" aria-expanded="false"
-      class="rounded-md px-2 py-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900">Appearance</button>
+      class="rd-ctl">${window.rdIcon ? window.rdIcon("appearance", 18) : ""}<span>Appearance</span></button>
     <div id="theme-panel" class="hidden absolute right-0 mt-2 w-60 card p-3 shadow-lg z-40"></div>`;
   const toggle = document.getElementById("theme-toggle");
   const panel = document.getElementById("theme-panel");
@@ -606,8 +608,16 @@ function renderThemeMenu() {
         title="${a}" style="background:${ACCENT_SWATCHES[a]}"
         class="h-6 w-6 rounded-full ring-offset-2 ring-offset-surface ${a === current.accent ? "ring-2 ring-slate-900" : ""}"></button>`
     ).join("");
+    const layoutButtons = window.appTheme.LAYOUTS.map(
+      (l) => `<button type="button" data-layout-choice="${l}" aria-pressed="${l === current.layout}"
+        class="flex-1 inline-flex items-center justify-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium ${
+          l === current.layout ? "bg-brand-600 text-white" : "text-slate-600 hover:bg-slate-100"
+        }">${window.rdIcon ? window.rdIcon("layout-" + l, 16) : ""}<span>${l === "top" ? "Top" : "Left"}</span></button>`
+    ).join("");
     panel.innerHTML = `<p class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Theme</p>
       <div class="flex gap-1 mb-4">${themeButtons}</div>
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Menu</p>
+      <div class="flex gap-1 mb-4">${layoutButtons}</div>
       <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Accent color</p>
       <div class="flex gap-2 px-1 py-1">${swatches}</div>${languageSection()}`;
   }
@@ -627,6 +637,7 @@ function renderThemeMenu() {
     if (!target) return;
     if (target.dataset.themeChoice) window.appTheme.setTheme(target.dataset.themeChoice);
     if (target.dataset.accentChoice) window.appTheme.setAccent(target.dataset.accentChoice);
+    if (target.dataset.layoutChoice) window.appTheme.setLayout(target.dataset.layoutChoice);
     paint();
   });
   document.addEventListener("click", (evt) => {
@@ -635,6 +646,25 @@ function renderThemeMenu() {
   document.addEventListener("keydown", (evt) => {
     if (evt.key === "Escape") setOpen(false);
   });
+}
+
+// The button that narrows the left menu to its icons and widens it again (only shown in the left layout).
+function renderNavCollapse() {
+  const button = document.getElementById("nav-collapse");
+  if (!button || !window.appTheme) return;
+  function paint() {
+    const compact = window.appTheme.get().nav === "compact";
+    const label = compact ? "Expand the menu" : "Collapse the menu";
+    button.innerHTML = (window.rdIcon ? window.rdIcon(compact ? "expand" : "collapse") : "") + `<span class="rd-nav-label">${compact ? "" : "Collapse"}</span>`;
+    button.setAttribute("aria-label", label);
+    button.title = label;
+    button.setAttribute("aria-expanded", String(!compact));
+  }
+  button.addEventListener("click", () => {
+    window.appTheme.setNav(window.appTheme.get().nav === "compact" ? "full" : "compact");
+    paint();
+  });
+  paint();
 }
 
 function renderNav(active, user) {
@@ -658,17 +688,20 @@ function renderNav(active, user) {
   nav.innerHTML = items
     .map(
       (item) =>
-        `<a href="${item.href}" class="px-2.5 py-2 rounded-md text-sm font-medium whitespace-nowrap ${
+        `<a href="${item.href}" title="${item.label}" class="rd-nav-link px-2.5 py-2 rounded-md text-sm font-medium whitespace-nowrap ${
           item.key === active ? "bg-brand-600 text-white" : "text-slate-600 hover:bg-slate-100"
-        }">${item.label}</a>`
+        }"${item.key === active ? ' aria-current="page"' : ""}>${window.rdIcon ? window.rdIcon(item.key) : ""}<span class="rd-nav-label">${item.label}</span></a>`
     )
     .join("");
 
   renderThemeMenu();
+  renderNavCollapse();
 
   const userLabel = document.getElementById("current-user-label");
   if (userLabel && user) {
-    userLabel.textContent = user.username + (user.is_admin ? " (admin)" : "");
+    // A round chip with the first letter, the name, and a small badge for an administrator.
+    const initial = (Array.from(user.username || "?")[0] || "?").toUpperCase();
+    userLabel.innerHTML = `<span class="rd-avatar" aria-hidden="true">${escapeHtml(initial)}</span><span class="rd-user-name">${escapeHtml(user.username)}</span>${user.is_admin ? '<span class="rd-role">admin</span>' : ""}`;
     // Administrators land on their own entry in Users; everyone else on their account page.
     if (user.is_admin && user.id != null) {
       userLabel.href = `/users?id=${encodeURIComponent(user.id)}`;
@@ -680,6 +713,7 @@ function renderNav(active, user) {
 
   const logoutBtn = document.getElementById("logout-btn");
   if (logoutBtn) {
+    logoutBtn.innerHTML = `${window.rdIcon ? window.rdIcon("logout", 18) : ""}<span>Log out</span>`;
     logoutBtn.addEventListener("click", async () => {
       await api("/api/v1/auth/logout", { method: "POST" });
       window.location.href = "/login";

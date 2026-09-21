@@ -25,6 +25,7 @@ from rustdesk_api.services import audit as audit_service
 from rustdesk_api.services import backup as backup_service
 from rustdesk_api.services import notifications as notification_service
 from rustdesk_api.services import options as options_service
+from rustdesk_api.services import updates as update_service
 
 router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
 
@@ -230,3 +231,40 @@ def create_backup_now(
     if created is None:  # pragma: no cover - the file was just written
         raise ApiError("BACKUP_FAILED", "The backup was written but could not be read back.", 500)
     return BackupOut(name=created.name, kind=created.kind, size=created.size, created_at=created.created_at)
+
+
+class LatestOut(BaseModel):
+    commit: str
+    date: str | None
+    message: str | None
+    url: str
+
+
+class UpdateStatusOut(BaseModel):
+    # off | unknown | current | behind | ahead | diverged | unpublished | error
+    state: str
+    checked_at: str | None
+    running_commit: str | None
+    running_version: str | None
+    dirty: bool
+    in_image: bool
+    behind_by: int | None
+    latest: LatestOut | None
+    # For a container that is behind: is the image for the newest commit published yet?
+    image: str | None
+    image_tag: str | None
+    compare_url: str | None
+    error: str | None
+
+
+@router.get("/update-status", response_model=UpdateStatusOut)
+def update_status(
+    refresh: bool = False,
+    _admin: User = Depends(get_current_admin),
+    settings: Settings = Depends(get_settings_dep),
+) -> UpdateStatusOut:
+    """Whether this server runs the latest build of the project (the Dashboard shows it). Asks
+    GitHub, cached for hours; `refresh` forces a new look, at most once a minute. Makes no request
+    at all when UPDATE_CHECK_ENABLED is false."""
+    status = update_service.get_status(settings.update_check_enabled, settings.git_commit, refresh=refresh)
+    return UpdateStatusOut(**status.as_dict())

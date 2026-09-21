@@ -1006,6 +1006,25 @@ an unusable password hash. The provider is trusted for MFA: a linked sign-in ski
 Not covered: several providers at once, the user-info endpoint, group/role mapping (a provider can never make anyone an
 administrator), logout at the provider, refresh tokens, `common-oidc/<json>` login options, and `id_token` decryption.
 
+## Web client (browser) - bridge, NOT live-verified against a real hbbs
+
+The browser client (`webclient/`) is not a RustDesk client this server answers; it talks to `hbbs` and `hbbr`
+directly, and this server only bridges its WebSockets (`/api/v1/webclient/ws/id` to hbbs port 21118,
+`.../relay` to hbbr port 21119) and decides who may open one. What the bridge reads, as encoded by the client's own
+code (`webclient/scripts/print-frames.mjs`):
+
+- ID socket: every frame is a `RendezvousMessage` with only `punch_hole_request` (oneof number 8) set. Its `id`
+  (field 1) is the device; the client also sends `force_relay`, `nat_type: SYMMETRIC`, `version` and, as
+  `licence_key`, the ID server's public key.
+- Relay socket: the first frame is a `RendezvousMessage` with only `request_relay` (18): `id` (1) the device,
+  `uuid` (2), `licence_key` (6). After it the stream is encrypted and passes through unread.
+- The bridge sets `X-Real-IP` to the browser's address (hbbs and hbbr use it for a peer behind a proxy).
+
+Seen with a stand-in hbbs: the client's first message arrives for the right device. Not seen: a real hbbs's
+`relay_response`, the relay pairing, or a whole session. RustDesk's self-hosting docs list the WebSocket ports as 21118 (hbbs)
+and 21119 (hbbr); community guides warn that a peer who reaches them directly can forge the address header, so keep
+them off the internet.
+
 ## How to verify against a real client
 
 1. Point a RustDesk desktop client's `API Server` field (in its ID/Relay

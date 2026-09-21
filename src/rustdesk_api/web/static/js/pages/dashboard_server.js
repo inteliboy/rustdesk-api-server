@@ -249,6 +249,46 @@ function linkRow(label, text, url) {
   </div>`;
 }
 
+// What the update check found, in words. `update` comes from /api/v1/admin/update-status (dashboard.js
+// fetches it and hands it over with window.setUpdateStatus); null until it has arrived.
+function updateText(u) {
+  switch (u.state) {
+    case "current":
+      return t("Up to date");
+    case "behind":
+      return t("{1} commit(s) behind the latest", [u.behind_by]);
+    case "diverged":
+      return t("{1} commit(s) behind the latest, and has changes of its own", [u.behind_by]);
+    case "ahead":
+      return t("Ahead of the latest published build");
+    case "unpublished":
+      return t("A local build: GitHub does not know this commit");
+    case "unknown":
+      return t("Unknown: this build does not know its commit");
+    case "off":
+      return t("Not checked (UPDATE_CHECK_ENABLED is off)");
+    case "error":
+      return t("Could not check: {1}", [u.error || ""]);
+    default:
+      return "";
+  }
+}
+
+function updateRow() {
+  const u = state.update;
+  if (!u) return "";
+  const again = u.state === "off" ? "" : ` &middot; <button type="button" id="update-recheck" class="text-link hover:underline">${escapeHtml(t("Check again"))}</button>`;
+  return `<div class="flex justify-between gap-6 px-4 py-2 text-sm">
+    <dt class="text-slate-500 shrink-0">${escapeHtml(t("Latest version"))}</dt>
+    <dd class="text-right break-words min-w-0">${escapeHtml(updateText(u))}${again}</dd>
+  </div>`;
+}
+
+window.setUpdateStatus = (update) => {
+  state.update = update;
+  if (state.info) drawInfo();
+};
+
 function panel(title, rows) {
   return `<section class="card">
     <h2 class="px-4 pt-4 pb-2 text-sm font-semibold">${escapeHtml(title)}</h2>
@@ -289,6 +329,7 @@ function drawInfo() {
     panel("API server", [
       row("Version", sw.app_version),
       linkRow("Commit", build.commit_short ? build.commit_short + (build.dirty ? " (uncommitted changes)" : "") : "unknown", build.commit_url),
+      updateRow(),
       row("Written against RustDesk client", build.rustdesk_client_source ? `${build.rustdesk_client_source} source` : null),
       row("Python", `${sw.python_implementation} ${sw.python}`),
       row("SQLite", sw.sqlite),
@@ -355,6 +396,9 @@ async function initServerPanel() {
   if (started) return;
   started = true;
   wireChartHover();
+  document.getElementById("info").addEventListener("click", (evt) => {
+    if (evt.target.id === "update-recheck" && window.checkForUpdates) window.checkForUpdates(true);
+  });
   // Shown before the first draw: charts are sized from their container's width.
   const section = document.getElementById("server-section");
   section.classList.remove("hidden");

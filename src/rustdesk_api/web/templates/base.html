@@ -14,7 +14,7 @@
   <script src="/static/js/i18n.js"></script>
   <link rel="stylesheet" href="/static/css/tailwind.css" />
 </head>
-<body class="bg-slate-50 text-slate-900 min-h-screen">
+<body class="bg-slate-50 text-slate-900 min-h-screen{% if active %} has-shell{% endif %}">
   {% block body %}{% endblock %}
   {% if not active %}
   <div class="fixed bottom-3 left-3 z-30">
@@ -22,6 +22,7 @@
   </div>
   {% endif %}
   <div id="toast-root" class="toast flex flex-col gap-2"></div>
+  <script src="/static/js/icons.js"></script>
   <script src="/static/js/app.js"></script>
   {% block scripts %}{% endblock %}
 </body>

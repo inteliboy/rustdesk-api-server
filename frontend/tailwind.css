@@ -141,3 +141,234 @@
     background-position: 0 50%;
   }
 }
+
+/* Navigation icons follow the text color. */
+.rd-nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.rd-icon {
+  flex: none;
+}
+/* Only the left layout uses these. */
+.rd-nav-collapse,
+.rd-brand-logo {
+  display: none;
+}
+.rd-shell-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Menu on the left (Appearance > Menu): the header becomes a side bar and the page makes room for it. On a narrow
+   screen the top menu is used whatever was chosen, since a side bar would take the room the page needs. */
+@media (min-width: 768px) {
+  html[data-layout="left"] body.has-shell {
+    padding-left: 14rem;
+    /* room for the account bar */
+    padding-top: 3.5rem;
+  }
+  html[data-layout="left"][data-nav="compact"] body.has-shell {
+    padding-left: 4.5rem;
+  }
+  /* The account controls stay where they are with the top menu (top right of the page): here as a bar over
+     the content area. Fixed, so the side bar's own scrolling does not clip them or the Appearance panel. */
+  html[data-layout="left"] .rd-shell-controls {
+    position: fixed;
+    z-index: 29;
+    top: 0;
+    left: 14rem;
+    right: 0;
+    height: 3.5rem;
+    margin: 0;
+    padding: 0 1.25rem;
+    justify-content: flex-end;
+    background: rgb(var(--surface));
+    border-bottom: 1px solid rgb(var(--slate-200));
+  }
+  html[data-layout="left"][data-nav="compact"] .rd-shell-controls {
+    left: 4.5rem;
+  }
+  html[data-layout="left"] body > header.rd-shell {
+    position: fixed;
+    z-index: 30;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 14rem;
+    overflow-x: hidden;
+    overflow-y: auto;
+    border-bottom-width: 0;
+    border-right-width: 1px;
+  }
+  html[data-layout="left"][data-nav="compact"] body > header.rd-shell {
+    width: 4.5rem;
+  }
+  html[data-layout="left"] .rd-shell-inner {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0.75rem 0.625rem;
+  }
+  /* The row holding brand and account controls dissolves, so each of them is placed on its own. */
+  html[data-layout="left"] .rd-shell-row {
+    display: contents;
+  }
+  html[data-layout="left"] .rd-shell-brand {
+    order: 0;
+    padding: 0.25rem 0.5rem 0.75rem;
+  }
+  html[data-layout="left"] .rd-brand-logo {
+    display: block;
+    border-radius: 0.375rem;
+  }
+  html[data-layout="left"] #app-nav {
+    order: 1;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    margin-top: 0;
+    gap: 0.125rem;
+  }
+  html[data-layout="left"] .rd-nav-collapse {
+    order: 2;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    padding: 0.5rem 0.625rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+  }
+  /* Icons only. */
+  html[data-layout="left"][data-nav="compact"] .rd-brand-text,
+  html[data-layout="left"][data-nav="compact"] .rd-nav-label {
+    display: none;
+  }
+  html[data-layout="left"][data-nav="compact"] .rd-nav-link,
+  html[data-layout="left"][data-nav="compact"] .rd-nav-collapse {
+    justify-content: center;
+  }
+  html[data-layout="left"][data-nav="compact"] .rd-shell-brand {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
+/* Top menu: the account controls sit at the window's right edge, as they do in the left layout, instead of
+   ending where the page content ends. (A narrow screen keeps them in the flow of the header.) */
+.rd-shell {
+  position: relative;
+}
+@media (min-width: 768px) {
+  html:not([data-layout="left"]) .rd-shell-row {
+    min-height: 2.25rem;
+  }
+  html:not([data-layout="left"]) .rd-shell-controls {
+    position: absolute;
+    top: 0.75rem;
+    right: 1.25rem;
+    margin: 0;
+  }
+}
+
+/* The account controls: Appearance, the signed-in user, Log out. */
+.rd-ctl {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.375rem 0.625rem;
+  border-radius: 0.5rem;
+  color: rgb(var(--slate-500));
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  transition: background-color 120ms, color 120ms;
+}
+.rd-ctl:hover,
+.rd-ctl[aria-expanded="true"] {
+  background: rgb(var(--slate-100));
+  color: rgb(var(--slate-900));
+}
+.rd-user {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.1875rem 0.75rem 0.1875rem 0.1875rem;
+  border: 1px solid rgb(var(--slate-200));
+  border-radius: 9999px;
+  background: rgb(var(--surface));
+  color: rgb(var(--slate-900));
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: border-color 120ms, box-shadow 120ms;
+}
+.rd-user:hover {
+  border-color: rgb(var(--brand-500));
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.08);
+}
+.rd-avatar {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 9999px;
+  background: rgb(var(--brand-600));
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.rd-user-name {
+  max-width: 10rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rd-role {
+  padding: 0.0625rem 0.4rem;
+  border-radius: 9999px;
+  background: rgb(var(--brand-600) / 0.14);
+  color: rgb(var(--brand-600));
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+/* The round icon on a Dashboard stat card: the card's tone, softly. */
+.stat-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 9999px;
+}
+.stat-icon-brand {
+  background: rgb(var(--brand-600) / 0.14);
+  color: rgb(var(--brand-600));
+}
+.stat-icon-green {
+  background: rgb(34 197 94 / 0.16);
+  color: #16a34a;
+}
+.stat-icon-slate {
+  background: rgb(100 116 139 / 0.16);
+  color: rgb(var(--slate-500));
+}
+.stat-icon-violet {
+  background: rgb(139 92 246 / 0.16);
+  color: #8b5cf6;
+}
+.stat-icon-amber {
+  background: rgb(245 158 11 / 0.16);
+  color: #d97706;
+}
+.stat-icon-rose {
+  background: rgb(244 63 94 / 0.16);
+  color: #e11d48;
+}

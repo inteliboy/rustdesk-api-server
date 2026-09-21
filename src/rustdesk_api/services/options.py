@@ -15,6 +15,7 @@ from rustdesk_api.config import Settings
 from rustdesk_api.services import installer as installer_service
 from rustdesk_api.services import notifications as notification_service
 from rustdesk_api.services import signing as signing_service
+from rustdesk_api.services import webclient as webclient_service
 
 # Names that are not options an administrator switches: reported nowhere on purpose.
 NOT_LISTED = frozenset(
@@ -231,6 +232,35 @@ def _network(s: Settings) -> list[Option]:
     ]
 
 
+def _web_client_option(s: Settings) -> Option:
+    help_text = (
+        "Control a device from the browser: Open in browser on a device. The server bridges the browser to "
+        "hbbs and hbbr, which must be reachable from here (WebSocket ports 21118 and 21119)."
+    )
+    env = ("WEB_CLIENT_ENABLED", "WEB_CLIENT_HBBS_URL", "WEB_CLIENT_HBBR_URL", "WEB_CLIENT_MAX_SESSIONS")
+    label = "Web client"
+    if not s.web_client_enabled:
+        return Option(DEVICES, env, label, help_text, False)
+    if webclient_service.problems(s):
+        # Which variable is missing is on the Deploy page for administrators; the report only says it is not usable yet.
+        return Option(
+            DEVICES, env, label, help_text, False, "switched on, but RUSTDESK_KEY or an ID server is missing"
+        )
+    return Option(
+        DEVICES,
+        env,
+        label,
+        help_text,
+        True,
+        "up to {1} sessions at once, through {2} and {3}",
+        (
+            s.web_client_max_sessions,
+            urlsplit(webclient_service.hbbs_url(s)).hostname or "",
+            urlsplit(webclient_service.hbbr_url(s)).hostname or "",
+        ),
+    )
+
+
 def _devices(s: Settings) -> list[Option]:
     return [
         Option(
@@ -242,6 +272,7 @@ def _devices(s: Settings) -> list[Option]:
             "{1} second(s)",
             (s.device_online_timeout,),
         ),
+        _web_client_option(s),
         Option(
             DEVICES,
             ("DEVICE_UUID_REBIND",),
@@ -358,6 +389,13 @@ def _data(s: Settings) -> list[Option]:
             "IP address lookups",
             "Owner details of a public IP address are fetched from the internet registries. Turn off to make no outbound lookups.",
             s.ip_lookup_enabled,
+        ),
+        Option(
+            DATA,
+            ("UPDATE_CHECK_ENABLED",),
+            "Check for a newer version",
+            "The Dashboard asks GitHub, at most every few hours and sending nothing about this installation, whether a newer build of the project exists. Turn off to make no such request.",
+            s.update_check_enabled,
         ),
     ]
 

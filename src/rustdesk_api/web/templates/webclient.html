@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Web client - RustDesk API Server</title>
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/img/favicon-32.png" />
+  <link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png" />
+  <style>
+    html[data-i18n-pending] body { visibility: hidden; }
+    html, body { height: 100%; margin: 0; overflow: hidden; background: #000; }
+    #rd-root { height: 100vh; height: 100dvh; }
+    /* Shown until the client takes over, and again if it cannot start. */
+    #rd-launch { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 12px; padding: 24px; text-align: center; color: #cbd5e1;
+      background: #0b1120; font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; z-index: 50; }
+    #rd-launch[hidden] { display: none; }
+    /* The client is AGPL-3.0 software: say so, and where its source is. Small, in a corner. */
+    #rd-source { position: fixed; right: 10px; bottom: 6px; z-index: 40; font: 11px system-ui, sans-serif;
+      color: #64748b; text-decoration: none; opacity: .8; }
+    #rd-source:hover { color: #94a3b8; text-decoration: underline; }
+    #rd-launch a { color: #93c5fd; }
+    #rd-launch .rd-launch-error { color: #fca5a5; max-width: 34rem; }
+  </style>
+  {% if lang != "en" %}<script src="/static/i18n/{{ lang }}.js"></script>{% endif %}
+  <script src="/static/js/i18n.js"></script>
+  <link rel="stylesheet" href="/static/webclient/app.css?v={{ version }}" />
+</head>
+<body>
+  <div id="rd-root">
+    <div id="rd-toolbar"></div>
+    <div id="rd-viewport">
+      <canvas id="rd-canvas"></canvas>
+      <div id="rd-stats"></div>
+      <div id="rd-overlay"></div>
+    </div>
+  </div>
+  <div id="rd-launch">
+    <p id="rd-launch-text">Opening the web client...</p>
+    <p id="rd-launch-error" class="rd-launch-error" hidden></p>
+    <p><a id="rd-launch-back" href="/devices" hidden>Back to devices</a></p>
+  </div>
+  <a id="rd-source" href="{{ source_url }}" target="_blank" rel="noopener">Source code (AGPL-3.0)</a>
+  <script src="/static/js/app.js"></script>
+  <script src="/static/js/pages/webclient.js" data-version="{{ version }}"></script>
+</body>
+</html>

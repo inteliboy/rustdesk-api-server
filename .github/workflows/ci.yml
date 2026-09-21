@@ -34,6 +34,27 @@ jobs:
       - run: .venv/bin/ruff format --check .
       - run: .venv/bin/pyright
 
+  webclient:
+    name: Web client (type check and build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: webclient/package-lock.json
+      - run: npm ci
+        working-directory: webclient
+      - run: npm run typecheck
+        working-directory: webclient
+      - run: npm run build
+        working-directory: webclient
+      # The built client is committed (the server never needs Node), so it has to match its source.
+      - name: The committed build is up to date
+        run: git diff --exit-code -- src/rustdesk_api/web/static/webclient
+
   test:
     name: Tests (${{ matrix.os }}, Python ${{ matrix.python }})
     runs-on: ${{ matrix.os }}

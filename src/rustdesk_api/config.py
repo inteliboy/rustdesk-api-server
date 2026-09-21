@@ -70,6 +70,10 @@ class Settings(BaseSettings):
 
     external_url: str = Field(default="http://127.0.0.1:21114", alias="EXTERNAL_URL")
 
+    # Dashboard: whether this is the latest build of the project. Asks GitHub (anonymously, at most
+    # every few hours, sending nothing about this installation); false makes no request at all.
+    update_check_enabled: bool = Field(default=True, alias="UPDATE_CHECK_ENABLED")
+
     # The commit this build was made from. Set by the Docker image (a build
     # argument); when empty the server asks the git checkout it runs from.
     git_commit: str = Field(default="", alias="GIT_COMMIT")
@@ -77,6 +81,19 @@ class Settings(BaseSettings):
     rustdesk_id_server: str = Field(default="", alias="RUSTDESK_ID_SERVER")
     rustdesk_relay_server: str = Field(default="", alias="RUSTDESK_RELAY_SERVER")
     rustdesk_key: str = Field(default="", alias="RUSTDESK_KEY")
+
+    # The web client: "Open in browser" on a device. Browsers cannot speak the
+    # RustDesk TCP protocol, but hbbs and hbbr also listen on WebSocket ports
+    # (21118 and 21119), so this server bridges the browser to them - only for
+    # a signed-in user who may control that one device. Off by default: it needs
+    # RUSTDESK_ID_SERVER and RUSTDESK_KEY, and hbbs/hbbr reachable from here.
+    web_client_enabled: bool = Field(default=False, alias="WEB_CLIENT_ENABLED")
+    # Where the bridge dials. Empty = ws://<host of RUSTDESK_ID_SERVER>:21118 and
+    # ws://<host of RUSTDESK_RELAY_SERVER, else the ID server>:21119.
+    web_client_hbbs_url: str = Field(default="", alias="WEB_CLIENT_HBBS_URL")
+    web_client_hbbr_url: str = Field(default="", alias="WEB_CLIENT_HBBR_URL")
+    # Browser sessions open at the same time (each holds a relay connection).
+    web_client_max_sessions: int = Field(default=10, ge=1, le=200, alias="WEB_CLIENT_MAX_SESSIONS")
 
     session_lifetime_seconds: int = Field(default=604800, alias="SESSION_LIFETIME_SECONDS")
 
@@ -307,6 +324,14 @@ class Settings(BaseSettings):
                 f"known: {', '.join(NOTIFY_EVENT_NAMES)}"
             )
         return ",".join(names)
+
+    @field_validator("web_client_hbbs_url", "web_client_hbbr_url")
+    @classmethod
+    def _check_web_client_url(cls, value: str) -> str:
+        value = value.strip()
+        if value and not value.lower().startswith(("ws://", "wss://")):
+            raise ValueError("WEB_CLIENT_HBBS_URL and WEB_CLIENT_HBBR_URL must start with ws:// or wss://")
+        return value
 
     @field_validator("installer_timestamp_url")
     @classmethod

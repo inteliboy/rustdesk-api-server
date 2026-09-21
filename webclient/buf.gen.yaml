@@ -1,0 +1,19 @@
+version: v2
+# Generates src/gen/message.ts + src/gen/rendezvous.ts from protos/*.proto.
+# Run: npm run gen   (buf bundles its own protoc; no system protoc needed).
+# The ts-proto plugin binary comes from node_modules/.bin/protoc-gen-ts_proto.
+clean: true
+plugins:
+  - local: ./node_modules/.bin/protoc-gen-ts_proto
+    out: src/gen
+    opt:
+      # Load-bearing (spec §5): snakeToCamel=false keeps oneof field names as
+      # the wire names (msg.video_frame?.vp9s) exactly like the AGPL v1 client.
+      - snakeToCamel=false
+      - forceLong=bigint
+      - env=browser
+      - outputJsonMethods=false
+      - esModuleInterop=true
+      - useOptionals=messages
+      - oneof=unions
+      - unrecognizedEnum=false

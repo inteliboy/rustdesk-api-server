@@ -1,0 +1,39 @@
+{
+  "name": "rustdesk-api-webclient",
+  "version": "0.1.0",
+  "private": true,
+  "description": "In-browser RustDesk controlling client for RustDesk API Server (relay-only, WebCodecs video, all-TypeScript protocol). AGPL-3.0.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "gen": "buf generate",
+    "build": "node esbuild.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "probe": "TSX_TSCONFIG_PATH=node-harness/tsconfig.json node --import tsx node-harness/probe-transport.mjs",
+    "drive": "TSX_TSCONFIG_PATH=node-harness/tsconfig.json node --import tsx node-harness/drive-login.mjs",
+    "drive:online": "TSX_TSCONFIG_PATH=node-harness/tsconfig.json node --import tsx node-harness/drive-login.mjs --online"
+  },
+  "dependencies": {
+    "jmuxer": "^2.1.1",
+    "libsodium-wrappers": "^0.7.15",
+    "tweetnacl": "^1.0.3",
+    "zstddec": "^0.1.0"
+  },
+  "devDependencies": {
+    "@bufbuild/buf": "^1.50.0",
+    "@types/libsodium-wrappers": "^0.7.14",
+    "@types/node": "^20.19.0",
+    "@types/ws": "^8.5.13",
+    "esbuild": "^0.24.0",
+    "ts-proto": "^2.6.0",
+    "tsx": "^4.23.1",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0",
+    "ws": "^8.18.0"
+  }
+}

@@ -47,6 +47,18 @@ _WEBUI_CSP = f"script-src 'self'; script-src-attr 'none'; {_CSP_COMMON}"
 # They are only served when API_DOCS_ENABLED is on.
 _API_DOCS_PATHS = frozenset({"/docs", "/docs/oauth2-redirect", "/redoc"})
 _API_DOCS_CSP = _CSP_COMMON
+# The web client decodes with libsodium and zstd compiled to WebAssembly (inlined in
+# its script and worker), which needs 'wasm-unsafe-eval' - not 'unsafe-eval', so
+# JavaScript eval stays off. Only its page and its own files get this.
+_WEBCLIENT_CSP = f"script-src 'self' 'wasm-unsafe-eval'; script-src-attr 'none'; {_CSP_COMMON}"
+
+
+def _csp_for(path: str) -> str:
+    if path in _API_DOCS_PATHS:
+        return _API_DOCS_CSP
+    if path == "/webclient" or path.startswith("/static/webclient/"):
+        return _WEBCLIENT_CSP
+    return _WEBUI_CSP
 
 
 def configure_logging(settings: Settings) -> None:
@@ -220,9 +232,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         response.headers["X-Request-ID"] = request_id
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
-        response.headers["Content-Security-Policy"] = (
-            _API_DOCS_CSP if request.url.path in _API_DOCS_PATHS else _WEBUI_CSP
-        )
+        response.headers["Content-Security-Policy"] = _csp_for(request.url.path)
         response.headers["Referrer-Policy"] = "same-origin"
         if request.url.path.startswith("/static/"):
             # StaticFiles sends an ETag but no Cache-Control, so browsers apply

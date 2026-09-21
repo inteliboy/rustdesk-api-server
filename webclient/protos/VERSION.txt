@@ -1,0 +1,19 @@
+RustDesk protobuf schemas — vendored from rustdesk/hbb_common
+
+Source:   https://github.com/rustdesk/hbb_common
+Path:     protos/message.proto, protos/rendezvous.proto
+Ref:      master
+Fetched:  2026-07-22 (via raw.githubusercontent.com/rustdesk/hbb_common/master/...)
+Package:  hbb  (both files; no cross-imports)
+
+NOTE ON PINNING
+  The sandbox that vendored these could reach raw.githubusercontent.com but not
+  the GitHub REST API or the git smart-HTTP endpoint, so an exact commit SHA
+  could not be recorded here. Before shipping, re-vendor from a pinned tag/SHA
+  (spec §4 Phase 4: "Pin vendored protos to an exact hbb_common ref; scripted
+  re-vendor + diff on upstream releases") and replace `Ref: master` above with
+  the exact SHA.
+
+REGENERATE the TypeScript types after any re-vendor:
+  npm run gen        # runs protoc / ts-proto per buf.gen.yaml settings
+  (see webclient/README.md → "Regenerating protobuf types")

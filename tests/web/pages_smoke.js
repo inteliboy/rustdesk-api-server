@@ -142,9 +142,18 @@ class Env {
       __toasts: env.toasts,
     });
     this.context = context;
+    // As in a browser, `window` is the global object: what one script puts on it another reads by its bare name.
+    Object.assign(context, window);
+    vm.runInContext("window = globalThis;", context);
+    vm.runInContext(read("static", "js", "icons.js"), context, { filename: "icons.js" }); // as base.html loads it
     vm.runInContext(read("static", "js", "app.js"), context, { filename: "app.js" });
     vm.runInContext("toast = function (message, kind) { __toasts.push([message, kind || 'info']); };", context);
-    vm.runInContext(read("static", "js", "pages", this.scriptName), context, { filename: this.scriptName });
+    // The page's own scripts, in the order its template loads them: a page can be split across files
+    // (the dashboard's server panel is dashboard_server.js, loaded ahead of dashboard.js).
+    for (const [, name] of this.html.matchAll(/src="\/static\/js\/pages\/([\w.]+)"/g)) {
+      vm.runInContext(read("static", "js", "pages", name), context, { filename: name });
+      if (name === this.scriptName) break;
+    }
     await settle();
     return this;
   }
@@ -1040,6 +1049,67 @@ const listFixtures = (items) => ({
     assert.match(attention, /1 device runs an outdated RustDesk client/);
     assert.match(attention, /3 devices receive no strategy/);
     assert.ok(!/archived/.test(attention));
+  });
+
+  await test("dashboard: each of the six cards has an icon in its own tone", async () => {
+    const fixtures = { "GET ^/api/v1/admin/dashboard": { total_devices: 3, online_devices: 1, offline_devices: 2, total_users: 1, total_groups: 0, total_tags: 0 } };
+    const stats = (await new Env("dashboard.html", "dashboard.js", { user: admin, fixtures }).run()).html_("stats");
+    const chips = stats.match(/<span class="stat-icon stat-icon-\w+"><svg /g) || [];
+    assert.equal(chips.length, 6, stats.slice(0, 300));
+    for (const tone of ["brand", "green", "slate", "violet", "amber", "rose"]) assert.match(stats, new RegExp(`stat-icon-${tone}`));
+    assert.match(stats, /Total devices/);
+    assert.match(stats, />3</);
+  });
+
+  // ---------------------------------------------------------------- dashboard: is this the latest build?
+  const quietStats = {
+    total_devices: 0, online_devices: 0, offline_devices: 0, total_users: 1, total_groups: 0, total_tags: 0,
+    new_devices_24h: 0, outdated_devices: 0, archived_devices: 0, devices_without_strategy: 0,
+  };
+  const updateFixture = (over) => ({
+    "GET ^/api/v1/admin/dashboard": quietStats,
+    "GET ^/api/v1/admin/update-status": {
+      state: "behind", behind_by: 3, in_image: true, image: "published", dirty: false,
+      compare_url: "https://github.com/inteliboy/rustdesk-api-server/compare/aaaaaaa...main", latest: null, error: null, ...over,
+    },
+  });
+  const updateLine = async (over) => {
+    const env = await new Env("dashboard.html", "dashboard.js", { user: admin, fixtures: updateFixture(over) }).run();
+    return env.html_("attention");
+  };
+
+  await test("dashboard: a container that is behind is told to pull the new image", async () => {
+    const line = await updateLine({});
+    assert.match(line, /A newer version is available \(3 commit\(s\) ahead\)\. Pull the new image and recreate the container\./);
+    assert.match(line, /href="https:\/\/github\.com\/inteliboy\/rustdesk-api-server\/compare\/aaaaaaa\.\.\.main" target="_blank" rel="noopener noreferrer"/);
+  });
+
+  await test("dashboard: a newer commit whose image is not published yet says so", async () => {
+    assert.match(await updateLine({ image: "pending" }), /its image is not published yet/);
+    assert.match(await updateLine({ image: "unknown" }), /Pull the new image once it is published/);
+  });
+
+  await test("dashboard: a checkout that is behind is told to pull and restart", async () => {
+    assert.match(await updateLine({ in_image: false, image: null }), /3 commit\(s\) ahead of this build\)\. Pull it and restart the server\./);
+  });
+
+  await test("dashboard: nothing is listed when the build is current, ahead, unknown or the check failed", async () => {
+    for (const state of ["current", "ahead", "unpublished", "unknown", "off", "error"]) {
+      assert.ok(!/newer version/.test(await updateLine({ state, behind_by: null })), state);
+    }
+  });
+
+  await test("dashboard: the page still works when the update check cannot be read", async () => {
+    const fixtures = { "GET ^/api/v1/admin/dashboard": { ...quietStats, new_devices_24h: 1 } }; // no update-status fixture: a 404
+    const env = await new Env("dashboard.html", "dashboard.js", { user: admin, fixtures }).run();
+    assert.match(env.html_("attention"), /1 new device registered/);
+  });
+
+  await test("dashboard: only a GitHub address becomes the link of the update line", async () => {
+    const line = await updateLine({ compare_url: "javascript:alert(1)", latest: { url: "https://evil.example/x" } });
+    assert.ok(!/javascript:|evil\.example/.test(line), line);
+    assert.match(line, /href="\/dashboard"/);
+    assert.ok(!/target="_blank"/.test(line));
   });
 
   console.log(failures ? `\n${failures} page smoke test(s) failed` : "\nall page smoke tests passed");

@@ -15,3 +15,5 @@ scripts
 *.egg-info
 .env
 screenshots
+# Source of the browser client; the built files are already under src/.
+webclient

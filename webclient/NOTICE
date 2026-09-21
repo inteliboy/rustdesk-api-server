@@ -1,0 +1,55 @@
+RustDesk API Server - web client
+================================
+
+This folder holds the source of the in-browser RustDesk client that the server
+serves at /webclient, and (built) in src/rustdesk_api/web/static/webclient/.
+
+LICENCE
+-------
+Everything in this folder and the built files in
+src/rustdesk_api/web/static/webclient/ is licensed under the GNU Affero General
+Public License, version 3 only (AGPL-3.0-only): see LICENSE in this folder.
+The rest of the repository (the Python server and the WebUI) is MIT licensed
+(see the LICENSE in the repository root). The two are separate programs: the
+server serves the client's files and bridges its WebSocket connections, and the
+client is given its settings as data; neither links against the other.
+
+Corresponding source: https://github.com/inteliboy/rustdesk-api-server/tree/main/webclient
+(the built files are produced from it with `npm ci && npm run build`).
+
+ORIGIN
+------
+The client is taken from CortenDesk's web client (webclient/ in
+https://github.com/Vaso73/cortendesk, version 1.9.1, commit 5d5470f), AGPL-3.0-only,
+"a from-scratch TypeScript implementation of the RustDesk wire protocol".
+Only its webclient/ folder and its licence text were used; nothing else of
+CortenDesk (in particular not its console, and not the "Attex" admin theme it
+bundles under a separate licence) is part of this repository.
+
+The RustDesk protocol definitions in protos/ come from the RustDesk project
+(https://github.com/rustdesk/hbb_common), AGPL-3.0; src/gen/ is generated from them.
+
+CHANGES MADE HERE (AGPL section 5(a))
+-------------------------------------
+- Renamed and re-branded for this project: product name, logo, page title, the
+  file name of a saved recording, package name, build output folder.
+- "Save password on this device" is switched off: the value it stored (a salted
+  hash of the device password) logs in to the device like the password does, and
+  this project keeps device credentials out of browser storage. The check box is
+  hidden, nothing is saved or loaded, and an earlier saved value is removed.
+- The decoder asks for hardware decoding where the browser reports that it has
+  it (Chromium), falls back to a browser-chosen decoder if that fails, draws to
+  an opaque canvas, and the statistics panel says whether decoding is in
+  hardware or software.
+- Build: the output goes into the Python package's static folder, without
+  source maps, and with no linked licence files.
+- scripts/print-frames.mjs (new): prints the two frames the server's bridge reads,
+  as encoded by this client, for the server's tests.
+
+THIRD-PARTY COMPONENTS IN THE BUILT FILES
+-----------------------------------------
+- libsodium-wrappers (ISC licence)      https://github.com/jedisct1/libsodium.js
+- tweetnacl (public domain / Unlicense) https://github.com/dchest/tweetnacl-js
+- jmuxer (MIT licence)                  https://github.com/samirkumardas/jmuxer
+- zstddec (MIT licence; zstd is BSD-3)  https://github.com/donmccurdy/zstddec
+Their licence texts are in their packages (webclient/node_modules after `npm ci`).

@@ -29,6 +29,8 @@ from rustdesk_api.api import (
     two_factor,
     users,
     views,
+    webclient,
+    webclient_ws,
     ws,
 )
 
@@ -65,5 +67,7 @@ api_router.include_router(installer.router)
 api_router.include_router(session_logs.router)
 api_router.include_router(ip_info.router)
 api_router.include_router(ws.router)
+api_router.include_router(webclient.router)
+api_router.include_router(webclient_ws.router)
 
 __all__ = ["api_router"]

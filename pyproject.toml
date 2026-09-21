@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "rustdesk-api"
-version = "0.1.0"
+version = "0.2.0"
 description = "Self-hosted RustDesk API server and management WebUI"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -28,6 +28,7 @@ dependencies = [
     "segno>=1.6",
     "httpx>=0.27",
     "PyJWT>=2.8",
+    "websockets>=13",
 ]
 
 [project.optional-dependencies]

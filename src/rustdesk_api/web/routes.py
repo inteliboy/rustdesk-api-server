@@ -16,12 +16,16 @@ from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from rustdesk_api import __version__
+
 WEB_DIR = Path(__file__).resolve().parent
 
 # The WebUI's languages: English is the source text, the others are catalogs in
 # static/i18n (built from i18n/catalog.tsv by scripts/build_i18n.py).
 SUPPORTED_LANGUAGES = ("en", "pl", "fr", "de", "es")
 LANGUAGE_COOKIE = "rd_lang"
+# The web client is AGPL-3.0 software; its page links to where its source is.
+WEBCLIENT_SOURCE_URL = "https://github.com/inteliboy/rustdesk-api-server/tree/main/webclient"
 
 
 def pick_language(request: Request) -> str:
@@ -129,6 +133,15 @@ def strategies_page(request: Request) -> HTMLResponse:
 @web_router.get("/connect", response_class=HTMLResponse)
 def connect_page(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(request, "connect.html", {"active": "connect"})
+
+
+@web_router.get("/webclient", response_class=HTMLResponse)
+def webclient_page(request: Request) -> HTMLResponse:
+    """The browser web client for one device (?device=<id>). Full screen, so not
+    inside the WebUI's shell; the API decides whether this user may start it."""
+    return templates.TemplateResponse(
+        request, "webclient.html", {"version": __version__, "source_url": WEBCLIENT_SOURCE_URL}
+    )
 
 
 @web_router.get("/settings", response_class=HTMLResponse)

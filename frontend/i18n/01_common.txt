@@ -19,6 +19,12 @@ Language || Język || Langue || Sprache || Idioma
 Appearance || Wygląd || Apparence || Darstellung || Apariencia
 Theme || Motyw || Thème || Design || Tema
 Accent color || Kolor akcentu || Couleur d'accent || Akzentfarbe || Color de énfasis
+Menu || Menu || Menu || Menü || Menú
+Top || Góra || Haut || Oben || Arriba
+Left || Lewa strona || Gauche || Links || Izquierda
+Collapse || Zwiń || Réduire || Einklappen || Contraer
+Collapse the menu || Zwiń menu || Réduire le menu || Menü einklappen || Contraer el menú
+Expand the menu || Rozwiń menu || Développer le menu || Menü ausklappen || Expandir el menú
 {1} accent || akcent: {1} || accent {1} || Akzent {1} || énfasis {1}
 (admin) || (administrator) || (administrateur) || (Administrator) || (administrador)
 Open your user record || Otwórz swój rekord użytkownika || Ouvrir votre fiche utilisateur || Ihren Benutzereintrag öffnen || Abrir su registro de usuario

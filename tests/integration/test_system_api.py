@@ -224,3 +224,70 @@ def test_the_options_report_is_for_administrators_only(app, admin_client):
     bob = _ordinary_user(app, admin_client)
     assert bob.get("/api/v1/admin/options").status_code == 403
     assert TestClient(app).get("/api/v1/admin/options").status_code == 401
+
+
+# --- is this the latest build? ---------------------------------------------------------------
+
+
+def _fake_github(status="ahead", commits=2):
+    import httpx
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        handler.requests.append(str(request.url))
+        tip = {
+            "sha": "c" * 40,
+            "html_url": "https://github.com/inteliboy/rustdesk-api-server/commit/" + "c" * 40,
+            "commit": {"message": "Newest change", "committer": {"date": "2026-09-21T10:00:00Z"}},
+        }
+        return httpx.Response(
+            200,
+            json={
+                "status": status,
+                "ahead_by": commits,
+                "commits": [tip] if commits else [],
+                "html_url": "https://x",
+            },
+        )
+
+    handler.requests = []
+    return handler
+
+
+def test_the_update_status_is_for_administrators(admin_client):
+    admin_client.post("/api/v1/users", json={"username": "bob", "password": "bobpassword1"})
+    admin_client.post("/api/v1/auth/logout")
+    admin_client.cookies.clear()
+    admin_client.post("/api/v1/auth/login", json={"username": "bob", "password": "bobpassword1"})
+    assert admin_client.get("/api/v1/admin/update-status").status_code == 403
+
+
+def test_the_update_status_says_how_far_behind_the_build_is(monkeypatch, admin_client):
+    import httpx
+
+    from rustdesk_api import buildinfo
+    from rustdesk_api.config import clear_settings_cache
+    from rustdesk_api.services import updates
+
+    monkeypatch.setenv("UPDATE_CHECK_ENABLED", "true")
+    clear_settings_cache()
+    info = buildinfo.BuildInfo("0.2.0", "a" * 40, False, None, buildinfo.REPOSITORY_URL, "1.4.9")
+    monkeypatch.setattr(buildinfo, "get_build_info", lambda configured="": info)
+    fake = _fake_github()
+    updates.set_transport(httpx.MockTransport(fake))
+    try:
+        body = admin_client.get("/api/v1/admin/update-status").json()
+    finally:
+        updates.set_transport(None)
+    assert body["state"] == "behind" and body["behind_by"] == 2
+    assert body["running_commit"] == "a" * 40 and body["running_version"] == "0.2.0"
+    assert body["latest"]["message"] == "Newest change" and body["latest"]["commit"] == "c" * 40
+    assert body["error"] is None
+    assert fake.requests == [
+        "https://api.github.com/repos/inteliboy/rustdesk-api-server/compare/" + "a" * 40 + "...main"
+    ]
+
+
+def test_the_update_check_can_be_switched_off(admin_client):
+    # (the test settings switch it off)
+    body = admin_client.get("/api/v1/admin/update-status").json()
+    assert body["state"] == "off" and body["latest"] is None and body["checked_at"] is None

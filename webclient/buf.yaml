@@ -1,0 +1,11 @@
+version: v2
+modules:
+  - path: protos
+lint:
+  use:
+    - STANDARD
+  # Vendored upstream schemas — we do not own their style.
+  disallow_comment_ignores: false
+breaking:
+  use:
+    - FILE

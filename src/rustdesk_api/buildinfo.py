@@ -89,6 +89,11 @@ def _baked_commit() -> str:
         return ""  # not an image, or built without a commit: fall through to the other sources
 
 
+def is_image() -> bool:
+    """True when this process runs from a Docker image built by this project's Dockerfile."""
+    return bool(_SHA.match(_baked_commit()))
+
+
 def get_build_info(configured_commit: str = "") -> BuildInfo:
     baked = _baked_commit()
     commit = baked if _SHA.match(baked) else configured_commit.strip().lower()
