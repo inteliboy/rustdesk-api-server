@@ -152,7 +152,9 @@ tested. In short:
   logs (`/api/audit/*`), connection notes, disconnect and strategies (including the server options that move
   clients to other servers), `--assign`, the two-factor login dialog and the OpenID Connect "Continue with ..."
   sign-in (also tested only against an in-process fake provider).
-- **Not tested:** other client versions and platforms (macOS, Linux, Android, iOS, web client).
+- **Tried briefly:** one Android device (sign-in, heartbeat and system info work; see
+  [Android clients](#android-clients)).
+- **Not tested:** other client versions and platforms (macOS, Linux, iOS, web client).
 
 Treat it as a young project: run it against a test client first, and please report what you find.
 
@@ -646,6 +648,14 @@ on another port (`https://example.com:21120`) or, better, on its own host name o
 (`https://rustdesk.example.com`, reverse-proxied to this server), and enter that in the client. With the API
 server field empty the client assumes `http://<id server>:21114`.
 
+### Android clients
+
+An Android device reports to the server only while the app's service is running (the Share Screen tab's **Start
+service**). With the service stopped the app can still sign in, which registers the device with just its ID and
+address, but it sends no heartbeat and no system info - so the device shows no host name, OS or version, and goes
+offline once `DEVICE_ONLINE_TIMEOUT` passes. Start the service and the details appear within seconds. This is how
+the client works, not a server setting, and a phone whose service is off cannot be connected to either.
+
 **Address book mode.** The client decides between its newer address book (personal and shared
 books, per-item changes) and the old "Legacy address book" by asking the server, and this
 server answers for the newer one by default. If a client misbehaves with it, set
@@ -896,6 +906,8 @@ look at new pages in a browser as well.
 - **RustDesk client can't log in**: check that the client's **API server** field has the `http://` (or
   `https://`) prefix, and read the server log for the request it received. Only RustDesk 1.4.9 on Windows
   has been tried against this server - see `docs/rustdesk-compatibility.md`.
+- **An Android device shows only its ID, IP and dates**: its service is stopped - see
+  [Android clients](#android-clients). Start the service in the app.
 - **Docker: "unable to open database file"** with a `./data:/app/data` bind mount on Linux: the container
   user (uid 10001) cannot write to a folder Docker created as root. Use the default named volume, or
   `sudo chown 10001:10001 data`.

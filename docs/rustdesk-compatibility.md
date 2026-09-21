@@ -26,6 +26,7 @@ re-checked against a newer client's source, not merely because a newer client ex
 | Source-derived   | `GET /api/audit/conn/active`, `PUT /api/audit` (connection notes; the older client posts `{id, session_id, note}` to `/api/audit/conn`) | Implemented from the client source (2026-09-21) - see "Connection notes" | **No** - needs the controlling client signed in with "Ask for note at end of connection" on |
 | Source-derived   | `POST /api/oidc/auth`, `GET /api/oidc/auth-query` (the client's "Continue with ..." button) and our `GET /api/oidc/callback` | Implemented from the client source (2026-09-21) - see "OIDC sign-in" | **No** - only tested against an in-process provider; needs a real provider and a client |
 | Source-derived   | Heartbeat `conns` / `disconnect`, `modified_at` / `strategy`; `POST /api/devices/cli` (`--assign`); `preset-*` keys in sysinfo; the two-step 2FA `/api/login` | Implemented from the client source (2026-09-20) - see "Heartbeat: connections and strategies", "`--assign`", "Two-factor login" | **No** - the 1.4.9 client has all of it; not yet exercised live |
+| Android (version not recorded) | `/api/login`, `/api/heartbeat`, `/api/sysinfo` | Works, but the client reports only while its service is running - see "Android reports only while its service is running" | Yes (2026-09-21), one device |
 | 1.4.9 (Windows)  | `/api/logout` | Implemented, not exercised in this session | No |
 | 1.4.9 (Windows)  | `/api/peers` (list, same query shape as `/api/users`) | Implemented from the client source (2026-09-21) - reference project's `peers` view is a non-functional stub | Path/method/query confirmed real via live 404 capture ("Błąd odświeżania grup" / "Error refreshing groups" shown in the client's Available Devices panel); fix not yet retested live
 
@@ -176,6 +177,23 @@ store the first part in `platform`, the remainder in `os_version`, which
 would also fill in the previously-empty `os_version` column. Not yet
 changed pending confirmation this format is stable across client
 versions/platforms (only one Windows client observed so far).
+
+### Android reports only while its service is running - **Observed** (2026-09-21)
+
+An Android client that was signed in to this server but had its service stopped showed up with nothing but its id,
+address and dates: no host name, OS, CPU, memory or version. Starting the service (the Share Screen tab's "Start
+service") made all of them appear within seconds. This is the client's design, not something the server can change:
+
+- The client's sync loop (`start_hbbs_sync_async` in `hbbs_http/sync.rs`, master) does nothing while the
+  `stop-service` option is set - neither the sysinfo upload nor the heartbeat.
+- On Android, `main_stop_service` sets `stop-service` to `Y` and `main_start_service` clears it (`flutter_ffi.rs`).
+- `/api/login` does not depend on the service, so a phone can sign in, which registers just the id and address.
+
+Consequences: an Android device is online only while its service runs (the heartbeat is what keeps it online), and
+its details are those of the last time it reported. Not a server fault, so there is no server-side workaround.
+Separately, a record that a login (or an import) created and no sysinfo upload ever filled is now asked for its
+system info on the next heartbeat (`"sysinfo": true`, see `has_reported_sysinfo` in `services/devices.py`), for a
+client that believes it already uploaded. Android app version not recorded.
 
 ## Address book endpoints - confirmed working end to end
 
