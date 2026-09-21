@@ -1,6 +1,8 @@
 const urlParams = new URLSearchParams(window.location.search);
+const TABS = ["activity", "conn", "file", "alarm"];
 const state = {
-  tab: ["file", "alarm"].includes(urlParams.get("tab")) ? urlParams.get("tab") : "conn",
+  // Chosen once the person is known: Activity is for administrators.
+  tab: TABS.includes(urlParams.get("tab")) ? urlParams.get("tab") : null,
   page: 1,
   pageSize: 25,
   deviceId: urlParams.get("device_id") || "",
@@ -30,7 +32,7 @@ const ALARM_TYPES = {
   10: "ID not on whitelist",
 };
 
-const RESOURCES = { conn: "connection-logs", file: "file-logs", alarm: "alarm-logs" };
+const RESOURCES = { activity: "admin/audit-logs", conn: "connection-logs", file: "file-logs", alarm: "alarm-logs" };
 const resource = () => RESOURCES[state.tab];
 const th = (label) => `<th class="px-4 py-2 font-medium">${label}</th>`;
 const td = (html, cls = "") => `<td class="px-4 py-3 ${cls}">${html}</td>`;
@@ -69,6 +71,15 @@ function durationText(start, end) {
   const secs = Math.max(0, Math.round((parseServerDate(end) - parseServerDate(start)) / 1000));
   const h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60), s = secs % 60;
   return h ? `${h}h ${m}m` : m ? `${m}m ${s}s` : `${s}s`;
+}
+
+// The activity log (the audit log): who did what in the WebUI and the management API.
+function activityRow(a) {
+  return `<tr>
+    ${td(fmtDate(a.created_at), "text-slate-500 whitespace-nowrap")}
+    ${td(describeActivity(a), a.result !== "success" ? "text-red-600 dark:text-red-400" : "")}
+    ${td(a.ip_address ? ipLabel(a.ip_address) : "-", "font-mono whitespace-nowrap")}
+  </tr>`;
 }
 
 function connRow(c) {
@@ -132,35 +143,43 @@ function alarmRow(a) {
 }
 
 function setTabStyles() {
-  for (const [key, id] of [["conn", "tab-conn"], ["file", "tab-file"], ["alarm", "tab-alarm"]]) {
+  for (const [key, id] of [["activity", "tab-activity"], ["conn", "tab-conn"], ["file", "tab-file"], ["alarm", "tab-alarm"]]) {
     document.getElementById(id).className =
       "px-3 py-1.5 rounded-md text-sm font-medium " +
       (state.tab === key ? "bg-brand-600 text-white" : "text-slate-600 hover:bg-slate-100");
   }
+  // The activity log is the audit log: administrators only (the server enforces it too).
+  document.getElementById("tab-activity").classList.toggle("hidden", !isAdmin);
+  document.getElementById("activity-note").classList.toggle("hidden", state.tab !== "activity");
+  // The client-reported logs have their own introduction; the activity log is not reported by clients.
+  document.getElementById("intro").classList.toggle("hidden", state.tab === "activity");
   document.getElementById("file-note").classList.toggle("hidden", state.tab !== "file");
   document.getElementById("alarm-note").classList.toggle("hidden", state.tab !== "alarm");
 }
 
 const EMPTY_TEXT = {
+  activity: "No activity recorded yet.",
   conn: "No connections recorded yet.",
   file: "No file transfers recorded yet.",
   alarm: "No alarms recorded yet.",
 };
-const ROW_RENDERERS = { conn: connRow, file: fileRow, alarm: alarmRow };
+const ROW_RENDERERS = { activity: activityRow, conn: connRow, file: fileRow, alarm: alarmRow };
 
 async function load() {
   setTabStyles();
-  const isConn = state.tab === "conn";
   const COLUMNS = {
+    activity: [th("Time"), th("Activity"), th("From IP")],
     conn: [th("Started"), th("Device (controlled)"), th("Controlled by"), th("Type"), th("Authorization"), th("From IP"), th("Duration")],
     file: [th("Time"), th("Direction"), th("From"), th("To"), th("Files"), th("IP")],
     alarm: [th("Time"), th("Alarm"), th("Device (controlled)"), th("Refused peer"), th("From IP"), th("Details")],
   };
   const columns = COLUMNS[state.tab];
-  document.getElementById("log-head").innerHTML = "<tr>" + columns.join("") + (isAdmin ? th("") : "") + "</tr>";
+  // Client-reported logs can be deleted by an administrator; the activity log cannot.
+  const canDelete = isAdmin && state.tab !== "activity";
+  document.getElementById("log-head").innerHTML = "<tr>" + columns.join("") + (canDelete ? th("") : "") + "</tr>";
 
   const params = new URLSearchParams({ page: state.page, page_size: state.pageSize });
-  if (state.deviceId) params.set("device_id", state.deviceId);
+  if (state.deviceId && state.tab !== "activity") params.set("device_id", state.deviceId);
   const data = await api(`/api/v1/${resource()}?` + params.toString());
   state.total = data.total;
 
@@ -186,7 +205,7 @@ async function load() {
   document.getElementById("next-page").disabled = data.page >= totalPages;
 
   const clearBtn = document.getElementById("clear-btn");
-  clearBtn.classList.toggle("hidden", !isAdmin);
+  clearBtn.classList.toggle("hidden", !canDelete);
   clearBtn.textContent = state.deviceId ? "Clear this device's logs" : "Clear all";
   clearBtn.disabled = data.total === 0;
   clearBtn.classList.toggle("opacity-50", data.total === 0);
@@ -228,6 +247,9 @@ async function clearAll() {
   const user = await requireAuth();
   if (!user) return;
   isAdmin = !!user.is_admin;
+  // Activity leads for administrators; a link to one device's logs (device_id) opens on Connections.
+  if (!isAdmin && state.tab === "activity") state.tab = null;
+  if (!state.tab) state.tab = isAdmin && !state.deviceId ? "activity" : "conn";
   renderNav("logs", user);
   if (state.deviceId) {
     document.getElementById("device-filter-note").innerHTML =
@@ -241,6 +263,7 @@ async function clearAll() {
   }
 })();
 
+document.getElementById("tab-activity").addEventListener("click", () => switchTab("activity"));
 document.getElementById("tab-conn").addEventListener("click", () => switchTab("conn"));
 document.getElementById("tab-file").addEventListener("click", () => switchTab("file"));
 document.getElementById("tab-alarm").addEventListener("click", () => switchTab("alarm"));

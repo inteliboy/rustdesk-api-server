@@ -98,6 +98,11 @@ def first_run(base: str) -> None:
         status == 200 and json.loads(raw)["available"] is True,
         raw.decode()[:80],
     )
+    check(
+        "the image has osslsigncode (uploaded certificates can sign)",
+        status == 200 and json.loads(raw)["certificate_tool"] is True,
+        raw.decode()[:120],
+    )
 
 
 def later_run(base: str) -> None:

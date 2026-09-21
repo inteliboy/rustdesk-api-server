@@ -14,6 +14,7 @@ from urllib.parse import urlsplit
 from rustdesk_api.config import Settings
 from rustdesk_api.services import installer as installer_service
 from rustdesk_api.services import notifications as notification_service
+from rustdesk_api.services import signing as signing_service
 
 # Names that are not options an administrator switches: reported nowhere on purpose.
 NOT_LISTED = frozenset(
@@ -418,6 +419,29 @@ def _notifications(s: Settings) -> list[Option]:
     ]
 
 
+def _certificate_option(s: Settings) -> Option:
+    tool = signing_service.find_tool(s) is not None
+    storage = bool(s.data_encryption_key)
+    host = signing_service.timestamp_host(s)
+    if not tool:
+        detail, args = "osslsigncode was not found", ()
+    elif not storage:
+        detail, args = "DATA_ENCRYPTION_KEY is not set", ()
+    elif host:
+        detail, args = "timestamped by {1}", (host,)
+    else:
+        detail, args = "signatures are not timestamped", ()
+    return Option(
+        INSTALLER,
+        ("INSTALLER_OSSLSIGNCODE", "INSTALLER_TIMESTAMP_URL"),
+        "Signing with an uploaded certificate",
+        "A certificate uploaded on the Deploy page signs the installers built here. Needs osslsigncode and DATA_ENCRYPTION_KEY.",
+        tool and storage,
+        detail,
+        args,
+    )
+
+
 def _installer(s: Settings) -> list[Option]:
     reason = installer_service.availability(s)
     return [
@@ -436,6 +460,7 @@ def _installer(s: Settings) -> list[Option]:
             "A command that signs each setup file the server builds. Its text is never shown.",
             bool(s.installer_sign_command),
         ),
+        _certificate_option(s),
         Option(
             INSTALLER,
             ("INSTALLER_DIR",),

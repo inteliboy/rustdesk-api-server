@@ -896,7 +896,13 @@ decoder rules above and that the API returns it; whether a given client version 
   release MSI (`rustdesk.exe --config <string>` then `--install-service`, as in the "Client setup" section above) and
   runs `makensis`. The MSI names (`rustdesk-<version>-x86_64.msi`, `-aarch64.msi`, the latter from 1.4.8) and their
   SHA-256 digests come from the GitHub releases API (`tag` `nightly` is a pre-release). Built and inspected for the
-  1.4.8, 1.4.9 and nightly (1.5.0) MSIs; a generated installer has **not** been run on a computer.
+  1.4.8, 1.4.9 and nightly (1.5.0) MSIs; a generated installer has **not** been run on a computer. The finished file
+  can be signed: with `INSTALLER_SIGN_COMMAND` (run by NSIS as `!finalize`), or with a certificate an administrator
+  uploads, applied afterwards by `osslsigncode` (`sign -pkcs12 ... -readpass ... -h sha256 [-ts <url>]`). An NSIS-built
+  installer signed that way through the server was checked with `osslsigncode` 2.14 (the signature and a DigiCert
+  timestamp are present, the digest matches the file) and read by Windows' `Get-AuthenticodeSignature`, which only
+  objected that the throwaway certificate's root is not trusted. A certificate from a real authority has **not** been
+  tried, so neither has Windows' verdict (SmartScreen, "verified publisher") on a signed installer.
 
 - **`/api/sysinfo_ver` - deliberately not implemented, and no client asks for
   it.** Checked 2026-09-20 at the `1.4.9` tag and `master`: the client only

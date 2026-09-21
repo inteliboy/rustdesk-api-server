@@ -9,6 +9,8 @@ never shown."""
 
 from __future__ import annotations
 
+import base64
+import binascii
 import datetime
 from typing import Literal
 
@@ -26,17 +28,45 @@ from rustdesk_api.models.user import User
 from rustdesk_api.services import audit as audit_service
 from rustdesk_api.services import client_config
 from rustdesk_api.services import installer as installer_service
+from rustdesk_api.services import signing as signing_service
 
 router = APIRouter(prefix="/api/v1/admin/installer", tags=["installer"])
 
 Arch = Literal["x64", "arm64"]
 
 
+class CertificateOut(BaseModel):
+    """What may be shown about the uploaded certificate: never the key, the file or a password."""
+
+    subject: str
+    issuer: str
+    thumbprint: str
+    not_before: datetime.datetime
+    not_after: datetime.datetime
+    expired: bool
+    code_signing: bool
+    uploaded_by: str
+    uploaded_at: datetime.datetime
+
+
 class StatusOut(BaseModel):
     available: bool
     # 'disabled' (INSTALLER_BUILD_ENABLED=false) or 'no_makensis'; null when it can build.
     reason: str | None
+    # INSTALLER_SIGN_COMMAND is set: the server signs with that (and ignores an uploaded certificate).
     signing: bool
+    certificate: CertificateOut | None
+    # osslsigncode is installed, so an uploaded certificate can be used.
+    certificate_tool: bool
+    # DATA_ENCRYPTION_KEY is set, so a certificate can be stored.
+    certificate_storage: bool
+    # The host that timestamps signatures (INSTALLER_TIMESTAMP_URL), if any.
+    timestamp_host: str | None
+
+
+class CertificateIn(BaseModel):
+    pfx_base64: str = Field(min_length=1, max_length=400_000)
+    password: str = Field(default="", max_length=256)
 
 
 class ReleaseOut(BaseModel):
@@ -53,6 +83,8 @@ class BuildIn(BaseModel):
     arch: Arch
     # Remove RustDesk's existing settings (and so its ID) before installing.
     reset_settings: bool = False
+    # Sign with the uploaded certificate: omitted = if one can be used, true = it must, false = do not.
+    sign: bool | None = None
 
 
 class BuildOut(BaseModel):
@@ -119,11 +151,96 @@ def _raise(exc: installer_service.InstallerError) -> ApiError:
 def status(
     _admin: User = Depends(get_current_admin), settings: Settings = Depends(get_settings_dep)
 ) -> StatusOut:
+    certificate = signing_service.info(installer_service.installer_directory(settings))
     return StatusOut(
         available=installer_service.availability(settings) is None,
         reason=installer_service.availability(settings),
         signing=bool(settings.installer_sign_command),
+        certificate=_certificate_out(certificate) if certificate else None,
+        certificate_tool=signing_service.find_tool(settings) is not None,
+        certificate_storage=bool(settings.data_encryption_key),
+        timestamp_host=signing_service.timestamp_host(settings),
     )
+
+
+def _certificate_out(certificate: signing_service.CertificateInfo) -> CertificateOut:
+    return CertificateOut(
+        subject=certificate.subject,
+        issuer=certificate.issuer,
+        thumbprint=certificate.thumbprint,
+        not_before=certificate.not_before,
+        not_after=certificate.not_after,
+        expired=certificate.expired,
+        code_signing=certificate.code_signing,
+        uploaded_by=certificate.uploaded_by,
+        uploaded_at=certificate.uploaded_at,
+    )
+
+
+@router.put(
+    "/certificate",
+    response_model=CertificateOut,
+    dependencies=[Depends(verify_csrf), Depends(enforce_auth_rate_limit)],
+)
+def upload_certificate(
+    payload: CertificateIn,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin),
+    settings: Settings = Depends(get_settings_dep),
+) -> CertificateOut:
+    """Stores the code-signing certificate (a .pfx / .p12 file, base64, with its password) that
+    signs the installers built here. Write-only: it is kept encrypted with DATA_ENCRYPTION_KEY and
+    is never returned. Uploading again replaces it."""
+    try:
+        pfx = base64.b64decode(payload.pfx_base64, validate=True)
+    except (binascii.Error, ValueError):
+        raise ApiError("BAD_REQUEST", "The certificate file was not sent correctly.", 422) from None
+    if installer_service.is_building():
+        raise _raise(installer_service.InstallerBusy())
+    try:
+        certificate = signing_service.store(
+            settings, installer_service.installer_directory(settings), pfx, payload.password, admin.username
+        )
+    except signing_service.SigningError as exc:
+        raise ApiError(exc.code, str(exc), exc.status) from None
+    audit_service.record(
+        db,
+        action="installer_certificate_set",
+        actor_id=admin.id,
+        detail={
+            "subject": certificate.subject,
+            "thumbprint": certificate.thumbprint,
+            "not_after": certificate.not_after.isoformat(),
+        },
+    )
+    db.commit()
+    return _certificate_out(certificate)
+
+
+@router.delete("/certificate", response_model=DeletedOut, dependencies=[Depends(verify_csrf)])
+def remove_certificate(
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin),
+    settings: Settings = Depends(get_settings_dep),
+) -> DeletedOut:
+    """Deletes the stored certificate and its private key."""
+    if installer_service.is_building():
+        raise _raise(installer_service.InstallerBusy())
+    directory = installer_service.installer_directory(settings)
+    previous = signing_service.info(directory)
+    try:
+        existed = signing_service.remove(directory)
+    except signing_service.SigningError as exc:
+        raise ApiError(exc.code, str(exc), exc.status) from None
+    if existed:
+        audit_service.record(
+            db,
+            action="installer_certificate_removed",
+            actor_id=admin.id,
+            detail={"thumbprint": previous.thumbprint if previous else None},
+        )
+        db.commit()
+    return DeletedOut(deleted=1 if existed else 0)
 
 
 @router.get("/releases", response_model=list[ReleaseOut])
@@ -167,6 +284,7 @@ def start_build(
                 tag=payload.tag,
                 arch=payload.arch,
                 reset_settings=payload.reset_settings,
+                sign_with_certificate=payload.sign,
             ),
         )
     except installer_service.InstallerError as exc:
@@ -179,7 +297,8 @@ def start_build(
             "tag": job.tag,
             "arch": job.arch,
             "reset_settings": payload.reset_settings,
-            "signed": bool(settings.installer_sign_command),
+            "signed": job.certificate or bool(settings.installer_sign_command),
+            "certificate": job.certificate,
         },
     )
     db.commit()

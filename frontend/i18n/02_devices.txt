@@ -151,12 +151,8 @@ Tag created. || Tag utworzony. || Étiquette créée. || Tag erstellt. || Etique
 # ---- dashboard
 Total devices || Wszystkie urządzenia || Appareils au total || Geräte insgesamt || Dispositivos en total
 Recent activity || Ostatnia aktywność || Activité récente || Letzte Aktivität || Actividad reciente
-Export last 30 days (CSV) || Eksportuj ostatnie 30 dni (CSV) || Exporter les 30 derniers jours (CSV) || Letzte 30 Tage exportieren (CSV) || Exportar los últimos 30 días (CSV)
-No activity yet. || Brak aktywności. || Aucune activité pour l'instant. || Noch keine Aktivität. || Aún no hay actividad.
 Dashboard stats require administrator access. || Statystyki pulpitu wymagają uprawnień administratora. || Les statistiques du tableau de bord nécessitent les droits d'administrateur. || Die Statistiken der Übersicht erfordern Administratorrechte. || Las estadísticas del panel requieren permisos de administrador.
 Failed to load dashboard stats: {1} || Nie udało się wczytać statystyk pulpitu: {1} || Impossible de charger les statistiques : {1} || Statistiken konnten nicht geladen werden: {1} || No se pudieron cargar las estadísticas: {1}
-Activity log requires administrator access. || Dziennik aktywności wymaga uprawnień administratora. || Le journal d'activité nécessite les droits d'administrateur. || Das Aktivitätsprotokoll erfordert Administratorrechte. || El registro de actividad requiere permisos de administrador.
-Failed to load activity: {1} || Nie udało się wczytać aktywności: {1} || Impossible de charger l'activité : {1} || Aktivität konnte nicht geladen werden: {1} || No se pudo cargar la actividad: {1}
 1 new device registered in the last 24 hours || 1 nowe urządzenie zarejestrowane w ciągu ostatnich 24 godzin || 1 nouvel appareil enregistré ces dernières 24 heures || 1 neues Gerät in den letzten 24 Stunden registriert || 1 dispositivo nuevo registrado en las últimas 24 horas
 {1} new devices registered in the last 24 hours || Nowe urządzenia zarejestrowane w ciągu ostatnich 24 godzin: {1} || {1} nouveaux appareils enregistrés ces dernières 24 heures || {1} neue Geräte in den letzten 24 Stunden registriert || {1} dispositivos nuevos registrados en las últimas 24 horas
 1 device runs an outdated RustDesk client || 1 urządzenie ma nieaktualnego klienta RustDesk || 1 appareil utilise un client RustDesk obsolète || 1 Gerät nutzt einen veralteten RustDesk-Client || 1 dispositivo usa un cliente de RustDesk desactualizado

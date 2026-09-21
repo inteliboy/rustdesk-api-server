@@ -7,6 +7,10 @@ const WARNINGS = {
     "The client silently drops :21114 from an https:// API server address, so it would talk to port 443 instead. Use a host name on 443 (or another port), or plain http://host:21114.",
   api_without_scheme: "The API server needs http:// or https:// in front, or the client cannot use it.",
   no_key: "No key is set: clients will connect without checking the ID server's key.",
+  // Only in a build's answer: the uploaded certificate was left out.
+  certificate_expired: "The uploaded certificate has expired, so the installer is not signed.",
+  signing_tool_missing: "osslsigncode is not installed on the server, so the installer is not signed.",
+  encryption_key_missing: "DATA_ENCRYPTION_KEY is not set, so the uploaded certificate cannot be used and the installer is not signed.",
 };
 
 let current = null; // the last answer of /api/v1/connect/config
@@ -127,12 +131,22 @@ let installer = { status: null, releases: [] };
 let polling = null;
 
 function installerBody() {
-  return {
+  const body = {
     servers: values(),
     tag: document.getElementById("inst-tag").value,
     arch: document.getElementById("inst-arch").value,
     reset_settings: document.getElementById("inst-reset").checked,
   };
+  // Only when the box is on the page: otherwise the server decides (it signs if it can).
+  if (!document.getElementById("inst-sign-row").classList.contains("hidden")) {
+    body.sign = document.getElementById("inst-sign").checked;
+  }
+  return body;
+}
+
+// Can a build be signed with the uploaded certificate right now?
+function certificateUsable(status) {
+  return Boolean(status.certificate && !status.certificate.expired && status.certificate_tool && status.certificate_storage && !status.signing);
 }
 
 function fillReleases() {
@@ -177,8 +191,88 @@ function paintInstallerStatus() {
   else if (status.reason === "disabled")
     text = t("Building on the server is turned off (INSTALLER_BUILD_ENABLED). The build kit still works.");
   else if (status.signing) text = t("Ready to build here. The file is signed by the server (INSTALLER_SIGN_COMMAND).");
+  else if (certificateUsable(status)) text = t("Ready to build here. The file is signed with the uploaded certificate unless you untick the box above.");
   else text = t("Ready to build here. The file is not signed: sign it yourself, or use the build kit on the computer that has your certificate.");
   document.getElementById("inst-status").textContent = text;
+  document.getElementById("inst-sign-row").classList.toggle("hidden", !certificateUsable(status));
+}
+
+// --- the code signing certificate ------------------------------------------------------------
+
+function paintCertificate() {
+  const status = installer.status;
+  const cert = status.certificate;
+  document.getElementById("cert-none").classList.toggle("hidden", Boolean(cert));
+  document.getElementById("cert-current").classList.toggle("hidden", !cert);
+  document.getElementById("cert-remove").classList.toggle("hidden", !cert);
+  if (cert) {
+    document.getElementById("cert-subject").textContent = cert.subject;
+    document.getElementById("cert-issuer").textContent = cert.issuer;
+    document.getElementById("cert-thumbprint").textContent = cert.thumbprint.replace(/(..)(?=.)/g, "$1 ");
+    const until = fmtDate(cert.not_after);
+    document.getElementById("cert-expires").textContent = cert.expired ? t("{1} (expired)", [until]) : until;
+    document.getElementById("cert-uploaded").textContent = t("{1} by {2}", [fmtDate(cert.uploaded_at), cert.uploaded_by]);
+  }
+  const notes = [];
+  if (!status.certificate_storage) notes.push(t("Set DATA_ENCRYPTION_KEY on the server to store a certificate: its private key is kept encrypted with it."));
+  if (!status.certificate_tool) notes.push(t("osslsigncode is not installed on this server, so a certificate cannot be used to sign yet."));
+  if (cert && cert.expired) notes.push(t("This certificate has expired: installers are not signed until you upload a new one."));
+  if (status.signing) notes.push(t("INSTALLER_SIGN_COMMAND is set, so the server signs with that command and does not use this certificate."));
+  const list = document.getElementById("cert-notes");
+  list.classList.toggle("hidden", notes.length === 0);
+  list.innerHTML = notes.map((n) => `<li>${escapeHtml(n)}</li>`).join("");
+  document.getElementById("cert-timestamp").textContent = status.timestamp_host
+    ? t("Signatures are timestamped by {1}, so they stay valid after the certificate expires (INSTALLER_TIMESTAMP_URL).", [status.timestamp_host])
+    : t("Signatures are not timestamped (INSTALLER_TIMESTAMP_URL is empty): they stop being valid when the certificate expires.");
+  document.getElementById("cert-upload").disabled = !status.certificate_storage;
+}
+
+async function refreshStatus() {
+  installer.status = await api("/api/v1/admin/installer");
+  paintInstallerStatus();
+  paintCertificate();
+}
+
+// The file is sent inside the JSON body (base64), so no multipart handling is needed.
+function toBase64(bytes) {
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(binary);
+}
+
+async function uploadCertificate() {
+  const fileInput = document.getElementById("cert-file");
+  const passwordInput = document.getElementById("cert-password");
+  const file = fileInput.files && fileInput.files[0];
+  if (!file) return toast(t("Choose a certificate file (.pfx or .p12) first."), "error");
+  const button = document.getElementById("cert-upload");
+  button.disabled = true;
+  try {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    await api("/api/v1/admin/installer/certificate", {
+      method: "PUT",
+      body: JSON.stringify({ pfx_base64: toBase64(bytes), password: passwordInput.value }),
+    });
+    toast(t("Certificate stored."), "success");
+    // Neither the file nor the password stays in the page.
+    passwordInput.value = "";
+    fileInput.value = "";
+    await refreshStatus();
+  } catch (err) {
+    toast(err.message, "error");
+    button.disabled = !installer.status.certificate_storage;
+  }
+}
+
+async function removeCertificate() {
+  if (!confirm(t("Remove the certificate and its private key from the server?"))) return;
+  try {
+    await api("/api/v1/admin/installer/certificate", { method: "DELETE" });
+    toast(t("Certificate removed."), "success");
+    await refreshStatus();
+  } catch (err) {
+    toast(err.message, "error");
+  }
 }
 
 function showResult(text, html) {
@@ -208,7 +302,13 @@ async function pollBuild(id) {
       document.getElementById("inst-build").disabled = false;
       return;
     }
-    showResult(job.state === "downloading" ? t("Downloading RustDesk from GitHub... {1}%", [job.progress]) : t("Building the installer..."));
+    showResult(
+      job.state === "downloading"
+        ? t("Downloading RustDesk from GitHub... {1}%", [job.progress])
+        : job.state === "signing"
+          ? t("Signing the installer...")
+          : t("Building the installer...")
+    );
     polling = setTimeout(() => pollBuild(id), 1000);
   } catch (err) {
     showResult(err.message);
@@ -321,6 +421,8 @@ async function loadInstaller() {
   document.getElementById("inst-tag").addEventListener("change", fillArchitectures);
   document.getElementById("inst-build").addEventListener("click", buildInstaller);
   document.getElementById("inst-kit").addEventListener("click", downloadKit);
+  document.getElementById("cert-upload").addEventListener("click", uploadCertificate);
+  document.getElementById("cert-remove").addEventListener("click", removeCertificate);
   document.getElementById("files-clear-msi").addEventListener("click", () => deleteFiles("msi", null, t("Delete all downloaded RustDesk MSI files?")));
   document.getElementById("files-clear-installer").addEventListener("click", () => deleteFiles("installer", null, t("Delete all built installers?")));
   document.getElementById("file-rows").addEventListener("click", (evt) => {
@@ -336,6 +438,7 @@ async function loadInstaller() {
     installer = { status, releases };
     fillReleases();
     paintInstallerStatus();
+    paintCertificate();
   } catch (err) {
     toast(err.message, "error");
   }

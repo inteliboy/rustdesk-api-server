@@ -15,9 +15,6 @@ function statCard(label, value, tone) {
   </div>`;
 }
 
-// describeActivity() is defined in app.js, shared with the per-user
-// activity panel on the Users page.
-
 // Things worth a look, from the same stats: each is a sentence with a link to where to act on it.
 function attentionItems(stats) {
   const items = [];
@@ -79,28 +76,5 @@ function renderAttention(stats) {
       err.status === 403
         ? `<p class="text-sm text-slate-500 col-span-4">Dashboard stats require administrator access.</p>`
         : `<p class="text-sm text-red-600 dark:text-red-400 col-span-4">Failed to load dashboard stats: ${escapeHtml(err.message)}</p>`;
-  }
-
-  try {
-    const logs = await api("/api/v1/admin/audit-logs?page_size=10");
-    const activityEl = document.getElementById("activity");
-    document.getElementById("audit-export").classList.remove("hidden");
-    if (logs.items.length === 0) {
-      activityEl.innerHTML = `<p class="p-4 text-sm text-slate-500">No activity yet.</p>`;
-    } else {
-      activityEl.innerHTML = logs.items
-        .map(
-          (item) => `<div class="p-4 flex items-center justify-between text-sm gap-3">
-            <span class="${item.result !== "success" ? "text-red-600 dark:text-red-400" : ""}">${describeActivity(item)}</span>
-            <span class="text-slate-400 whitespace-nowrap">${fmtDate(item.created_at)}</span>
-          </div>`
-        )
-        .join("");
-    }
-  } catch (err) {
-    document.getElementById("activity").innerHTML =
-      err.status === 403
-        ? `<p class="p-4 text-sm text-slate-500">Activity log requires administrator access.</p>`
-        : `<p class="p-4 text-sm text-red-600 dark:text-red-400">Failed to load activity: ${escapeHtml(err.message)}</p>`;
   }
 })();

@@ -134,7 +134,7 @@ class Env {
       return { ok: true, status: 200, text: async () => (answer === null ? "" : JSON.stringify(answer)) };
     };
     const context = vm.createContext({
-      document, window, fetch, console, URLSearchParams, encodeURIComponent, Number, Set, Map, Array, Object, Date, JSON, Promise, Boolean, String, Error, parseInt, setTimeout, clearTimeout, setInterval: () => 0, clearInterval() {},
+      document, window, fetch, console, URLSearchParams, encodeURIComponent, Number, Set, Map, Array, Object, Date, JSON, Promise, Boolean, String, Error, parseInt, Uint8Array, btoa: (text) => Buffer.from(text, "binary").toString("base64"), setTimeout, clearTimeout, setInterval: () => 0, clearInterval() {},
       confirm: () => true,
       navigator: { clipboard: { writeText: async (t) => { env.copied = t; } } },
       WebSocket: class { addEventListener() {} },
@@ -575,10 +575,67 @@ const listFixtures = (items) => ({
   });
 
   // ---------------------------------------------------------------- dashboard
-  await test("dashboard: only an administrator gets the audit export link", async () => {
-    const fixtures = { "GET ^/api/v1/admin/stats": { total_devices: 0, online_devices: 0, offline_devices: 0, total_users: 1, total_groups: 0 }, "GET ^/api/v1/admin/audit-logs": { items: [], page: 1, page_size: 10, total: 0 } };
+  await test("dashboard: the activity feed lives on the Logs page now", async () => {
+    const fixtures = { "GET ^/api/v1/admin/dashboard": { total_devices: 0, online_devices: 0, offline_devices: 0, total_users: 1, total_groups: 0, total_tags: 0 } };
     const env = await new Env("dashboard.html", "dashboard.js", { user: admin, fixtures }).run();
-    assert.ok(!env.element("audit-export").classList.contains("hidden"));
+    assert.ok(!env.html.includes('id="activity"') && !env.html.includes("Recent activity"));
+    assert.ok(!env.requests.some((r) => r.url.includes("audit-logs")), "the dashboard no longer reads the audit log");
+  });
+
+  // --------------------------------------------------------------------- logs
+  const activityItems = [
+    { id: 3, actor_id: 1, actor_username: "admin", action: "installer_certificate_set", target_type: null, target_id: null, result: "success", ip_address: "10.0.0.5", detail: { subject: "Example Corp" }, created_at: "2026-09-21T10:00:00" },
+    { id: 2, actor_id: null, actor_username: null, action: "login", target_type: null, target_id: null, result: "failure", ip_address: "203.0.113.9", detail: { username: "mallory", via: "webui" }, created_at: "2026-09-21T09:00:00" },
+  ];
+  const logFixtures = {
+    "GET ^/api/v1/admin/audit-logs": { items: activityItems, page: 1, page_size: 25, total: 60 },
+    "GET ^/api/v1/connection-logs": { items: [], page: 1, page_size: 25, total: 0 },
+  };
+
+  await test("logs: administrators land on Activity, the first tab, with every event and paging", async () => {
+    const env = await new Env("logs.html", "logs.js", { user: admin, fixtures: logFixtures }).run();
+    assert.ok(!env.element("tab-activity").classList.contains("hidden"));
+    assert.ok(env.element("tab-activity").className.includes("bg-brand-600"), "Activity is the selected tab");
+    assert.ok(env.html.indexOf('id="tab-activity"') < env.html.indexOf('id="tab-conn"'), "and comes first");
+    const rows = env.html_("log-rows");
+    assert.match(rows, /uploaded the code signing certificate &quot;Example Corp&quot;|uploaded the code signing certificate "Example Corp"/);
+    assert.match(rows, /Failed login attempt for "mallory"/);
+    assert.match(rows, /text-red-600/, "a failed event is marked");
+    assert.match(env.html_("log-head"), /Activity/);
+    assert.ok(!/Delete/.test(rows) && !/<th class="px-4 py-2 font-medium"><\/th>/.test(env.html_("log-head")), "the audit log has no delete column");
+    assert.ok(env.element("clear-btn").classList.contains("hidden"), "and cannot be cleared");
+    assert.ok(!env.element("activity-note").classList.contains("hidden"));
+    assert.ok(env.element("intro").classList.contains("hidden"), "the client-log introduction is not shown");
+    assert.match(env.element("page-info").textContent, /Page 1 of 3 \(60 total\)/);
+    assert.ok(env.requests.some((r) => r.url.startsWith("/api/v1/admin/audit-logs?page=1&page_size=25")));
+    assert.ok(!env.element("next-page").disabled);
+  });
+
+  await test("logs: Connections keeps its delete controls, and Activity comes back", async () => {
+    const env = await new Env("logs.html", "logs.js", { user: admin, fixtures: logFixtures }).run();
+    await env.fire("tab-conn", "click");
+    assert.ok(env.requests.some((r) => r.url.startsWith("/api/v1/connection-logs")));
+    assert.ok(!env.element("clear-btn").classList.contains("hidden"), "an administrator can clear client-reported logs");
+    assert.doesNotMatch(env.html_("log-head"), /Activity/);
+    assert.ok(env.element("activity-note").classList.contains("hidden"));
+    assert.ok(!env.element("intro").classList.contains("hidden"));
+    await env.fire("tab-activity", "click");
+    assert.ok(!env.element("activity-note").classList.contains("hidden"));
+  });
+
+  await test("logs: an ordinary user has no Activity tab and never asks for the audit log", async () => {
+    const env = await new Env("logs.html", "logs.js", { user: alice, fixtures: logFixtures }).run();
+    assert.ok(env.element("tab-activity").classList.contains("hidden"));
+    assert.ok(env.element("tab-conn").className.includes("bg-brand-600"));
+    assert.ok(!env.requests.some((r) => r.url.includes("audit-logs")));
+    const asked = await new Env("logs.html", "logs.js", { user: alice, search: "?tab=activity", fixtures: logFixtures }).run();
+    assert.ok(!asked.requests.some((r) => r.url.includes("audit-logs")), "even when the address asks for it");
+  });
+
+  await test("logs: a link to one device's logs opens on Connections", async () => {
+    const env = await new Env("logs.html", "logs.js", { user: admin, search: "?device_id=7", fixtures: logFixtures }).run();
+    assert.ok(env.element("tab-conn").className.includes("bg-brand-600"));
+    assert.ok(env.requests.some((r) => r.url.includes("connection-logs") && r.url.includes("device_id=7")));
   });
 
   // ----------------------------------------------------------------- settings
@@ -756,6 +813,130 @@ const listFixtures = (items) => ({
     assert.match(env.element("inst-status").textContent, /not signed/);
   });
 
+  const certificate = {
+    subject: "Example Corp Code Signing", issuer: "Example CA", thumbprint: "0123456789ABCDEF0123456789ABCDEF01234567",
+    not_before: "2026-01-01T00:00:00Z", not_after: "2027-01-01T00:00:00Z", expired: false, code_signing: true,
+    uploaded_by: "admin", uploaded_at: "2026-09-21T10:00:00Z",
+  };
+  const signable = { available: true, reason: null, signing: false, certificate, certificate_tool: true, certificate_storage: true, timestamp_host: "timestamp.digicert.com" };
+  const unsignable = { available: true, reason: null, signing: false, certificate: null, certificate_tool: true, certificate_storage: true, timestamp_host: "timestamp.digicert.com" };
+  const finished = (id) => ({ id, state: "done", progress: 100, message: "", tag: "1.4.9", version: "1.4.9", arch: "x64", filename: "x.exe", size: 1048576, signed: true, warnings: [] });
+
+  await test("connect: a stored certificate is described, and its box decides whether the build is signed", async () => {
+    const fixtures = {
+      ...installerFixtures,
+      "GET ^/api/v1/admin/installer$": signable,
+      "POST ^/api/v1/admin/installer/builds$": { ...finished("job2"), state: "queued", filename: "" },
+      "GET ^/api/v1/admin/installer/builds/job2$": finished("job2"),
+    };
+    const env = await new Env("connect.html", "connect.js", { user: admin, fixtures }).run();
+    assert.ok(!env.element("cert-current").classList.contains("hidden") && env.element("cert-none").classList.contains("hidden"));
+    assert.strictEqual(env.element("cert-subject").textContent, "Example Corp Code Signing");
+    assert.strictEqual(env.element("cert-thumbprint").textContent, "01 23 45 67 89 AB CD EF 01 23 45 67 89 AB CD EF 01 23 45 67");
+    assert.match(env.element("cert-uploaded").textContent, /by admin/);
+    assert.match(env.element("cert-timestamp").textContent, /timestamp\.digicert\.com/);
+    assert.ok(!env.element("inst-sign-row").classList.contains("hidden"));
+    assert.match(env.element("inst-status").textContent, /signed with the uploaded certificate/);
+    assert.ok(!env.element("cert-remove").classList.contains("hidden"));
+    assert.ok(env.element("cert-notes").classList.contains("hidden"), "nothing to warn about");
+    env.element("inst-sign").checked = true;
+    await env.fire("inst-build", "click");
+    assert.strictEqual(JSON.parse(env.posted("/api/v1/admin/installer/builds")[0].body).sign, true);
+    const unticked = await new Env("connect.html", "connect.js", { user: admin, fixtures }).run();
+    unticked.element("inst-sign").checked = false;
+    await unticked.fire("inst-build", "click");
+    assert.strictEqual(JSON.parse(unticked.posted("/api/v1/admin/installer/builds")[0].body).sign, false);
+  });
+
+  await test("connect: without a certificate there is no box, and the server decides", async () => {
+    const env = await new Env("connect.html", "connect.js", {
+      user: admin,
+      fixtures: {
+        ...installerFixtures,
+        "GET ^/api/v1/admin/installer$": unsignable,
+        "POST ^/api/v1/admin/installer/builds$": { ...finished("j"), state: "queued", filename: "", signed: false },
+        "GET ^/api/v1/admin/installer/builds/j$": { ...finished("j"), signed: false },
+      },
+    }).run();
+    assert.ok(!env.element("cert-none").classList.contains("hidden") && env.element("cert-current").classList.contains("hidden"));
+    assert.ok(env.element("inst-sign-row").classList.contains("hidden") && env.element("cert-remove").classList.contains("hidden"));
+    await env.fire("inst-build", "click");
+    assert.ok(!("sign" in JSON.parse(env.posted("/api/v1/admin/installer/builds")[0].body)));
+  });
+
+  await test("connect: what stops a certificate from working is said on the page", async () => {
+    const problems = { ...signable, certificate_tool: false, certificate_storage: false, signing: true, certificate: { ...certificate, expired: true } };
+    const env = await new Env("connect.html", "connect.js", { user: admin, fixtures: { ...installerFixtures, "GET ^/api/v1/admin/installer$": problems } }).run();
+    const notes = env.html_("cert-notes");
+    assert.match(notes, /Set DATA_ENCRYPTION_KEY/);
+    assert.match(notes, /osslsigncode is not installed/);
+    assert.match(notes, /has expired/);
+    assert.match(notes, /INSTALLER_SIGN_COMMAND is set/);
+    assert.match(env.element("cert-expires").textContent, /\(expired\)/);
+    assert.ok(env.element("inst-sign-row").classList.contains("hidden"), "an unusable certificate offers no box");
+    assert.ok(env.element("cert-upload").disabled, "nothing can be stored without the data key");
+    const plain = { ...signable, timestamp_host: null };
+    const untimestamped = await new Env("connect.html", "connect.js", { user: admin, fixtures: { ...installerFixtures, "GET ^/api/v1/admin/installer$": plain } }).run();
+    assert.match(untimestamped.element("cert-timestamp").textContent, /not timestamped/);
+  });
+
+  await test("connect: uploading sends the file and password once, then clears both from the page", async () => {
+    let stored = false;
+    const env = await new Env("connect.html", "connect.js", {
+      user: admin,
+      fixtures: {
+        ...installerFixtures,
+        "GET ^/api/v1/admin/installer$": () => (stored ? signable : unsignable),
+        "PUT ^/api/v1/admin/installer/certificate$": () => { stored = true; return certificate; },
+      },
+    }).run();
+    await env.fire("cert-upload", "click");
+    assert.strictEqual(env.requests.filter((r) => r.method === "PUT").length, 0, "no file, no request");
+    assert.ok(env.toasts.some(([m, kind]) => /Choose a certificate file/.test(m) && kind === "error"));
+
+    const bytes = Uint8Array.from([0x30, 0x82, 0x01, 0xff, 0x00, 0x7f]);
+    env.element("cert-file").files = [{ arrayBuffer: async () => bytes.buffer }];
+    env.element("cert-password").value = "typed-secret";
+    await env.fire("cert-upload", "click");
+    const sent = env.requests.filter((r) => r.method === "PUT");
+    assert.strictEqual(sent.length, 1);
+    assert.deepStrictEqual(JSON.parse(sent[0].body), { pfx_base64: Buffer.from(bytes).toString("base64"), password: "typed-secret" });
+    assert.strictEqual(env.element("cert-password").value, "", "the password does not stay in the page");
+    assert.strictEqual(env.element("cert-file").value, "");
+    assert.ok(env.toasts.some(([m]) => /Certificate stored/.test(m)));
+    assert.ok(!env.element("cert-current").classList.contains("hidden"), "the status was read again");
+    assert.ok(!env.element("inst-sign-row").classList.contains("hidden"));
+  });
+
+  await test("connect: a refused certificate shows the reason from the server and keeps the form", async () => {
+    const refusal = { __status: 400, body: { error: { code: "SIGNING_ERROR", message: "The certificate could not be opened: the password is wrong." } } };
+    const env = await new Env("connect.html", "connect.js", {
+      user: admin,
+      fixtures: { ...installerFixtures, "GET ^/api/v1/admin/installer$": unsignable, "PUT ^/api/v1/admin/installer/certificate$": refusal },
+    }).run();
+    env.element("cert-file").files = [{ arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer }];
+    env.element("cert-password").value = "nope";
+    await env.fire("cert-upload", "click");
+    assert.ok(env.toasts.some(([m, kind]) => /password is wrong/.test(m) && kind === "error"));
+    assert.ok(!env.element("cert-upload").disabled, "it can be tried again");
+  });
+
+  await test("connect: removing the certificate asks first and then deletes it", async () => {
+    let removed = false;
+    const env = await new Env("connect.html", "connect.js", {
+      user: admin,
+      fixtures: {
+        ...installerFixtures,
+        "GET ^/api/v1/admin/installer$": () => (removed ? unsignable : signable),
+        "DELETE ^/api/v1/admin/installer/certificate$": () => { removed = true; return { deleted: 1 }; },
+      },
+    }).run();
+    await env.fire("cert-remove", "click");
+    assert.strictEqual(env.requests.filter((r) => r.method === "DELETE" && r.url.endsWith("/certificate")).length, 1);
+    assert.ok(!env.element("cert-none").classList.contains("hidden"), "the page shows there is none now");
+    assert.ok(env.toasts.some(([m]) => /Certificate removed/.test(m)));
+  });
+
   await test("connect: a build posts the chosen release and offers the file when it is done", async () => {
     const done = { id: "job1", state: "done", progress: 100, message: "", tag: "1.4.9", version: "1.4.9", arch: "x64",
       filename: "rustdesk-1.4.9-x86_64-preconfigured.exe", size: 25165824, signed: false, warnings: ["no_key"] };
@@ -852,7 +1033,6 @@ const listFixtures = (items) => ({
         total_devices: 3, online_devices: 1, offline_devices: 2, total_users: 1, total_groups: 0, total_tags: 0,
         new_devices_24h: 2, outdated_devices: 1, archived_devices: 0, devices_without_strategy: 3,
       },
-      "GET ^/api/v1/admin/audit-logs": { items: [], page: 1, page_size: 10, total: 0 },
     };
     const env = await new Env("dashboard.html", "dashboard.js", { user: admin, fixtures }).run();
     const attention = env.html_("attention");

@@ -24,7 +24,9 @@ from rustdesk_api.security.encryption import generate_key, get_secret_box
 from rustdesk_api.services import address_book as address_book_service
 from rustdesk_api.services import authentication as auth_service
 from rustdesk_api.services import backup as backup_service
+from rustdesk_api.services import installer as installer_service
 from rustdesk_api.services import retention as retention_service
+from rustdesk_api.services import signing as signing_service
 from rustdesk_api.services import tokens as token_service
 from rustdesk_api.services import two_factor as two_factor_service
 
@@ -288,11 +290,18 @@ def rotate_data_key() -> None:
     with session_scope() as db:
         rotated, unreadable = address_book_service.rotate_passwords(db, box)
         secrets_rotated, secrets_unreadable = two_factor_service.rotate_secrets(db, box)
-    click.echo(f"Re-encrypted {rotated} stored password(s) and {secrets_rotated} two-factor secret(s).")
-    if unreadable or secrets_unreadable:
+    certificate_rotated, certificate_unreadable = signing_service.rotate(
+        settings, installer_service.installer_directory(settings)
+    )
+    click.echo(
+        f"Re-encrypted {rotated} stored password(s), {secrets_rotated} two-factor secret(s) and "
+        f"{certificate_rotated} signing certificate(s)."
+    )
+    if unreadable or secrets_unreadable or certificate_unreadable:
         click.echo(
-            f"{unreadable} stored password(s) and {secrets_unreadable} two-factor secret(s) could not be "
-            "decrypted with the configured key(s) and were left unchanged.",
+            f"{unreadable} stored password(s), {secrets_unreadable} two-factor secret(s) and "
+            f"{certificate_unreadable} signing certificate(s) could not be decrypted with the "
+            "configured key(s) and were left unchanged.",
             err=True,
         )
         sys.exit(1)

@@ -515,6 +515,16 @@ function describeActivity(item, { includeActor = true } = {}) {
       return `${prefix}exported ${safe.rows} ${safe.what} row${item.detail && item.detail.rows === 1 ? "" : "s"}`;
     case "devices_imported":
       return `${prefix}imported devices (${safe.created} created, ${safe.updated} updated)`;
+    case "installer_build":
+      return `${prefix}built a Windows installer (RustDesk ${safe.tag}, ${safe.arch}${item.detail && item.detail.signed ? ", signed" : ""})`;
+    case "installer_kit":
+      return `${prefix}downloaded a Windows installer build kit (RustDesk ${safe.tag}, ${safe.arch})`;
+    case "installer_files_deleted":
+      return `${prefix}deleted ${safe.count} stored installer file${item.detail && item.detail.count === 1 ? "" : "s"}`;
+    case "installer_certificate_set":
+      return `${prefix}uploaded the code signing certificate "${safe.subject}"`;
+    case "installer_certificate_removed":
+      return `${prefix}removed the code signing certificate`;
     case "address_book_entry_deleted":
       return `${prefix}deleted address book entry <span class="whitespace-nowrap">${safe.alias ? `"${safe.alias}" (${safe.rustdesk_id})` : safe.rustdesk_id}</span>`;
     default:

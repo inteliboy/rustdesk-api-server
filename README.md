@@ -31,7 +31,7 @@ RustDesk Client
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="screenshots/dashboard-dark.png">
-    <img alt="The dashboard: device counts, recent activity and the server's health" src="screenshots/dashboard-light.png" width="900">
+    <img alt="The dashboard: device counts and the server's health" src="screenshots/dashboard-light.png" width="900">
   </picture>
 </p>
 <p align="center"><sub>The dashboard, in the theme your GitHub is using. More in <a href="#screenshots">Screenshots</a>.</sub></p>
@@ -58,24 +58,25 @@ See [Features](#features) for the complete list.
 ## Screenshots
 
 All screenshots are in the [`screenshots/`](screenshots/) folder. The WebUI has light and dark themes (choose
-**Appearance** in the top bar, or leave it on "system"), so the main pages are shown in both. Everything on
+**Appearance** in the top bar, or leave it on "system"), so every page is shown in both. Everything on
 them is fictional demo data: made-up people, devices and addresses, made-up hardware in the server panel and typical container paths.
 
 | Page | Light | Dark |
 | ---- | ----- | ---- |
-| Dashboard: counts, recent activity | [dashboard-light.png](screenshots/dashboard-light.png) | [dashboard-dark.png](screenshots/dashboard-dark.png) |
+| Dashboard: counts and what needs a look | [dashboard-light.png](screenshots/dashboard-light.png) | [dashboard-dark.png](screenshots/dashboard-dark.png) |
 | Dashboard: server panel (CPU and memory charts, version, commit) | [dashboard-server-light.png](screenshots/dashboard-server-light.png) | [dashboard-server-dark.png](screenshots/dashboard-server-dark.png) |
 | Devices: status, owner, group, tags | [devices-light.png](screenshots/devices-light.png) | [devices-dark.png](screenshots/devices-dark.png) |
 | A device: details, strategy, sharing | [device-detail-light.png](screenshots/device-detail-light.png) | [device-detail-dark.png](screenshots/device-detail-dark.png) |
-| Connection logs reported by the clients | [logs-light.png](screenshots/logs-light.png) | [logs-dark.png](screenshots/logs-dark.png) |
-| Address book | [address-book-light.png](screenshots/address-book-light.png) | |
-| Strategies | [strategies-light.png](screenshots/strategies-light.png) | |
-| Deploy: config string, QR code, setup commands | [deploy-light.png](screenshots/deploy-light.png) | |
-| Deploy: the Windows installer builder and the files it keeps | [deploy-installer-light.png](screenshots/deploy-installer-light.png) | |
+| Logs: Activity (what happened in the WebUI and the API) | [logs-activity-light.png](screenshots/logs-activity-light.png) | [logs-activity-dark.png](screenshots/logs-activity-dark.png) |
+| Logs: connections reported by the clients | [logs-light.png](screenshots/logs-light.png) | [logs-dark.png](screenshots/logs-dark.png) |
+| Address book | [address-book-light.png](screenshots/address-book-light.png) | [address-book-dark.png](screenshots/address-book-dark.png) |
+| Strategies | [strategies-light.png](screenshots/strategies-light.png) | [strategies-dark.png](screenshots/strategies-dark.png) |
+| Deploy: config string, QR code, setup commands | [deploy-light.png](screenshots/deploy-light.png) | [deploy-dark.png](screenshots/deploy-dark.png) |
+| Deploy: the Windows installer builder, the code signing certificate and the files it keeps | [deploy-installer-light.png](screenshots/deploy-installer-light.png) | [deploy-installer-dark.png](screenshots/deploy-installer-dark.png) |
 | Settings: notifications, database backups | [settings-light.png](screenshots/settings-light.png) | [settings-dark.png](screenshots/settings-dark.png) |
-| Settings: options set with environment variables, and whether they are on (top of the list) | [settings-options-light.png](screenshots/settings-options-light.png) | [settings-options-dark.png](screenshots/settings-options-dark.png) |
-| Users (administrators) | [users-light.png](screenshots/users-light.png) | |
-| Security: password, sessions, API keys | [security-light.png](screenshots/security-light.png) | |
+| Settings: options set with environment variables, and whether they are on (the top of the list) | [settings-options-light.png](screenshots/settings-options-light.png) | [settings-options-dark.png](screenshots/settings-options-dark.png) |
+| Users (administrators) | [users-light.png](screenshots/users-light.png) | [users-dark.png](screenshots/users-dark.png) |
+| Security: password, sessions, API keys | [security-light.png](screenshots/security-light.png) | [security-dark.png](screenshots/security-dark.png) |
 
 ## Quick start
 
@@ -222,7 +223,7 @@ Phase 3. LDAP sign-in and webhook notifications are not implemented.
 - Optional restriction of the WebUI and management API to your own networks
   (`WEBUI_ALLOWED_NETWORKS`) and a token-protected Prometheus **`/metrics`** endpoint - see Monitoring
   and network access below
-- Audit logging of administrative actions, with who/what shown in the dashboard's recent activity
+- Audit logging of administrative actions, with who/what shown under **Logs > Activity** (administrators)
 - Log retention: activity, connection, file-transfer and alarm logs older than a configurable
   age are deleted automatically (defaults 365 / 180 days, `0` keeps forever), and
   expired login sessions are cleaned up - see Log retention below
@@ -559,7 +560,7 @@ Keys stop working the moment their user is disabled.
   owner and administrators also see who made each change; someone the device is only shared with does not.
   Timeline events age out with the audit log (`AUDIT_LOG_RETENTION_DAYS`).
 - **Export.** *Export CSV/JSON* on the Devices page (the devices you may see), *Export CSV* on the Users page,
-  and the last 30 days of the audit log on the Dashboard (administrators). Exports never contain password
+  and the last 30 days of the audit log under Logs > Activity (administrators). Exports never contain password
   hashes, tokens or device identities, and cells that a spreadsheet would run as a formula are prefixed with a
   quote. Each export is itself audit-logged. The same data is at `/api/v1/export/devices|users|audit`.
 - **Import** (administrators, Devices page). A CSV with a header row (or a JSON list) using any of
@@ -633,7 +634,7 @@ A background task inside the server deletes what has aged out, once at startup a
 
 | Setting | Default | Applies to |
 | --- | --- | --- |
-| `AUDIT_LOG_RETENTION_DAYS` | `365` | the activity log shown as *Recent activity* |
+| `AUDIT_LOG_RETENTION_DAYS` | `365` | the activity log shown under *Logs > Activity* |
 | `CONNECTION_LOG_RETENTION_DAYS` | `180` | connection, file-transfer **and** alarm logs |
 | `LOG_RETENTION_INTERVAL_HOURS` | `24` | how often the task runs |
 
@@ -725,6 +726,27 @@ service. It is the recipe of a hand-made NSIS script, generated for you:
   **any Windows computer that has NSIS**: it downloads the MSI, builds, and signs if you pass
   `-Thumbprint <certificate in the store>` or `-PfxFile <file>` (`signtool` from the Windows SDK). Use this when the
   code-signing certificate lives on another machine (or a hardware token) rather than on the server.
+- **Signing with an uploaded certificate.** Under *Code signing certificate* on the card an administrator uploads a
+  `.pfx` / `.p12` file with its password. The server opens it once and checks that it holds a certificate with its
+  private key, that it is valid now and, if it states a purpose, meant for code signing. It then stores it **encrypted
+  with `DATA_ENCRYPTION_KEY`** - which has to be set: without it nothing is stored, so the private key never lands on
+  disk in the clear. The password you typed is not kept either: the key is re-packed under a random password of the
+  server's own. The certificate is write-only: the card shows who it was issued to and by, its SHA-1 thumbprint, its
+  expiry and who uploaded it, but the file, the key and the password can never be downloaded or shown; you can replace
+  or remove it. Every build then signs with it (a box lets you leave it out for one build) in an extra *Signing* step.
+  Signing uses `osslsigncode` - **the Docker image has it**; elsewhere install it or set `INSTALLER_OSSLSIGNCODE`. The
+  key is handed to it through a private temporary folder that is deleted straight after, with the password in a file
+  (`-readpass`), never on the command line. The signature is timestamped by `INSTALLER_TIMESTAMP_URL` (DigiCert by
+  default; empty = no timestamp and no outbound request), which keeps it valid after the certificate expires. If
+  signing fails the build fails and no unsigned file is left behind; if the certificate cannot be used at all (expired,
+  no `osslsigncode`, no data key) the build is made unsigned and says so, unless a client asked for signing explicitly
+  (`"sign": true` in the API), which refuses the build. `INSTALLER_SIGN_COMMAND`, below, takes precedence if both are
+  set. **Every administrator can then build installers signed with your certificate** - that is the point, but decide
+  whether it is acceptable; if not, sign on the computer that holds the certificate with the build kit. Uploading,
+  removing and every signed build are in the audit log (with the thumbprint, never a secret), and
+  `rustdesk-api rotate-data-key` re-encrypts the stored certificate. It is kept in `installers/signing/`, next to the
+  installers and not in the database, so database backups do not contain it and "delete all installers" does not
+  remove it.
 - **Signing on the server** is optional: set `INSTALLER_SIGN_COMMAND` to the command NSIS should run on the finished
   file, with `%1` where the file goes, for example
   `signtool sign /sha1 <THUMBPRINT> /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 "%1"` (a certificate in
@@ -744,14 +766,16 @@ service. It is the recipe of a hand-made NSIS script, generated for you:
 The file contains the ID server, relay, API server and the public key - the same values as the config string - and
 no password. Only administrators can build it (it runs a program and may sign with your certificate); the audit log
 records who built one, which release and whether it was signed. Settings: `INSTALLER_BUILD_ENABLED`,
-`INSTALLER_MAKENSIS`, `INSTALLER_DIR`, `INSTALLER_SIGN_COMMAND` and `INSTALLER_ICON` (default: RustDesk's own icon,
-fetched from GitHub) - see `.env.example`.
+`INSTALLER_MAKENSIS`, `INSTALLER_DIR`, `INSTALLER_SIGN_COMMAND`, `INSTALLER_OSSLSIGNCODE`, `INSTALLER_TIMESTAMP_URL` and
+`INSTALLER_ICON` (default: RustDesk's own icon, fetched from GitHub) - see `.env.example`.
 
 **What has been verified:** builds of a stable and of a nightly release, x64 and ARM64, with the real MSIs and the real
 NSIS on Windows (and the signing hook running), the build kit's `build.ps1` under Windows PowerShell 5.1 including
-signing with a throwaway certificate, and the API, the script generation and the WebUI in the automated tests.
-**Not verified:** running a generated installer on a computer, and (until the CI job for it has run) NSIS from Debian
-inside the Docker image. Try the installer on one machine first.
+signing with a throwaway certificate, an NSIS-built installer signed with a throwaway uploaded certificate by the real
+`osslsigncode` 2.14 (the signature is there and its digest matches the file), and the API, the script generation and
+the WebUI in the automated tests. **Not verified:** running a generated installer on a computer, a certificate from a
+real certificate authority (so Windows' own verdict on the signature), and (until the CI jobs for them have run) NSIS
+and `osslsigncode` from Debian inside the Docker image. Try the installer on one machine first.
 
 ## Default strategy and fleet hygiene
 

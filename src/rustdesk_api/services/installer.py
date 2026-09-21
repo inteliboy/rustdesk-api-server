@@ -8,7 +8,8 @@ server writes the script, downloads the MSI and runs `makensis`.
 Two ways to get the file:
 
 * **Build on the server** (`start_build`): needs `makensis` on the server and outbound
-  HTTPS to GitHub. The result can be signed on the spot with INSTALLER_SIGN_COMMAND.
+  HTTPS to GitHub. The result can be signed on the spot, either by the command in
+  INSTALLER_SIGN_COMMAND or with a certificate an administrator uploaded (services/signing.py).
 * **Build kit** (`build_kit`): a zip with the script and a PowerShell script that does the
   same on any Windows machine, so the code-signing certificate can stay on the machine
   that holds it.
@@ -42,6 +43,7 @@ import httpx
 from rustdesk_api.config import Settings
 from rustdesk_api.services import backup as backup_service
 from rustdesk_api.services import client_config
+from rustdesk_api.services import signing as signing_service
 
 logger = logging.getLogger(__name__)
 
@@ -531,6 +533,9 @@ class BuildSpec:
     tag: str
     arch: str
     reset_settings: bool = False
+    # Sign with the uploaded certificate: None = if there is one that can be used, True = it
+    # must be used (the build is refused when it cannot be), False = do not.
+    sign_with_certificate: bool | None = None
 
 
 @dataclass
@@ -538,13 +543,15 @@ class Job:
     id: str
     tag: str
     arch: str
-    state: str = "queued"  # queued, downloading, building, done, failed
+    state: str = "queued"  # queued, downloading, building, signing, done, failed
     progress: int = 0
     message: str = ""
     version: str = ""
     filename: str = ""
     size: int = 0
     signed: bool = False
+    # Signed with the uploaded certificate (decided when the build was accepted).
+    certificate: bool = False
     warnings: list[str] = field(default_factory=list)
     file: Path | None = None
     created: float = field(default_factory=time.monotonic)
@@ -583,6 +590,46 @@ def _forget_old_jobs() -> None:
                 job.file.unlink(missing_ok=True)
 
 
+def is_building() -> bool:
+    return _build_slot.locked()
+
+
+def _certificate_plan(settings: Settings, wanted: bool | None) -> tuple[bool, list[str]]:
+    """Whether this build is signed with the uploaded certificate, and what to tell the person if
+    it was left out. `wanted` True refuses the build when the certificate cannot be used."""
+    if wanted is False or settings.installer_sign_command:
+        # The server's own signing command (an operator's setting) takes precedence.
+        return False, []
+    certificate = signing_service.info(installer_directory(settings))
+    if certificate is None:
+        if wanted:
+            raise InstallerError(
+                "There is no certificate to sign with. Upload one first.", "CERTIFICATE_MISSING", 409
+            )
+        return False, []
+    problem: tuple[str, str, str] | None = None  # (message, error code, warning code)
+    if certificate.expired:
+        problem = ("The uploaded certificate has expired.", "CERTIFICATE_EXPIRED", "certificate_expired")
+    elif signing_service.find_tool(settings) is None:
+        problem = (
+            "osslsigncode was not found on the server, so it cannot sign. Install it or set "
+            "INSTALLER_OSSLSIGNCODE.",
+            "SIGNING_TOOL_NOT_FOUND",
+            "signing_tool_missing",
+        )
+    elif not settings.data_encryption_key:
+        problem = (
+            "DATA_ENCRYPTION_KEY is not set, so the stored certificate cannot be opened.",
+            "ENCRYPTION_KEY_REQUIRED",
+            "encryption_key_missing",
+        )
+    if problem is None:
+        return True, []
+    if wanted:
+        raise InstallerError(problem[0], problem[1], 409)
+    return False, [problem[2]]
+
+
 def start_build(settings: Settings, spec: BuildSpec) -> Job:
     """Checks what can be checked at once (a release with that architecture exists, a
     builder is installed) and runs the rest in the background: the download and the build
@@ -599,6 +646,7 @@ def start_build(settings: Settings, spec: BuildSpec) -> Job:
         )
     release = find_release(spec.tag)
     asset = pick_asset(release, spec.arch)
+    sign_now, skipped = _certificate_plan(settings, spec.sign_with_certificate)
     if not _build_slot.acquire(blocking=False):
         raise InstallerBusy
     try:
@@ -608,7 +656,8 @@ def start_build(settings: Settings, spec: BuildSpec) -> Job:
             tag=release.tag,
             arch=spec.arch,
             version=release.version,
-            warnings=client_config.warnings(spec.servers),
+            warnings=client_config.warnings(spec.servers) + skipped,
+            certificate=sign_now,
         )
         with _jobs_lock:
             _jobs[job.id] = job
@@ -655,14 +704,23 @@ def _run_job(settings: Settings, spec: BuildSpec, release: Release, asset: Asset
             shutil.rmtree(scratch, ignore_errors=True)
         if not outfile.is_file():
             raise InstallerError("makensis finished but produced no file.")
+        if job.certificate:
+            job.state = "signing"
+            try:
+                signing_service.sign_file(settings, installer_directory(settings), outfile)
+            except signing_service.SigningError:
+                outfile.unlink(missing_ok=True)  # never leave an unsigned file behind a failed signing
+                raise
         job.file = outfile
         job.size = outfile.stat().st_size
-        job.signed = bool(settings.installer_sign_command)
+        job.signed = bool(settings.installer_sign_command) or job.certificate
         job.filename = f"rustdesk-{release.version}-{ARCHES[spec.arch]}-preconfigured.exe"
         job.state = "done"
         _prune_output(out_dir)
     except InstallerError as exc:
         job.state, job.message = "failed", str(exc)
+    except signing_service.SigningError as exc:
+        job.state, job.message = "failed", f"Signing failed: {exc}"
     except Exception:  # noqa: BLE001 - reported to the person, logged with the traceback
         logger.exception("Building the installer failed unexpectedly")
         job.state, job.message = "failed", "The installer could not be built (see the server log)."

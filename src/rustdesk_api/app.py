@@ -269,8 +269,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "error": {
                     "code": "VALIDATION_ERROR",
                     "message": "Request validation failed.",
-                    # A validator that raises ValueError leaves the exception itself in `ctx`.
-                    "details": jsonable_encoder(exc.errors(), custom_encoder={Exception: str}),
+                    # A validator that raises ValueError leaves the exception itself in `ctx`. What was
+                    # sent (`input`) is left out: it may be a password or a key, and the person has it.
+                    "details": jsonable_encoder(
+                        [{k: v for k, v in error.items() if k != "input"} for error in exc.errors()],
+                        custom_encoder={Exception: str},
+                    ),
                 }
             },
         )

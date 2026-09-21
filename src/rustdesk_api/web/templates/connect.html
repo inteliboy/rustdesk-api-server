@@ -110,12 +110,55 @@
         <input id="inst-reset" type="checkbox" class="mt-0.5" />
         <span>Also remove RustDesk&rsquo;s existing settings first (the computer gets a new ID)</span>
       </label>
+      <label id="inst-sign-row" class="hidden flex items-start gap-2 text-sm mt-2">
+        <input id="inst-sign" type="checkbox" class="mt-0.5" checked />
+        <span>Sign the installer with the uploaded certificate</span>
+      </label>
       <p id="inst-status" class="text-xs text-slate-500 mt-3" role="status"></p>
       <div class="flex items-center gap-3 mt-3 flex-wrap">
         <button type="button" id="inst-build" class="px-3 py-1.5 rounded-md bg-brand-600 text-white text-sm hover:bg-brand-700 disabled:opacity-50">Build installer</button>
         <button type="button" id="inst-kit" class="px-3 py-1.5 rounded-md border border-slate-300 text-sm hover:bg-slate-100 disabled:opacity-50">Download build kit (.zip)</button>
       </div>
       <p id="inst-result" class="text-sm mt-3 hidden whitespace-pre-line" role="status"></p>
+
+      <div id="cert-section" class="border-t border-slate-200 mt-5 pt-4">
+        <h3 class="text-sm font-semibold mb-1">Code signing certificate</h3>
+        <p class="text-xs text-slate-500 mb-3" data-i18n-html="connect.cert_help">
+          A signed installer does not trigger Windows&rsquo; &ldquo;unknown publisher&rdquo; warning. Upload your code signing
+          certificate (a <code>.pfx</code> or <code>.p12</code> file with its password) to sign the installers built here.
+          It is stored encrypted, can never be downloaded again, and is used by every administrator who builds an installer.
+        </p>
+        <p id="cert-none" class="text-sm text-slate-500 hidden">No certificate is stored, so the installers are not signed.</p>
+        <dl id="cert-current" class="hidden grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm">
+          <dt class="text-slate-500">Issued to</dt><dd id="cert-subject" class="break-words"></dd>
+          <dt class="text-slate-500">Issued by</dt><dd id="cert-issuer" class="break-words"></dd>
+          <dt class="text-slate-500">Thumbprint (SHA-1)</dt><dd id="cert-thumbprint" class="font-mono text-xs break-all"></dd>
+          <dt class="text-slate-500">Valid until</dt><dd id="cert-expires"></dd>
+          <dt class="text-slate-500">Uploaded</dt><dd id="cert-uploaded"></dd>
+        </dl>
+        <ul id="cert-notes" class="hidden mt-3 space-y-1 text-xs text-amber-700 dark:text-amber-400 list-disc ml-5"></ul>
+        <p id="cert-timestamp" class="text-xs text-slate-500 mt-3"></p>
+        <div class="grid sm:grid-cols-2 gap-3 mt-3">
+          <label class="text-sm">
+            <span id="cert-file-label" class="block text-xs text-slate-500 mb-1">Certificate file (.pfx or .p12)</span>
+            <input id="cert-file" type="file" accept=".pfx,.p12,application/x-pkcs12" class="w-full text-sm" />
+          </label>
+          <label class="text-sm">
+            <span class="block text-xs text-slate-500 mb-1">Its password</span>
+            <input id="cert-password" type="password" autocomplete="new-password" spellcheck="false" maxlength="256"
+                   class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm" />
+          </label>
+        </div>
+        <div class="flex gap-3 mt-3 flex-wrap">
+          <button type="button" id="cert-upload" class="px-3 py-1.5 rounded-md border border-slate-300 text-sm hover:bg-slate-100 disabled:opacity-50">Upload certificate</button>
+          <button type="button" id="cert-remove" class="hidden px-3 py-1.5 rounded-md border border-slate-300 text-sm text-red-600 hover:bg-slate-100 disabled:opacity-50">Remove certificate</button>
+        </div>
+        <p class="text-xs text-slate-500 mt-3" data-i18n-html="connect.cert_storage_help">
+          The password is only used to open the file once and is not kept: the server stores the key under a password of its own,
+          encrypted with <code>DATA_ENCRYPTION_KEY</code>. If you would rather not have the key on this server, use the build kit
+          on the computer that has it.
+        </p>
+      </div>
 
       <div class="border-t border-slate-200 mt-5 pt-4">
         <h3 class="text-sm font-semibold mb-1">Files on the server</h3>

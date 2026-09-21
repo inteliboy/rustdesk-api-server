@@ -6,6 +6,7 @@
   <div class="flex items-center justify-between mb-2 flex-wrap gap-3">
     <h1 class="text-lg font-semibold">Logs</h1>
     <div class="flex items-center gap-2">
+      <button id="tab-activity" class="hidden px-3 py-1.5 rounded-md text-sm font-medium">Activity</button>
       <button id="tab-conn" class="px-3 py-1.5 rounded-md text-sm font-medium">Connections</button>
       <button id="tab-file" class="px-3 py-1.5 rounded-md text-sm font-medium">File transfers</button>
       <button id="tab-alarm" class="px-3 py-1.5 rounded-md text-sm font-medium">Alarms</button>
@@ -13,10 +14,14 @@
       <button id="clear-btn" class="hidden px-3 py-1.5 rounded-md border border-red-300 dark:border-red-800 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40"></button>
     </div>
   </div>
-  <p class="text-sm text-slate-500 mb-2">
+  <p id="intro" class="text-sm text-slate-500 mb-2">
     <span data-i18n-html="logs.intro">Reported by the RustDesk client on the <em>controlled</em> device, for devices you own or that are
     shared with you. Requires that client's <span class="font-mono">API Server</span> to point at this server.</span>
     <span id="device-filter-note"></span>
+  </p>
+  <p id="activity-note" class="hidden text-sm text-slate-500 mb-4">
+    <span>What happened in the WebUI and the management API, newest first: sign-ins, changes to devices, users and settings, and other actions of administrators. Old entries are removed automatically (AUDIT_LOG_RETENTION_DAYS) and cannot be deleted by hand.</span>
+    <a id="audit-export" href="/api/v1/export/audit?days=30" download class="text-link underline whitespace-nowrap">Export last 30 days (CSV)</a>
   </p>
   <p id="file-note" class="hidden text-sm text-slate-500 mb-4">
     Direction is from the controlled device's point of view. The client reports only the path on the

@@ -8,10 +8,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# NSIS (makensis) lets the Connect page build Windows setup files on the server. It runs
-# on Linux and only writes the Windows installer; nothing here is Windows-specific.
+# NSIS (makensis) lets the Deploy page build Windows setup files on the server, and
+# osslsigncode signs them with a certificate an administrator uploads. Both run on Linux and
+# only write or sign the Windows installer; nothing here is Windows-specific.
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends nsis && \
+    apt-get install -y --no-install-recommends nsis osslsigncode && \
     rm -rf /var/lib/apt/lists/*
 
 # Install the application first (layer caching): copy only what pip needs to

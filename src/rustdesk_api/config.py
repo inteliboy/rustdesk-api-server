@@ -180,6 +180,15 @@ class Settings(BaseSettings):
     installer_sign_command: str = Field(default="", alias="INSTALLER_SIGN_COMMAND", repr=False)
     # A .ico for the setup file; empty = the RustDesk icon, fetched from GitHub.
     installer_icon: str = Field(default="", alias="INSTALLER_ICON")
+    # Signing with a certificate an administrator uploads on the Deploy page (stored encrypted
+    # with DATA_ENCRYPTION_KEY). It is done with osslsigncode, which must be on the server (the
+    # Docker image has it); empty INSTALLER_OSSLSIGNCODE = the one on PATH. The signature is
+    # timestamped by INSTALLER_TIMESTAMP_URL so it stays valid after the certificate expires;
+    # empty = no timestamp (and no outbound request).
+    installer_osslsigncode: str = Field(default="", alias="INSTALLER_OSSLSIGNCODE")
+    installer_timestamp_url: str = Field(
+        default="http://timestamp.digicert.com", alias="INSTALLER_TIMESTAMP_URL"
+    )
 
     # Server tab: this process's CPU and memory, sampled every N seconds into a
     # rolling in-memory window (nothing is written to the database, and the
@@ -298,6 +307,14 @@ class Settings(BaseSettings):
                 f"known: {', '.join(NOTIFY_EVENT_NAMES)}"
             )
         return ",".join(names)
+
+    @field_validator("installer_timestamp_url")
+    @classmethod
+    def _check_installer_timestamp_url(cls, value: str) -> str:
+        value = value.strip()
+        if value and not value.lower().startswith(("http://", "https://")):
+            raise ValueError("INSTALLER_TIMESTAMP_URL must start with http:// or https://")
+        return value
 
     @field_validator("installer_sign_command")
     @classmethod
