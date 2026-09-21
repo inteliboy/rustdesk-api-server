@@ -23,6 +23,25 @@ def test_a_value_that_is_not_a_hash_is_ignored_not_linked(monkeypatch):
         assert info.commit_url is None
 
 
+def test_the_commit_baked_into_the_image_beats_a_stale_setting(monkeypatch, tmp_path):
+    """A container manager can re-apply the previous image's GIT_COMMIT to a newer image."""
+    stale = "3301ab6" + "0" * 33
+    baked = tmp_path / "BUILD_COMMIT"
+    baked.write_text(SHA)  # no trailing newline, as the Dockerfile writes it
+    monkeypatch.setattr(buildinfo, "_BAKED_COMMIT_FILE", baked)
+    assert get_build_info(stale).commit == SHA
+
+
+def test_an_empty_or_missing_baked_file_falls_back_to_the_setting(monkeypatch, tmp_path):
+    baked = tmp_path / "BUILD_COMMIT"
+    monkeypatch.setattr(buildinfo, "_BAKED_COMMIT_FILE", baked)
+    assert get_build_info(SHA).commit == SHA  # missing
+    baked.write_text("")  # an image built without the build argument
+    assert get_build_info(SHA).commit == SHA
+    baked.write_text("not-a-sha")
+    assert get_build_info(SHA).commit == SHA
+
+
 def test_without_a_setting_the_checkout_is_asked(monkeypatch):
     monkeypatch.setattr(buildinfo, "_checkout_commit", lambda: (SHA, True))
     info = get_build_info("")

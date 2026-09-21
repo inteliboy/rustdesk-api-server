@@ -348,9 +348,11 @@ device identity adds `DEVICE_UUID_REBIND`. Each is described in `.env.example`; 
 explained under [Single sign-on](#single-sign-on-openid-connect).
 
 The Dashboard shows which build is running: the version, the git commit (linked to GitHub) and the RustDesk
-client release whose source the protocol code was written against. The Docker images get the commit from CI;
-from a git checkout it is read from `git`; otherwise it shows as unknown. `GIT_COMMIT` overrides it if you build
-your own image with `--build-arg GIT_COMMIT=$(git rev-parse HEAD)`. `GET /api/version` returns the same facts.
+client release whose source the protocol code was written against. The Docker images get the commit from CI and
+keep it in a file inside the image, so a container that was recreated from saved settings (as Synology's Container
+Manager does) still reports the commit of the image it runs, not an old one; from a git checkout it is read from
+`git`; otherwise it shows as unknown. `GIT_COMMIT` sets it outside a Docker image, or for your own image built with
+`--build-arg GIT_COMMIT=$(git rev-parse HEAD)`. `GET /api/version` returns the same facts.
 
 Generate a real `SECRET_KEY` with:
 

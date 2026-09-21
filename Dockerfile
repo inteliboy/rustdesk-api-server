@@ -28,6 +28,9 @@ USER rustdesk
 # late so a new commit does not invalidate the dependency layers above.
 ARG GIT_COMMIT=""
 ENV GIT_COMMIT=${GIT_COMMIT}
+# Also as a file, which the app reads first: a container manager that saves the old
+# container's environment would otherwise re-apply an old GIT_COMMIT to a new image.
+RUN printf '%s' "${GIT_COMMIT}" > /app/BUILD_COMMIT
 
 ENV RUSTDESK_API_HOST=0.0.0.0 \
     RUSTDESK_API_PORT=21114 \

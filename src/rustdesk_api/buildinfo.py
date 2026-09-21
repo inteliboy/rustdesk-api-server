@@ -1,9 +1,9 @@
 """Which build of the server this is, for the Dashboard and `/api/version`.
 
-The commit comes from the `GIT_COMMIT` setting (the Docker image gets it as a
-build argument, since `.git` is not copied into the image) and otherwise from
-the git checkout the code is running out of. Neither is required: without one
-the commit is simply reported as unknown.
+The commit comes from the file the Docker image is built with (a build
+argument, since `.git` is not copied into the image), then the `GIT_COMMIT`
+setting, and otherwise from the git checkout the code is running out of. None
+is required: without one the commit is simply reported as unknown.
 """
 
 from __future__ import annotations
@@ -28,6 +28,12 @@ RUSTDESK_CLIENT_SOURCE = "1.4.9"
 
 _SHA = re.compile(r"^[0-9a-f]{7,40}$")
 _CHECKOUT = Path(__file__).resolve().parents[2]
+
+# Written by the Dockerfile. It wins over the `GIT_COMMIT` setting because a
+# container manager may save the old container's environment - including the
+# `GIT_COMMIT` the previous image set - and re-apply it to a newer image, which
+# would then keep reporting the old commit.
+_BAKED_COMMIT_FILE = Path("/app/BUILD_COMMIT")
 
 
 @dataclass(frozen=True)
@@ -75,8 +81,17 @@ def _checkout_commit() -> tuple[str | None, bool]:
     return commit, bool(_git("status", "--porcelain"))
 
 
+def _baked_commit() -> str:
+    """The commit written into the Docker image at build time, or "" outside one."""
+    try:
+        return _BAKED_COMMIT_FILE.read_text(encoding="utf-8").strip().lower()
+    except OSError:
+        return ""  # not an image, or built without a commit: fall through to the other sources
+
+
 def get_build_info(configured_commit: str = "") -> BuildInfo:
-    commit = configured_commit.strip().lower()
+    baked = _baked_commit()
+    commit = baked if _SHA.match(baked) else configured_commit.strip().lower()
     dirty = False
     if _SHA.match(commit):
         pass
