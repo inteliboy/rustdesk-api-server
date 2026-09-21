@@ -24,6 +24,7 @@ from rustdesk_api.models.user import User
 from rustdesk_api.services import audit as audit_service
 from rustdesk_api.services import backup as backup_service
 from rustdesk_api.services import notifications as notification_service
+from rustdesk_api.services import options as options_service
 
 router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
 
@@ -123,6 +124,42 @@ def system_overview(
         backups=_backups(settings),
         fleet=FleetOut(stale_days=settings.device_stale_days, min_client_version=settings.min_client_version),
     )
+
+
+class OptionOut(BaseModel):
+    env: list[str]
+    label: str
+    help: str
+    enabled: bool
+    # A sentence with {1}, {2} placeholders and the values for them; never a secret.
+    detail: str | None
+    args: list[str | int]
+
+
+class OptionGroupOut(BaseModel):
+    name: str
+    items: list[OptionOut]
+
+
+@router.get("/options", response_model=list[OptionGroupOut])
+def options_overview(
+    _admin: User = Depends(get_current_admin), settings: Settings = Depends(get_settings_dep)
+) -> list[OptionGroupOut]:
+    """Every option that is set with an environment variable, and whether it is on. Secrets are
+    reported as set or not, never shown."""
+    groups: dict[str, list[OptionOut]] = {}
+    for o in options_service.report(settings):
+        groups.setdefault(o.group, []).append(
+            OptionOut(
+                env=list(o.env),
+                label=o.label,
+                help=o.help,
+                enabled=o.enabled,
+                detail=o.detail,
+                args=list(o.args),
+            )
+        )
+    return [OptionGroupOut(name=name, items=items) for name, items in groups.items()]
 
 
 class ChannelResult(BaseModel):

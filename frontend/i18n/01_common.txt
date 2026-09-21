@@ -12,7 +12,7 @@ Address Book || Książka adresowa || Carnet d'adresses || Adressbuch || Libreta
 Logs || Dzienniki || Journaux || Protokolle || Registros
 Strategies || Strategie || Stratégies || Strategien || Estrategias
 Users || Użytkownicy || Utilisateurs || Benutzer || Usuarios
-Connect || Podłączanie || Connexion || Verbinden || Conectar
+Deploy || Wdrożenie || Déploiement || Bereitstellung || Despliegue
 Settings || Ustawienia || Paramètres || Einstellungen || Ajustes
 Security || Bezpieczeństwo || Sécurité || Sicherheit || Seguridad
 Language || Język || Langue || Sprache || Idioma

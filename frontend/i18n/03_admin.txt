@@ -98,7 +98,7 @@ unknown error || nieznany błąd || erreur inconnue || unbekannter Fehler || err
 Backup written. || Kopia zapisana. || Sauvegarde écrite. || Sicherung geschrieben. || Copia de seguridad guardada.
 
 # ---- connect page
-Connect clients || Podłączanie klientów || Connecter des clients || Clients verbinden || Conectar clientes
+Deploy clients || Wdrażanie klientów || Déploiement des clients || Clients bereitstellen || Despliegue de clientes
 Your servers || Twoje serwery || Vos serveurs || Ihre Server || Sus servidores
 ID server (hbbs) || Serwer ID (hbbs) || Serveur d'ID (hbbs) || ID-Server (hbbs) || Servidor de ID (hbbs)
 Relay server (hbbr), if it is a different host || Serwer przekaźnikowy (hbbr), jeśli to inny host || Serveur relais (hbbr), si c'est un autre hôte || Relay-Server (hbbr), falls es ein anderer Host ist || Servidor de retransmisión (hbbr), si es otro host

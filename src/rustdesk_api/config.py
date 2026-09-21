@@ -166,7 +166,7 @@ class Settings(BaseSettings):
     # Clients older than this (e.g. 1.4.0) are flagged as outdated. Empty turns it off.
     min_client_version: str = Field(default="", alias="MIN_CLIENT_VERSION")
 
-    # Windows installer builder (Connect page). The server downloads a RustDesk MSI from
+    # Windows installer builder (Deploy page). The server downloads a RustDesk MSI from
     # GitHub and wraps it with NSIS (makensis) into a setup .exe that installs it and
     # applies this server's settings. It needs makensis on the server (the Docker image has
     # it; on Windows install NSIS) and outbound HTTPS to github.com. Built files are kept

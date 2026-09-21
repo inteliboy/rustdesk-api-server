@@ -51,7 +51,7 @@ jobs:
       - name: Smoke test a fresh container
         run: python scripts/docker_smoke.py first
 
-      # The Connect page builds Windows setup files with NSIS; the script uses the UserInfo plugin
+      # The Deploy page builds Windows setup files with NSIS; the script uses the UserInfo plugin
       # like the generated one does.
       - name: The image can compile an NSIS installer
         run: |

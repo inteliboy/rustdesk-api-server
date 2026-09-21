@@ -89,12 +89,70 @@ function renderFleet(f) {
     );
 }
 
+let optionGroups = [];
+
+// The sentence of an option's detail ("every {1} hour(s), keeping {2}") with its values filled in.
+function optionDetail(o) {
+  return o.detail ? escapeHtml(t(o.detail, o.args)) : "";
+}
+
+function renderOptions() {
+  const needle = document.getElementById("option-filter").value.trim().toLowerCase();
+  const state = document.getElementById("option-state").value;
+  let shown = 0;
+  let total = 0;
+  let enabled = 0;
+  const html = optionGroups
+    .map((g) => {
+      total += g.items.length;
+      enabled += g.items.filter((o) => o.enabled).length;
+      const items = g.items.filter((o) => {
+        if (state === "on" && !o.enabled) return false;
+        if (state === "off" && o.enabled) return false;
+        // Match the label as the visitor sees it (translated), the English one, and the variable names.
+        const text = `${t(o.label)} ${o.label} ${t(o.help)} ${o.env.join(" ")}`.toLowerCase();
+        return !needle || text.includes(needle);
+      });
+      shown += items.length;
+      if (!items.length) return "";
+      return `<div>
+        <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">${escapeHtml(g.name)}</h3>
+        <div class="card divide-y divide-slate-100 text-sm">
+          ${items
+            .map(
+              (o) => `<div class="flex items-start justify-between gap-4 px-4 py-3">
+                <div class="min-w-0">
+                  <p class="font-medium">${escapeHtml(o.label)}</p>
+                  <p class="text-xs text-slate-500 mt-0.5">${escapeHtml(o.help)}</p>
+                  <p class="font-mono text-xs text-slate-500 mt-1 break-all">${o.env.map(escapeHtml).join(" · ")}</p>
+                </div>
+                <div class="flex flex-col items-end gap-1 shrink-0 text-right">
+                  ${on(o.enabled)}
+                  <span class="text-xs text-slate-500">${optionDetail(o)}</span>
+                </div>
+              </div>`
+            )
+            .join("")}
+        </div>
+      </div>`;
+    })
+    .join("");
+  document.getElementById("options").innerHTML = html;
+  document.getElementById("options-empty").classList.toggle("hidden", shown > 0);
+  document.getElementById("option-summary").textContent = t("{1} of {2} options are on.", [enabled, total]);
+}
+
 async function load() {
-  const system = await api("/api/v1/admin/system");
+  const [system, options] = await Promise.all([api("/api/v1/admin/system"), api("/api/v1/admin/options")]);
   renderNotifications(system.notifications);
   renderBackups(system.backups);
   renderFleet(system.fleet);
+  optionGroups = options;
+  renderOptions();
 }
+
+document.getElementById("option-filter").addEventListener("input", renderOptions);
+document.getElementById("option-state").addEventListener("change", renderOptions);
 
 document.getElementById("test-notification").addEventListener("click", async (evt) => {
   const button = evt.currentTarget;

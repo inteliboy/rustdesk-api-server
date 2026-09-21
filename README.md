@@ -59,7 +59,7 @@ See [Features](#features) for the complete list.
 
 All screenshots are in the [`screenshots/`](screenshots/) folder. The WebUI has light and dark themes (choose
 **Appearance** in the top bar, or leave it on "system"), so the main pages are shown in both. Everything on
-them is fictional demo data: made-up people, devices and addresses, and made-up hardware in the server panel.
+them is fictional demo data: made-up people, devices and addresses, made-up hardware in the server panel and typical container paths.
 
 | Page | Light | Dark |
 | ---- | ----- | ---- |
@@ -69,6 +69,11 @@ them is fictional demo data: made-up people, devices and addresses, and made-up 
 | A device: details, strategy, sharing | [device-detail-light.png](screenshots/device-detail-light.png) | [device-detail-dark.png](screenshots/device-detail-dark.png) |
 | Connection logs reported by the clients | [logs-light.png](screenshots/logs-light.png) | [logs-dark.png](screenshots/logs-dark.png) |
 | Address book | [address-book-light.png](screenshots/address-book-light.png) | |
+| Strategies | [strategies-light.png](screenshots/strategies-light.png) | |
+| Deploy: config string, QR code, setup commands | [deploy-light.png](screenshots/deploy-light.png) | |
+| Deploy: the Windows installer builder and the files it keeps | [deploy-installer-light.png](screenshots/deploy-installer-light.png) | |
+| Settings: notifications, database backups | [settings-light.png](screenshots/settings-light.png) | [settings-dark.png](screenshots/settings-dark.png) |
+| Settings: options set with environment variables, and whether they are on (top of the list) | [settings-options-light.png](screenshots/settings-options-light.png) | [settings-options-dark.png](screenshots/settings-options-dark.png) |
 | Users (administrators) | [users-light.png](screenshots/users-light.png) | |
 | Security: password, sessions, API keys | [security-light.png](screenshots/security-light.png) | |
 
@@ -169,7 +174,7 @@ Treat it as a young project: run it against a test client first, and please repo
 [Working with many devices](#working-with-many-devices) · [Device identity](#device-identity) ·
 [Monitoring](#monitoring-and-network-access) · [Log retention](#log-retention) ·
 [Notifications](#notifications) · [Database backups](#database-backups) ·
-[Connecting clients](#connecting-many-clients) · [Windows installer](#windows-installer) · [Default strategy](#default-strategy-and-fleet-hygiene) ·
+[Deploying clients](#deploying-many-clients) · [Windows installer](#windows-installer) · [Default strategy](#default-strategy-and-fleet-hygiene) ·
 [Languages](#languages) · [Database](#database) ·
 [First-run setup](#first-run-setup) · [Client configuration](#rustdesk-client-configuration) ·
 [Older API servers](#moving-clients-from-an-older-api-server) · [Reverse proxy](#reverse-proxy-setup) · [Security](#security-recommendations) ·
@@ -248,8 +253,10 @@ Phase 3. LDAP sign-in and webhook notifications are not implemented.
   locked accounts, failed backups), **scheduled and pre-upgrade database backups**, a **default strategy** for new
   devices, **archiving** of devices that are gone and a flag for **outdated clients** - see Notifications, Database
   backups and Default strategy and fleet hygiene below
-- A **Connect** page with the client's config string, a QR code and setup commands - see Connecting many clients - and a
+- A **Deploy** page with the client's config string, a QR code and setup commands - see Deploying many clients - and a
   **Windows installer** builder (any RustDesk release incl. nightly, x64/ARM64, optional signing) - see Windows installer
+- A **Settings** page that lists every option set with an environment variable and whether it is on or off, with
+  secrets reported only as set or not - see Configuration
 - WebUI in English, Polish, French, German and Spanish - see Languages below
 - Runs natively on Windows/Linux/macOS, or via Docker
 - Alembic database migrations
@@ -362,6 +369,16 @@ device identity adds `DEVICE_UUID_REBIND`. Each is described in `.env.example`; 
 explained under [Single sign-on](#single-sign-on-openid-connect). The `NOTIFY_*`, `BACKUP_*`,
 `DEVICE_STALE_DAYS` and `MIN_CLIENT_VERSION` settings are explained under [Notifications](#notifications),
 [Database backups](#database-backups) and [Default strategy and fleet hygiene](#default-strategy-and-fleet-hygiene).
+
+**Settings** in the WebUI (administrators) has a section *Options set with environment variables*. It lists every
+option the server reads, in groups (sign-in and accounts, network and access, devices and clients, data and
+backups, notifications, the Windows installer, this server), with the variable names, a one-line explanation,
+whether it is **On** or **Off**, and a short fact where there is one (for example "every 24 hours, keeping 7" or
+"after 30 days"). Search it by option or variable name, or show only what is on or off. It is read-only: settings
+can hold secrets, so they are changed where the server is started, not from a browser. A secret (a key, token,
+password, or a URL that carries one) is only reported as set or not, never shown, and the paths and commands
+behind the installer options are not shown either. `GET /api/v1/admin/options` returns the same list. When you add a setting to
+`config.py`, `pytest` fails until it is listed in `services/options.py`, so the page cannot fall behind.
 
 The Dashboard shows which build is running: the version, the git commit (linked to GitHub) and the RustDesk
 client release whose source the protocol code was written against. The Docker images get the commit from CI and
@@ -676,9 +693,9 @@ They go to `BACKUP_DIR` (default: a `backups` folder next to the database, which
 volume). A backup is a full copy of the database with the password hashes in it: keep the folder as private as the
 database. Restore by stopping the server, replacing `rustdesk.db` with the backup and starting it again.
 
-## Connecting many clients
+## Deploying many clients
 
-**Connect** in the WebUI (any signed-in user) shows what a RustDesk client needs to know about this server: the
+**Deploy** in the WebUI (any signed-in user) shows what a RustDesk client needs to know about this server: the
 ID server, relay, API server and the public key, as a **config string**, a **QR code**, a **file name** for a
 renamed Windows executable and ready-to-run commands (`rustdesk --config ...`, optionally `--assign`). The fields
 start from `RUSTDESK_ID_SERVER`, `RUSTDESK_RELAY_SERVER`, `RUSTDESK_KEY` and `EXTERNAL_URL` and can be edited on the
@@ -692,7 +709,7 @@ client against the generated commands: try them on one machine first (the macOS 
 
 ## Windows installer
 
-Administrators also get a **Windows installer** card on **Connect**: pick a RustDesk release - the latest stable, an
+Administrators also get a **Windows installer** card on **Deploy**: pick a RustDesk release - the latest stable, an
 older one or the **nightly** build - and an architecture (**x64** or **ARM64**; older releases only have x64), and
 the server makes a setup `.exe`. Run on a computer (as administrator) it removes an installed RustDesk, installs
 RustDesk's own MSI silently, applies this server's settings with `rustdesk.exe --config <string>` and installs the

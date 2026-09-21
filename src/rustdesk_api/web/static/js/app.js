@@ -642,7 +642,7 @@ function renderNav(active, user) {
     items.push({ key: "strategies", href: "/strategies", label: "Strategies" });
     items.push({ key: "users", href: "/users", label: "Users" });
   }
-  items.push({ key: "connect", href: "/connect", label: "Connect" });
+  items.push({ key: "connect", href: "/connect", label: "Deploy" });
   if (user && user.is_admin) items.push({ key: "settings", href: "/settings", label: "Settings" });
   items.push({ key: "security", href: "/security", label: "Security" });
   nav.innerHTML = items

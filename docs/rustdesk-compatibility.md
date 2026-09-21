@@ -860,7 +860,7 @@ login resets the count. Not yet seen on a live client; the client treats any `er
 
 ## Client setup: the config string, `--config` and the file name (source-verified 2026-09-21, NOT run against a client)
 
-The WebUI's **Connect** page builds these from the server settings. Formats, from the client source:
+The WebUI's **Deploy** page builds these from the server settings. Formats, from the client source:
 
 - **Config string** (`ServerConfig.encode`/`decode` in `flutter/lib/common.dart`): the JSON object
   `{"host": <ID server>, "relay": ..., "api": ..., "key": ...}` as URL-safe base64, **reversed**. The Flutter decoder
@@ -872,7 +872,7 @@ The WebUI's **Connect** page builds these from the server settings. Formats, fro
   `custom-rendezvous-server`, `api-server` and `relay-server`. A running client should be restarted.
 - **File name**: an executable named `rustdesk-host=<id>,key=<key>,api=<api>,relay=<relay>.exe` configures itself (the
   parts are found by their `host=`, `key=`, `api=`, `relay=` prefixes; a trailing comma protects against Windows adding
-  " (1)"). The Connect page writes only the parts that are set.
+  " (1)"). The Deploy page writes only the parts that are set.
 - **`rustdesk://config/<string>`** exists on Android and iOS only, and is ignored unless the build option
   `allow-deep-link-server-settings` is on, so the page does not offer it.
 - The QR code is the config string; the mobile apps' "import server config" reads it.
@@ -892,7 +892,7 @@ decoder rules above and that the API returns it; whether a given client version 
   session (which needs a connection and, unless a permanent password is used, acceptance). Not checked: whether the
   Pro server or its client build has a channel for this; it is not part of the open-source protocol either way.
 
-- **Windows installer (Connect page).** Not a client protocol feature: the server writes an NSIS script around the
+- **Windows installer (Deploy page).** Not a client protocol feature: the server writes an NSIS script around the
   release MSI (`rustdesk.exe --config <string>` then `--install-service`, as in the "Client setup" section above) and
   runs `makensis`. The MSI names (`rustdesk-<version>-x86_64.msi`, `-aarch64.msi`, the latter from 1.4.8) and their
   SHA-256 digests come from the GitHub releases API (`tag` `nightly` is a pre-release). Built and inspected for the

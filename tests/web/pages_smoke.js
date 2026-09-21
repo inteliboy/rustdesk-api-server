@@ -602,8 +602,58 @@ const listFixtures = (items) => ({
     fleet: { stale_days: 45, min_client_version: "1.4.0" },
   };
 
+  const options = [
+    {
+      name: "Sign-in and accounts",
+      items: [
+        { env: ["ALLOW_REGISTRATION", "REGISTRATION_REQUIRES_APPROVAL"], label: "Self-registration", help: "People can create their own account.", enabled: true, detail: "an administrator must approve a new account", args: [] },
+        { env: ["LOGIN_LOCKOUT_THRESHOLD", "LOGIN_LOCKOUT_MINUTES"], label: "Account lockout", help: "Locked after wrong passwords.", enabled: false, detail: null, args: [] },
+      ],
+    },
+    {
+      name: "Data, logs and backups",
+      items: [
+        { env: ["BACKUP_INTERVAL_HOURS", "BACKUP_KEEP", "BACKUP_DIR"], label: "Scheduled backups", help: "A copy of the database.", enabled: true, detail: "every {1} hour(s), keeping {2}", args: [24, 7] },
+        { env: ["METRICS_TOKEN"], label: "Prometheus metrics (/metrics)", help: "Metrics for monitoring.", enabled: true, detail: null, args: [] },
+      ],
+    },
+  ];
+
+  await test("settings: lists every option with its variables and whether it is on, and can filter them", async () => {
+    const env = await new Env("settings.html", "settings.js", {
+      user: admin,
+      fixtures: { "GET ^/api/v1/admin/system": system, "GET ^/api/v1/admin/options": options },
+    }).run();
+    const list = env.html_("options");
+    assert.match(list, /Sign-in and accounts/);
+    assert.match(list, /BACKUP_INTERVAL_HOURS · BACKUP_KEEP · BACKUP_DIR/);
+    assert.match(list, /every 24 hour\(s\), keeping 7/);
+    assert.match(list, /an administrator must approve a new account/);
+    assert.strictEqual((list.match(/badge-online/g) || []).length, 3, "three options are on");
+    assert.strictEqual((list.match(/badge-offline/g) || []).length, 1, "one is off");
+    assert.strictEqual(env.element("option-summary").textContent, "3 of 4 options are on.");
+
+    env.element("option-state").value = "off";
+    await env.fire("option-state", "change");
+    assert.match(env.html_("options"), /Account lockout/);
+    assert.doesNotMatch(env.html_("options"), /Self-registration/);
+
+    env.element("option-state").value = "all";
+    env.element("option-filter").value = "metrics_token";
+    await env.fire("option-filter", "input");
+    assert.match(env.html_("options"), /Prometheus metrics/);
+    assert.doesNotMatch(env.html_("options"), /Self-registration/);
+    assert.doesNotMatch(env.html_("options"), /Data, logs and backups<\/h3>[\s\S]*Scheduled backups/);
+
+    env.element("option-filter").value = "nothing like this";
+    await env.fire("option-filter", "input");
+    assert.strictEqual(env.html_("options"), "");
+    assert.ok(!env.element("options-empty").classList.contains("hidden"), "says that nothing matches");
+    assert.deepStrictEqual(env.toasts, []);
+  });
+
   await test("settings: shows channels, events, backups and the device-list rules", async () => {
-    const env = await new Env("settings.html", "settings.js", { user: admin, fixtures: { "GET ^/api/v1/admin/system": system } }).run();
+    const env = await new Env("settings.html", "settings.js", { user: admin, fixtures: { "GET ^/api/v1/admin/system": system, "GET ^/api/v1/admin/options": options } }).run();
     assert.match(env.html_("channels"), /hooks\.example\.com/);
     assert.match(env.html_("channels"), /Not configured/);
     assert.match(env.html_("events"), /new_device/);
@@ -619,13 +669,14 @@ const listFixtures = (items) => ({
   await test("settings: without a channel there is nothing to test; the test and backup buttons post", async () => {
     const quiet = JSON.parse(JSON.stringify(system));
     quiet.notifications.channels.forEach((c) => { c.configured = false; c.target = null; });
-    const env0 = await new Env("settings.html", "settings.js", { user: admin, fixtures: { "GET ^/api/v1/admin/system": quiet } }).run();
+    const env0 = await new Env("settings.html", "settings.js", { user: admin, fixtures: { "GET ^/api/v1/admin/system": quiet, "GET ^/api/v1/admin/options": options } }).run();
     assert.ok(env0.element("test-notification").classList.contains("hidden"));
 
     const env = await new Env("settings.html", "settings.js", {
       user: admin,
       fixtures: {
         "GET ^/api/v1/admin/system": system,
+        "GET ^/api/v1/admin/options": options,
         "POST ^/api/v1/admin/notifications/test": [{ channel: "webhook", ok: false, error: "the server answered HTTP 401" }],
         "POST ^/api/v1/admin/backups": { name: "rustdesk-20260921T110000Z.db", kind: "manual", size: 4096, created_at: "2026-09-21T11:00:00" },
       },

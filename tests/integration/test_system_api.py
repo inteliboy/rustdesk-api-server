@@ -189,3 +189,38 @@ def test_an_ordinary_user_can_use_the_setup_helper(app, admin_client):
     bob = _ordinary_user(app, admin_client)
     assert bob.get("/api/v1/connect").status_code == 200
     assert bob.post("/api/v1/connect/config", json={"id_server": "id.example.com"}).status_code == 200
+
+
+# --- options set with environment variables -------------------------------
+
+
+def test_the_options_report_says_what_is_on_and_shows_no_secret(app, settings, monkeypatch):
+    monkeypatch.setenv("ALLOW_REGISTRATION", "true")
+    monkeypatch.setenv("METRICS_TOKEN", "metrics-token-value-1234")
+    monkeypatch.setenv("NOTIFY_WEBHOOK_URL", "https://hooks.example.com/services/T0/B0/secret-token")
+    monkeypatch.setenv("TRUSTED_PROXIES", "10.0.0.1")
+    clear_settings_cache()
+    from rustdesk_api.app import create_app
+    from rustdesk_api.config import get_settings
+
+    with TestClient(create_app(get_settings())) as admin:
+        admin.post("/api/v1/auth/setup", json={"username": "admin", "password": "adminpass123"})
+        admin.post("/api/v1/auth/login", json={"username": "admin", "password": "adminpass123"})
+        r = admin.get("/api/v1/admin/options")
+
+    assert r.status_code == 200, r.text
+    groups = {g["name"]: g["items"] for g in r.json()}
+    assert list(groups)[0] == "Sign-in and accounts"
+    items = {i["env"][0]: i for g in groups.values() for i in g}
+    assert items["ALLOW_REGISTRATION"]["enabled"] is True
+    assert items["METRICS_TOKEN"]["enabled"] is True and items["METRICS_TOKEN"]["detail"] is None
+    assert items["TRUSTED_PROXIES"]["args"] == [1]
+    assert items["NOTIFY_WEBHOOK_URL"]["args"] == ["hooks.example.com"]
+    assert items["NOTIFY_NTFY_URL"]["enabled"] is False
+    assert "secret-token" not in r.text and "metrics-token-value" not in r.text
+
+
+def test_the_options_report_is_for_administrators_only(app, admin_client):
+    bob = _ordinary_user(app, admin_client)
+    assert bob.get("/api/v1/admin/options").status_code == 403
+    assert TestClient(app).get("/api/v1/admin/options").status_code == 401

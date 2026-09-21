@@ -63,6 +63,30 @@
     <h2 id="fleet-title" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Device list</h2>
     <div id="fleet" class="card divide-y divide-slate-100 text-sm"></div>
   </section>
+
+  <section class="mb-10" aria-labelledby="options-title">
+    <h2 id="options-title" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Options set with environment variables</h2>
+    <p class="text-sm text-slate-500 mb-3">
+      Every option the server reads from its environment (or the .env file), and whether it is on. Change
+      one where you start the server, for example in the container's environment, and restart. A secret is only
+      reported as set or not; its value is never shown.
+    </p>
+    <div class="flex items-center justify-between mb-4 gap-3 flex-wrap">
+      <input id="option-filter" type="search" placeholder="Search options or variable names..." autocomplete="off"
+             class="w-72 max-w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+      <div class="flex items-center gap-2 text-sm">
+        <label for="option-state" class="text-slate-500">Show</label>
+        <select id="option-state" class="rounded-md border border-slate-300 px-2 py-2 text-sm">
+          <option value="all">All options</option>
+          <option value="on">Only those that are on</option>
+          <option value="off">Only those that are off</option>
+        </select>
+      </div>
+    </div>
+    <p id="option-summary" class="text-xs text-slate-500 mb-3" aria-live="polite"></p>
+    <div id="options" class="space-y-5"></div>
+    <p id="options-empty" class="hidden card p-6 text-center text-sm text-slate-500">No option matches.</p>
+  </section>
 </main>
 {% endblock %}
 {% block scripts %}
