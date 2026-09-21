@@ -15,11 +15,11 @@ reading the reference project's source (api/views_api.py::ab):
   stored in AddressBookEntry, not derived from Device.
 
 `login-options`, `device-group/accessible`, `/api/users`, and `/api/peers`
-are not meaningfully implemented in the reference project - `peers` exists
-there only as a non-functional stub (`{"code": 1, "data": "ok"}`, confirmed
-by reading `api/views.py::peers`). Their response shapes here are educated
-guesses following the envelope pattern confirmed for `/api/ab`; only
-path/method/query are confirmed real via live capture.
+are not implemented in the reference project (`peers` is a stub). Their shapes
+here come from the client's own parser (`GroupModel` in
+flutter/lib/models/group_model.dart, `PeerPayload` in
+flutter/lib/common/hbbs/hbbs.dart, 1.4.9): `data` is a real JSON array, unlike
+`/api/ab`. Read from source, not yet seen working in a live client.
 """
 
 import json
@@ -64,7 +64,7 @@ def test_device_group_accessible_without_auth_returns_empty(client):
     assert r.status_code == 200
     body = r.json()
     assert body["total"] == 0
-    assert json.loads(body["data"]) == []
+    assert body["data"] == []
 
 
 def test_device_group_accessible_lists_owned_groups(admin_client):
@@ -79,8 +79,7 @@ def test_device_group_accessible_lists_owned_groups(admin_client):
     assert r.status_code == 200
     body = r.json()
     assert body["total"] == 1
-    data = json.loads(body["data"])
-    assert data[0]["name"] == "Servers"
+    assert body["data"] == [{"name": "Servers"}]
 
 
 def test_ab_personal_without_auth_returns_401_error(client):
@@ -204,14 +203,26 @@ def test_users_listing_without_auth_returns_empty(client):
     assert r.status_code == 200
     body = r.json()
     assert body["total"] == 0
-    assert json.loads(body["data"]) == []
+    assert body["data"] == []
 
 
-def test_users_listing_returns_active_usernames(admin_client):
+def test_accessible_lookups_return_a_json_array_not_a_string(admin_client):
+    """The client does `if (data is List)` (group_model.dart) and ignores
+    anything else - a JSON-encoded string left the panel empty."""
+    token = _login_get_token(admin_client)
+    headers = {"Authorization": f"Bearer {token}"}
+    params = {"current": 1, "pageSize": 100, "accessible": "", "status": 1}
+    for path in ("/api/users", "/api/peers", "/api/device-group/accessible"):
+        body = admin_client.get(path, params=params, headers=headers).json()
+        assert isinstance(body["total"], int), path
+        assert isinstance(body["data"], list), path
+
+
+def test_users_listing_is_the_caller_alone_by_default(admin_client):
     admin_client.post(
         "/api/v1/users", json={"username": "alice", "password": "alicepassword1", "is_admin": False}
     )
-    token = _login_get_token(admin_client)
+    token = _login_get_token(admin_client, "alice", "alicepassword1")
 
     r = admin_client.get(
         "/api/users",
@@ -219,9 +230,30 @@ def test_users_listing_returns_active_usernames(admin_client):
         headers={"Authorization": f"Bearer {token}"},
     )
     assert r.status_code == 200
-    data = json.loads(r.json()["data"])
-    names = {u["name"] for u in data}
-    assert {"admin", "alice"}.issubset(names)
+    data = r.json()["data"]
+    assert [u["name"] for u in data] == ["alice"]
+    assert data[0]["status"] == 1
+    assert data[0]["is_admin"] is False
+
+
+def test_users_listing_adds_owners_of_devices_shared_with_the_caller(admin_client):
+    admin_client.post(
+        "/api/v1/users", json={"username": "alice", "password": "alicepassword1", "is_admin": False}
+    )
+    admin_client.post(
+        "/api/login",
+        json={"username": "admin", "password": "adminpass123", "id": "777888999"},
+    )
+    device_id = admin_client.get("/api/v1/devices").json()["items"][0]["id"]
+    admin_client.post(f"/api/v1/devices/{device_id}/shares", json={"username": "alice", "permission": "view"})
+    token = _login_get_token(admin_client, "alice", "alicepassword1")
+
+    r = admin_client.get(
+        "/api/users",
+        params={"current": 1, "pageSize": 100, "status": 1},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert [u["name"] for u in r.json()["data"]] == ["alice", "admin"]
 
 
 def test_peers_without_auth_returns_empty(client):
@@ -229,30 +261,44 @@ def test_peers_without_auth_returns_empty(client):
     assert r.status_code == 200
     body = r.json()
     assert body["total"] == 0
-    assert json.loads(body["data"]) == []
+    assert body["data"] == []
 
 
-def test_peers_lists_devices_owned_by_caller(admin_client):
+def test_peers_lists_devices_owned_by_caller_in_the_shape_the_client_reads(admin_client):
     """A real client's login body includes its own `id`, which
     /api/login opportunistically registers and claims (see
     api/auth.py) - reused here to get a Device row without needing a
-    separate heartbeat/sysinfo call."""
+    separate heartbeat/sysinfo call. Field names are those of `PeerPayload`
+    in the client source."""
     admin_client.post(
         "/api/login",
         json={"username": "admin", "password": "adminpass123", "id": "111222333"},
     )
     token = _login_get_token(admin_client)
+    admin_client.post(
+        "/api/sysinfo",
+        json={"id": "111222333", "hostname": "desk-1", "username": "bob", "os": "Windows 11"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    group = admin_client.post("/api/v1/groups", json={"name": "Servers"}).json()
+    device_id = admin_client.get("/api/v1/devices").json()["items"][0]["id"]
+    admin_client.patch(f"/api/v1/devices/{device_id}", json={"group_id": group["id"], "note": "front desk"})
 
     r = admin_client.get(
         "/api/peers",
-        params={"current": 1, "pageSize": 100, "status": 1},
+        params={"current": 1, "pageSize": 100, "accessible": "", "status": 1},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert r.status_code == 200
     body = r.json()
     assert body["total"] == 1
-    data = json.loads(body["data"])
-    assert data[0]["id"] == "111222333"
+    (peer,) = body["data"]
+    assert peer["id"] == "111222333"
+    assert peer["user_name"] == "admin"
+    assert peer["device_group_name"] == "Servers"
+    assert peer["note"] == "front desk"
+    assert peer["status"] == 1
+    assert peer["info"] == {"username": "bob", "os": "windows", "device_name": "desk-1"}
 
 
 def test_peers_are_scoped_per_user(admin_client):
@@ -274,4 +320,4 @@ def test_peers_are_scoped_per_user(admin_client):
     assert r.status_code == 200
     body = r.json()
     assert body["total"] == 0
-    assert json.loads(body["data"]) == []
+    assert body["data"] == []

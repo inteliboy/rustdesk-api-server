@@ -5,12 +5,13 @@ import hmac
 import json
 
 from sqlalchemy import func, or_, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from rustdesk_api.models.device import Device
 from rustdesk_api.models.device_event import DeviceEvent
 from rustdesk_api.models.share import DeviceShare
 from rustdesk_api.models.tag import Tag
+from rustdesk_api.models.user import User
 from rustdesk_api.services import audit as audit_service
 
 
@@ -237,7 +238,9 @@ def list_devices(
     (admin use only - callers must enforce that). Passing the same user's
     id for both returns everything visible to them: devices they own OR
     devices actively shared with them."""
-    stmt = select(Device)
+    stmt = select(Device).options(
+        selectinload(Device.owner), selectinload(Device.group), selectinload(Device.tags)
+    )
     count_stmt = select(func.count(Device.id))
 
     visibility = None
@@ -297,6 +300,21 @@ def list_devices(
     stmt = stmt.order_by(ordering, Device.id.asc()).offset((page - 1) * page_size).limit(page_size)
     items = list(db.execute(stmt).scalars())
     return items, total
+
+
+def list_owners_of_shared_devices(db: Session, user_id: int) -> list[User]:
+    """Users who own a device that is currently shared with `user_id`."""
+    shared_device_ids = select(DeviceShare.device_id).where(
+        DeviceShare.shared_with_user_id == user_id,
+        or_(DeviceShare.expires_at.is_(None), DeviceShare.expires_at > _utcnow()),
+    )
+    stmt = (
+        select(User)
+        .where(User.id.in_(select(Device.owner_id).where(Device.id.in_(shared_device_ids))))
+        .where(User.is_active.is_(True))
+        .order_by(User.username)
+    )
+    return list(db.execute(stmt).scalars())
 
 
 _UNSET = object()

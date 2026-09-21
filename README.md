@@ -311,6 +311,11 @@ two-factor authentication and saved address-book passwords, `DATA_ENCRYPTION_KEY
 `LOGIN_LOCKOUT_THRESHOLD`, `LOGIN_LOCKOUT_MINUTES`, `WEBUI_ALLOWED_NETWORKS` and `METRICS_TOKEN`;
 device identity adds `DEVICE_UUID_REBIND`. Each is described in `.env.example`.
 
+The Dashboard shows which build is running: the version, the git commit (linked to GitHub) and the RustDesk
+client release whose source the protocol code was written against. The Docker images get the commit from CI;
+from a git checkout it is read from `git`; otherwise it shows as unknown. `GIT_COMMIT` overrides it if you build
+your own image with `--build-arg GIT_COMMIT=$(git rev-parse HEAD)`. `GET /api/version` returns the same facts.
+
 Generate a real `SECRET_KEY` with:
 
 ```powershell

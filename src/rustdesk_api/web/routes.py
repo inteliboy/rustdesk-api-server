@@ -12,7 +12,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -21,6 +21,13 @@ templates = Jinja2Templates(directory=str(WEB_DIR / "templates"))
 
 web_router = APIRouter(include_in_schema=False)
 web_router.mount("/static", StaticFiles(directory=str(WEB_DIR / "static")), name="static")
+
+
+@web_router.get("/favicon.ico")
+def favicon() -> FileResponse:
+    """Browsers ask for this path on their own (Safari, feed readers, direct
+    visits to a URL that is not an HTML page), whatever the page's <link> says."""
+    return FileResponse(WEB_DIR / "static" / "img" / "favicon.ico", media_type="image/x-icon")
 
 
 @web_router.get("/", response_class=HTMLResponse)

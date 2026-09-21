@@ -53,6 +53,10 @@ class Settings(BaseSettings):
 
     external_url: str = Field(default="http://127.0.0.1:21114", alias="EXTERNAL_URL")
 
+    # The commit this build was made from. Set by the Docker image (a build
+    # argument); when empty the server asks the git checkout it runs from.
+    git_commit: str = Field(default="", alias="GIT_COMMIT")
+
     rustdesk_id_server: str = Field(default="", alias="RUSTDESK_ID_SERVER")
     rustdesk_relay_server: str = Field(default="", alias="RUSTDESK_RELAY_SERVER")
     rustdesk_key: str = Field(default="", alias="RUSTDESK_KEY")

@@ -18,10 +18,40 @@ function statCard(label, value, tone) {
 // describeActivity() is defined in app.js, shared with the per-user
 // activity panel on the Users page.
 
+// "RustDesk API Server 0.1.0 · commit f81a8e8 · protocol checked against RustDesk client 1.4.9".
+// Built with DOM calls rather than HTML strings: the pieces come from the server.
+async function showBuildInfo() {
+  const el = document.getElementById("build-info");
+  try {
+    const info = await api("/api/version");
+    el.textContent = `RustDesk API Server ${info.version}`;
+    const sep = () => el.append(" · ");
+    sep();
+    if (info.commit_short) {
+      el.append("commit ");
+      const link = document.createElement("a");
+      link.textContent = info.commit_short;
+      link.href = info.commit_url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.className = "font-mono text-link hover:underline";
+      el.append(link);
+      if (info.dirty) el.append(" (uncommitted changes)");
+    } else {
+      el.append("commit unknown");
+    }
+    sep();
+    el.append(`written against the RustDesk ${info.rustdesk_client_source} client source`);
+  } catch (err) {
+    el.textContent = ""; // the version line is a nicety; the dashboard works without it
+  }
+}
+
 (async () => {
   const user = await requireAuth();
   if (!user) return;
   renderNav("dashboard", user);
+  showBuildInfo();
 
   try {
     const stats = await api("/api/v1/admin/dashboard");

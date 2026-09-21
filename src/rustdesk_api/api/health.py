@@ -5,7 +5,9 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from rustdesk_api import __version__
+from rustdesk_api.api.deps import get_settings_dep
+from rustdesk_api.buildinfo import get_build_info
+from rustdesk_api.config import Settings
 from rustdesk_api.db.database import get_db
 
 router = APIRouter(tags=["health"])
@@ -28,5 +30,8 @@ def ready(db: Session = Depends(get_db)) -> dict:
 
 
 @router.get("/api/version")
-def version() -> dict:
-    return {"version": __version__}
+def version(settings: Settings = Depends(get_settings_dep)) -> dict:
+    """`version` is what the endpoint always returned; the rest says which
+    commit this is and which RustDesk client source the protocol was checked
+    against (see rustdesk_api/buildinfo.py)."""
+    return get_build_info(settings.git_commit).as_dict()

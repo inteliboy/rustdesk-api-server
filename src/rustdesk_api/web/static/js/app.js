@@ -625,6 +625,13 @@ function renderNav(active, user) {
   const userLabel = document.getElementById("current-user-label");
   if (userLabel && user) {
     userLabel.textContent = user.username + (user.is_admin ? " (admin)" : "");
+    // Administrators land on their own entry in Users; everyone else on their account page.
+    if (user.is_admin && user.id != null) {
+      userLabel.href = `/users?id=${encodeURIComponent(user.id)}`;
+      userLabel.title = "Open your user record";
+    } else {
+      userLabel.title = "Your account and password";
+    }
   }
 
   const logoutBtn = document.getElementById("logout-btn");

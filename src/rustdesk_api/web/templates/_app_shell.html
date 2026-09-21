@@ -1,15 +1,16 @@
-{# Included by authenticated pages: top nav bar. #}
-{# Nothing inside a label wraps; when the bar is too wide, whole items move to a second row. #}
+{# Included by authenticated pages: top bar. #}
+{# Two rows so the account controls never depend on how wide the nav renders (fonts differ per OS/browser): #}
+{# brand + account controls on top, navigation below. Nothing wraps inside a label; whole items move down. #}
 <header class="border-b border-slate-200 bg-surface">
-  <div class="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-    <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+  <div class="max-w-6xl mx-auto px-4 pt-3 pb-2">
+    <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
       <span class="font-semibold text-slate-900 whitespace-nowrap">RustDesk API Server</span>
-      <nav id="app-nav" class="flex flex-wrap items-center gap-1"></nav>
+      <div class="ml-auto flex items-center gap-3 text-sm whitespace-nowrap">
+        <div id="theme-menu" class="relative"></div>
+        <a id="current-user-label" href="/security" class="text-slate-500 hover:text-slate-900 hover:underline"></a>
+        <button id="logout-btn" class="text-slate-500 hover:text-slate-900 whitespace-nowrap">Log out</button>
+      </div>
     </div>
-    <div class="ml-auto flex items-center gap-3 text-sm whitespace-nowrap">
-      <div id="theme-menu" class="relative"></div>
-      <span id="current-user-label" class="text-slate-500"></span>
-      <button id="logout-btn" class="text-slate-500 hover:text-slate-900 whitespace-nowrap">Log out</button>
-    </div>
+    <nav id="app-nav" class="mt-2 flex flex-wrap items-center gap-1"></nav>
   </div>
 </header>

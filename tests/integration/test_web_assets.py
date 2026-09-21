@@ -76,3 +76,20 @@ def test_compiled_css_is_up_to_date(tmp_path):
     assert rebuilt.read_text(encoding="utf-8") == COMPILED_CSS.read_text(encoding="utf-8"), (
         "static/css/tailwind.css is stale - run `npm run build:css` and commit the result"
     )
+
+
+def test_favicon_is_linked_by_every_page_and_served(client):
+    head = (WEB_DIR / "templates" / "base.html").read_text(encoding="utf-8")
+    for href in (
+        "/favicon.ico",
+        "/static/img/favicon-32.png",
+        "/static/img/favicon-16.png",
+        "/static/img/apple-touch-icon.png",
+    ):
+        assert f'href="{href}"' in head, href
+        r = client.get(href)
+        assert r.status_code == 200, href
+        assert r.headers["content-type"].startswith("image/"), href
+    # Not behind login: the browser requests it before (and without) a session.
+    assert client.get("/favicon.ico").content[:4] == b"\x00\x00\x01\x00"  # ICO magic
+    assert client.get("/static/img/apple-touch-icon.png").content[:8] == b"\x89PNG\r\n\x1a\n"

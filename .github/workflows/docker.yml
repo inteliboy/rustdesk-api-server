@@ -28,6 +28,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          build-args: GIT_COMMIT=${{ github.sha }}
           load: true
           tags: rustdesk-api:ci
           cache-from: type=gha
@@ -152,6 +153,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          build-args: GIT_COMMIT=${{ github.sha }}
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}

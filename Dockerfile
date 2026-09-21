@@ -24,6 +24,11 @@ RUN useradd --create-home --uid 10001 rustdesk && \
     chown -R rustdesk:rustdesk /app
 USER rustdesk
 
+# Which commit this image was built from (shown on the Dashboard). Declared this
+# late so a new commit does not invalidate the dependency layers above.
+ARG GIT_COMMIT=""
+ENV GIT_COMMIT=${GIT_COMMIT}
+
 ENV RUSTDESK_API_HOST=0.0.0.0 \
     RUSTDESK_API_PORT=21114 \
     DATABASE_URL=sqlite:///./data/rustdesk.db

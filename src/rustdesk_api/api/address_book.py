@@ -6,11 +6,10 @@ actual Django view source of the reference project named in CLAUDE.md
 section 73 (https://github.com/bryangerlach/rustdesk-api-server,
 api/views_api.py::ab) combined with live capture against a real RustDesk
 1.4.9 client - see docs/rustdesk-compatibility.md for the full trace.
-`login-options`, `device-group/accessible`, and `/api/users` are not
-present in the reference project at all and remain educated guesses,
-confirmed only by path/method/query via a live 404 capture. Expect to
-revise this file further after live-client verification (CLAUDE.md
-section 74: observe -> test -> document -> implement).
+`login-options`, `device-group/accessible`, `/api/users` and `/api/peers` are
+not implemented in the reference project; their shapes come from the client's
+own parser (see docs/rustdesk-compatibility.md) and are not yet live-verified
+(CLAUDE.md section 74: observe -> test -> document -> implement).
 
 This module holds the *legacy* address book (`GET/POST /api/ab`) and the
 smaller client lookups. The newer per-item protocol (personal guid, shared
@@ -31,7 +30,6 @@ import json
 import logging
 
 from fastapi import APIRouter, Depends, Header, Query, Request
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from rustdesk_api.db.database import get_db
@@ -100,6 +98,16 @@ def login_options() -> list[str]:
     return []
 
 
+def _accessible_page(items: list[dict], current: int, page_size: int) -> dict:
+    """The envelope of the client's "accessible" lookups (`GroupModel` in
+    flutter/lib/models/group_model.dart). Unlike `/api/ab`, `data` must be a
+    real JSON array: the client does `if (data is List)` and silently skips
+    anything else, which is what a JSON-encoded string is, so the panel stayed
+    empty."""
+    start = (current - 1) * page_size
+    return {"total": len(items), "data": items[start : start + page_size]}
+
+
 @router.get("/api/device-group/accessible")
 def device_group_accessible(
     current: int = Query(default=1, ge=1),
@@ -107,19 +115,16 @@ def device_group_accessible(
     db: Session = Depends(get_db),
     authorization: str | None = Header(default=None),
 ) -> dict:
-    """Not present in the reference project (confirmed by reading its
-    source) - shape is an educated guess, only the path/method/query are
-    confirmed real via a live 404 capture."""
+    """Device groups shown in the left list of the client's "Accessible
+    devices" tab; the client reads only `name` (`DeviceGroupPayload`). The
+    caller's own groups (all of them for an administrator)."""
     user = current_client_user(db, authorization)
     if user is None:
-        return {"total": 0, "data": json.dumps([])}
+        return _accessible_page([], current, pageSize)
 
     owner_id = None if user.is_admin else user.id
     groups = group_service.list_groups(db, owner_id=owner_id)
-    start = (current - 1) * pageSize
-    page_items = groups[start : start + pageSize]
-    data = [{"id": g.id, "name": g.name} for g in page_items]
-    return {"total": len(groups), "data": json.dumps(data)}
+    return _accessible_page([{"name": g.name} for g in groups], current, pageSize)
 
 
 @router.get("/api/ab")
@@ -200,6 +205,16 @@ async def save_address_book(
     return {}
 
 
+def _client_os(platform: str | None) -> str:
+    """`PeerPayload.info["os"]`: the client takes the text before " / " and
+    matches it, lower-cased, against windows/linux/macos/android to choose the
+    icon. Stored platforms are sometimes longer ("Windows 11")."""
+    if not platform:
+        return ""
+    first = platform.split()[0].lower()
+    return first if first in ("windows", "linux", "macos", "android") else platform
+
+
 @router.get("/api/users")
 def list_users_for_sharing(
     current: int = Query(default=1, ge=1),
@@ -207,20 +222,21 @@ def list_users_for_sharing(
     db: Session = Depends(get_db),
     authorization: str | None = Header(default=None),
 ) -> dict:
-    """Used by the client to populate a "share with" user picker. Not
-    present in the reference project (confirmed by reading its source,
-    which has a same-named but unrelated trivial endpoint) - this shape is
-    an educated guess, only path/method/query confirmed real."""
+    """Users in the left list of the client's "Accessible devices" tab (fields
+    read by `UserPayload`: `name`, `status`, `is_admin`, ...). Choosing one
+    shows the peers whose `user_name` equals it. That is the caller plus the
+    owners of devices shared with the caller - not every account on the
+    server, which would tell any user who else has one."""
     user = current_client_user(db, authorization)
     if user is None:
-        return {"total": 0, "data": json.dumps([])}
+        return _accessible_page([], current, pageSize)
 
-    stmt = select(User).where(User.is_active.is_(True)).order_by(User.username)
-    all_users = list(db.execute(stmt).scalars())
-    start = (current - 1) * pageSize
-    page_items = all_users[start : start + pageSize]
-    data = [{"name": u.username} for u in page_items]
-    return {"total": len(all_users), "data": json.dumps(data)}
+    others = [u for u in device_service.list_owners_of_shared_devices(db, user.id) if u.id != user.id]
+    items = [
+        {"name": u.username, "display_name": "", "email": "", "note": "", "status": 1, "is_admin": u.is_admin}
+        for u in [user, *others]
+    ]
+    return _accessible_page(items, current, pageSize)
 
 
 @router.get("/api/peers")
@@ -230,21 +246,14 @@ def list_peers(
     db: Session = Depends(get_db),
     authorization: str | None = Header(default=None),
 ) -> dict:
-    """Populates the client's "Available devices" panel. Previously a bare
-    404 (no route registered at all). The reference project's own `peers`
-    view is a non-functional stub (`{"code": 1, "data": "ok"}` - confirmed
-    by reading `api/views.py::peers` in the source named in CLAUDE.md
-    section 73), so it gives no ground truth for the response shape; this
-    reuses the envelope already confirmed working for `/api/users` and
-    `/api/device-group/accessible` (`{"total", "data": "<json-encoded
-    list>"}`) and the peer-dict shape already confirmed working for
-    `/api/ab`. Lists devices the caller can view (owned or shared with
-    them) via the same authorization-scoped query devices.py already uses
-    elsewhere - this is the registered-device pool, distinct from the
-    personal address book served by `/api/ab`."""
+    """Devices in the client's "Accessible devices" tab: those the caller owns
+    plus those shared with them, one page at a time. Shape as read by
+    `PeerPayload` (flutter/lib/common/hbbs/hbbs.dart): the device's own
+    facts sit under `info`, and `user_name` / `device_group_name` are what the
+    left list filters on. Distinct from the personal address book of `/api/ab`."""
     user = current_client_user(db, authorization)
     if user is None:
-        return {"total": 0, "data": json.dumps([])}
+        return _accessible_page([], current, pageSize)
 
     items, total = device_service.list_devices(
         db, owner_id=user.id, shared_with_user_id=user.id, page=current, page_size=pageSize
@@ -252,13 +261,18 @@ def list_peers(
     data = [
         {
             "id": device.rustdesk_id,
-            "username": device.username or "",
-            "hostname": device.hostname or "",
-            "alias": device.alias or "",
-            "platform": device.platform or "",
-            "tags": [tag.name for tag in device.tags],
-            "hash": "",
+            "info": {
+                "username": device.username or "",
+                "os": _client_os(device.platform),
+                "device_name": device.hostname or device.name or "",
+            },
+            "status": 1,
+            "user": str(device.owner_id) if device.owner_id is not None else "",
+            "user_name": device.owner.username if device.owner is not None else "",
+            "device_group_name": device.group.name if device.group is not None else "",
+            "note": device.note or "",
         }
         for device in items
     ]
-    return {"total": total, "data": json.dumps(data)}
+    # The server already paged; `total` lets the client ask for the next page.
+    return {"total": total, "data": data}

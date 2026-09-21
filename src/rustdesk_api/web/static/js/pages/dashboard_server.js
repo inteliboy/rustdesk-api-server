@@ -278,7 +278,10 @@ function drawInfo() {
       row("Version", sw.app_version),
       row("Python", `${sw.python_implementation} ${sw.python}`),
       row("SQLite", sw.sqlite),
-      row("HTTPS on this port", sw.tls ? "Yes" : "No"),
+      // Two different questions: this server's own certificate (usually "No" behind a
+      // reverse proxy or a NAS's built-in one, which is fine), and this browser's connection.
+      row("Your connection", window.location.protocol === "https:" ? `Encrypted (HTTPS, ${window.location.host})` : "Not encrypted (HTTP)"),
+      row("TLS inside the API server", sw.tls ? "Yes" : "No (plain HTTP)"),
       row("Process ID", proc.pid),
       row("Started", fmtDate(proc.started_at)),
       row("Uptime", fmtDuration(proc.uptime_seconds)),

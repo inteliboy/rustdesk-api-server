@@ -12,16 +12,20 @@ marked "**Confirmed**" come directly from that session; everything else is
 still the original assumption from the community reference project named
 in `CLAUDE.md` section 73, unverified.
 
+The client release shown on the Dashboard as "written against the RustDesk X client source" is
+`RUSTDESK_CLIENT_SOURCE` in `src/rustdesk_api/buildinfo.py` (currently 1.4.9). Change it when endpoints have been
+re-checked against a newer client's source, not merely because a newer client exists.
+
 | RustDesk client | Endpoint(s) | API compatibility | Tested against real client |
 | ---------------- | ----------- | ------------------ | --------------------------- |
 | 1.4.9 (Windows)  | `/api/login`, `/api/heartbeat`, `/api/sysinfo`, `/api/currentUser` | Confirmed compatible | Yes (2026-09-18) |
 | 1.4.9 (Windows)  | `/api/ab` (GET+POST) - the *legacy* address book | Confirmed compatible (envelope + persistence verified end to end) | Yes (2026-09-18) |
 | Source-derived   | `/api/ab/personal`, `/api/ab/settings`, `/api/ab/shared/profiles`, `/api/ab/peers`, `/api/ab/tags/{guid}`, `/api/ab/peer/{add,update}/{guid}`, `/api/ab/peer/{guid}`, `/api/ab/tag/{add,rename,update}/{guid}`, `/api/ab/tag/{guid}` - the newer per-item address book | Implemented from the client source (2026-09-20); `ADDRESS_BOOK_LEGACY_MODE=true` falls back to the legacy book | **No** - see "Address book, newer per-item protocol" |
-| 1.4.9 (Windows)  | `/api/device-group/accessible`, `/api/users` (list), `/api/login-options` | Implemented, response shapes unverified (no client-side error observed, but not positively confirmed correct either) | Paths confirmed via 404 capture; no error seen after implementing, not otherwise verified |
+| 1.4.9 (Windows)  | `/api/device-group/accessible`, `/api/users` (list), `/api/login-options` | Implemented from the client source (2026-09-21); an earlier string-encoded `data` left the tab empty - see the section on the Accessible devices tab | Paths confirmed via 404 capture; no error seen after implementing, not otherwise verified |
 | Source-derived   | `/api/audit/conn`, `/api/audit/file`, `/api/audit/alarm` | Implemented from the client source (paths + payloads); see "`/api/audit/alarm`" for its response shape | **No** - needs a second machine connecting in (alarms: one that gets refused) |
 | Source-derived   | Heartbeat `conns` / `disconnect`, `modified_at` / `strategy`; `POST /api/devices/cli` (`--assign`); `preset-*` keys in sysinfo; the two-step 2FA `/api/login` | Implemented from the client source (2026-09-20) - see "Heartbeat: connections and strategies", "`--assign`", "Two-factor login" | **No** - the 1.4.9 client has all of it; not yet exercised live |
 | 1.4.9 (Windows)  | `/api/logout` | Implemented, not exercised in this session | No |
-| 1.4.9 (Windows)  | `/api/peers` (list, same query shape as `/api/users`) | Implemented (2026-09-18), response shape unverified - reference project's `peers` view is a non-functional stub, so no ground truth exists for the exact shape | Path/method/query confirmed real via live 404 capture ("Błąd odświeżania grup" / "Error refreshing groups" shown in the client's Available Devices panel); fix not yet retested live
+| 1.4.9 (Windows)  | `/api/peers` (list, same query shape as `/api/users`) | Implemented from the client source (2026-09-21) - reference project's `peers` view is a non-functional stub | Path/method/query confirmed real via live 404 capture ("Błąd odświeżania grup" / "Error refreshing groups" shown in the client's Available Devices panel); fix not yet retested live
 
 ## Confirmed endpoints
 
@@ -313,27 +317,34 @@ Design choices, still not 100% confirmed:
   write path is `POST /api/ab`).
 - `GET /api/login-options` always returns `[]` - no OIDC/LDAP providers
   are configured (Phase 3). Not present in the reference project at all.
-- `GET /api/device-group/accessible` and `GET /api/users` remain educated
-  guesses (`{"total": N, "data": "<json array string>"}`), not present in
-  the reference project either. No client-side error was observed after
-  implementing them, but that is not the same as positive confirmation.
 - None of these hard-fail on missing/invalid auth; they return an empty
   result instead, matching the tolerant style of the other rustdesk-compat
   endpoints.
 
-**`GET /api/peers`** (same query shape as `/api/users`: `current`,
-`pageSize`, `accessible`, `status`) - the 404 seen for this path surfaced
-in the client UI as "Błąd odświeżania grup: code: HTTP_ERROR, message: Not
-Found" ("Error refreshing groups") in the Available Devices panel, even
-though it has nothing to do with `/api/device-group/accessible` (which was
-returning 200 the whole time) - the client's error message is misleading
-here. Now implemented: lists `Device` rows the caller can view (owned or
-shared with them), using the same `{"total", "data": "<json array
-string>"}` envelope and peer-dict shape already confirmed for `/api/ab`.
-Checked the reference project's own `peers` view for ground truth first
-(CLAUDE.md section 74) and found it's a non-functional stub -
-`{"code": 1, "data": "ok"}`, `api/views.py::peers` - so this is still an
-educated guess pending live-client confirmation, not a verified shape.
+**"Accessible devices" tab: `/api/device-group/accessible`, `/api/users`,
+`/api/peers`** (source-verified 2026-09-21 against 1.4.9's
+`flutter/lib/models/group_model.dart` and `flutter/lib/common/hbbs/hbbs.dart`,
+NOT yet live-verified). All three take `current`, `pageSize` (and `accessible`,
+`status=1`) and answer `{"total": N, "data": [...]}`. **`data` must be a real
+JSON array** - the client does `if (data is List)` and skips anything else.
+Earlier versions returned it as a JSON-encoded string (copying the `/api/ab`
+envelope), which is why the tab stayed empty although every request returned
+200. Fields the client reads:
+
+| Endpoint | Item fields |
+| -------- | ----------- |
+| `/api/device-group/accessible` | `name` |
+| `/api/users` | `name`, `display_name`, `email`, `note`, `status` (0 disabled, -1 unverified, else normal), `is_admin` |
+| `/api/peers` | `id`, `info` (`username`, `os`, `device_name`), `status`, `user`, `user_name`, `device_group_name`, `note` |
+
+The left list is groups plus users; choosing a user shows the peers whose
+`user_name` equals it, choosing a group those whose `device_group_name`
+equals it, and with nothing chosen all peers are shown. `info.os` is matched
+lower-cased against `windows`/`linux`/`macos`/`android` for the icon.
+Here: peers are the devices the caller owns or has had shared with them;
+users are the caller plus owners of devices shared with them (not the whole
+user table); groups are the caller's own (all for an administrator). The
+reference project's `peers` is a non-functional stub, so it is no help.
 
 ### `POST /api/currentUser` - **Confirmed**
 
