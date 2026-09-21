@@ -88,6 +88,64 @@
       <textarea id="exe-name" readonly rows="2" class="w-full border border-slate-300 rounded px-2 py-1.5 text-xs font-mono" aria-label="File name"></textarea>
       <button type="button" data-copy="exe-name" class="mt-2 px-3 py-1.5 rounded-md border border-slate-300 text-sm hover:bg-slate-100">Copy</button>
     </section>
+
+    <section id="installer" class="card p-5 mb-6 hidden" aria-labelledby="installer-title">
+      <h2 id="installer-title" class="text-sm font-semibold mb-1">Windows installer</h2>
+      <p class="text-xs text-slate-500 mb-3" data-i18n-html="connect.installer_help">
+        Makes a setup file (<code>.exe</code>) that installs RustDesk and applies the servers above, so nothing has to be typed
+        in on the computer. It downloads RustDesk&rsquo;s MSI from GitHub and wraps it with NSIS.
+        <strong>Try it on one machine first:</strong> it removes an installed RustDesk before it installs.
+      </p>
+      <div class="grid sm:grid-cols-2 gap-3">
+        <label class="text-sm">
+          <span class="block text-xs text-slate-500 mb-1">Version</span>
+          <select id="inst-tag" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm bg-surface"></select>
+        </label>
+        <label class="text-sm">
+          <span class="block text-xs text-slate-500 mb-1">Architecture</span>
+          <select id="inst-arch" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm bg-surface"></select>
+        </label>
+      </div>
+      <label class="flex items-start gap-2 text-sm mt-3">
+        <input id="inst-reset" type="checkbox" class="mt-0.5" />
+        <span>Also remove RustDesk&rsquo;s existing settings first (the computer gets a new ID)</span>
+      </label>
+      <p id="inst-status" class="text-xs text-slate-500 mt-3" role="status"></p>
+      <div class="flex items-center gap-3 mt-3 flex-wrap">
+        <button type="button" id="inst-build" class="px-3 py-1.5 rounded-md bg-brand-600 text-white text-sm hover:bg-brand-700 disabled:opacity-50">Build installer</button>
+        <button type="button" id="inst-kit" class="px-3 py-1.5 rounded-md border border-slate-300 text-sm hover:bg-slate-100 disabled:opacity-50">Download build kit (.zip)</button>
+      </div>
+      <p id="inst-result" class="text-sm mt-3 hidden whitespace-pre-line" role="status"></p>
+
+      <div class="border-t border-slate-200 mt-5 pt-4">
+        <h3 class="text-sm font-semibold mb-1">Files on the server</h3>
+        <p id="files-where" class="text-xs text-slate-500 mb-2"></p>
+        <p id="files-empty" class="text-sm text-slate-500 hidden">Nothing is stored.</p>
+        <div id="files-table" class="overflow-x-auto hidden">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left text-xs text-slate-500">
+                <th class="py-1 pr-3 font-medium">Type</th>
+                <th class="py-1 pr-3 font-medium">Name</th>
+                <th class="py-1 pr-3 font-medium">Size</th>
+                <th class="py-1 pr-3 font-medium">Modified</th>
+                <th class="py-1"><span class="sr-only">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody id="file-rows"></tbody>
+          </table>
+        </div>
+        <div class="flex gap-3 mt-3 flex-wrap">
+          <button type="button" id="files-clear-msi" class="px-3 py-1.5 rounded-md border border-slate-300 text-sm hover:bg-slate-100 disabled:opacity-50">Delete all downloaded MSI files</button>
+          <button type="button" id="files-clear-installer" class="px-3 py-1.5 rounded-md border border-slate-300 text-sm hover:bg-slate-100 disabled:opacity-50">Delete all built installers</button>
+        </div>
+      </div>
+      <p class="text-xs text-slate-500 mt-3" data-i18n-html="connect.kit_help">
+        The <strong>build kit</strong> builds the same file on any Windows computer that has NSIS, and signs it there if you give
+        it a certificate (<code>build.ps1 -Thumbprint &hellip;</code>), so the certificate does not have to be on this server.
+        The server can sign too: see <code>INSTALLER_SIGN_COMMAND</code> in the README.
+      </p>
+    </section>
   </div>
 </main>
 {% endblock %}

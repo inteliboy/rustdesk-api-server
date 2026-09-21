@@ -29,6 +29,10 @@ NOTIFY_EVENT_NAMES = (
 )
 
 
+# Characters INSTALLER_SIGN_COMMAND may not contain (it is written into an NSIS script).
+FORBIDDEN_SIGN_CHARS = tuple(chr(code) for code in (0x60, 0x0A, 0x0D, 0x00))
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -162,6 +166,21 @@ class Settings(BaseSettings):
     # Clients older than this (e.g. 1.4.0) are flagged as outdated. Empty turns it off.
     min_client_version: str = Field(default="", alias="MIN_CLIENT_VERSION")
 
+    # Windows installer builder (Connect page). The server downloads a RustDesk MSI from
+    # GitHub and wraps it with NSIS (makensis) into a setup .exe that installs it and
+    # applies this server's settings. It needs makensis on the server (the Docker image has
+    # it; on Windows install NSIS) and outbound HTTPS to github.com. Built files are kept
+    # under INSTALLER_DIR (empty = an `installers` folder next to the database).
+    installer_build_enabled: bool = Field(default=True, alias="INSTALLER_BUILD_ENABLED")
+    installer_makensis: str = Field(default="", alias="INSTALLER_MAKENSIS")
+    installer_dir: str = Field(default="", alias="INSTALLER_DIR")
+    # Optional code signing of the finished .exe: a command that NSIS runs with %1 replaced by
+    # the file, e.g. signtool sign /sha1 <thumbprint> /fd SHA256 /tr <url> /td SHA256 "%1"
+    # (a certificate in the server's store) or osslsigncode. Do not put a password in it.
+    installer_sign_command: str = Field(default="", alias="INSTALLER_SIGN_COMMAND", repr=False)
+    # A .ico for the setup file; empty = the RustDesk icon, fetched from GitHub.
+    installer_icon: str = Field(default="", alias="INSTALLER_ICON")
+
     # Server tab: this process's CPU and memory, sampled every N seconds into a
     # rolling in-memory window (nothing is written to the database, and the
     # history starts empty after a restart). With several worker processes each
@@ -279,6 +298,18 @@ class Settings(BaseSettings):
                 f"known: {', '.join(NOTIFY_EVENT_NAMES)}"
             )
         return ",".join(names)
+
+    @field_validator("installer_sign_command")
+    @classmethod
+    def _check_installer_sign_command(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            return ""
+        if "%1" not in value:
+            raise ValueError("INSTALLER_SIGN_COMMAND must contain %1, where NSIS puts the file to sign")
+        if any(ch in value for ch in FORBIDDEN_SIGN_CHARS):
+            raise ValueError("INSTALLER_SIGN_COMMAND must be one line without backticks")
+        return value
 
     @field_validator("min_client_version")
     @classmethod

@@ -51,6 +51,20 @@ jobs:
       - name: Smoke test a fresh container
         run: python scripts/docker_smoke.py first
 
+      # The Connect page builds Windows setup files with NSIS; the script uses the UserInfo plugin
+      # like the generated one does.
+      - name: The image can compile an NSIS installer
+        run: |
+          docker exec -i rd sh -c 'cat > /tmp/t.nsi' <<'EOF'
+          OutFile "/tmp/t.exe"
+          SilentInstall silent
+          Section
+            UserInfo::GetAccountType
+            Pop $0
+          SectionEnd
+          EOF
+          docker exec rd sh -c 'makensis -V2 /tmp/t.nsi && test -s /tmp/t.exe'
+
       - name: Runs as a non-root user
         run: |
           uid=$(docker exec rd id -u)

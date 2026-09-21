@@ -240,6 +240,7 @@ def check_config() -> None:
         "notify_ntfy_url",
         "notify_ntfy_token",
         "notify_smtp_password",
+        "installer_sign_command",
     ):
         if redacted.get(key):
             redacted[key] = "***redacted***"

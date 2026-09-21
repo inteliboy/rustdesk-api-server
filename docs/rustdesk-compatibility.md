@@ -883,6 +883,21 @@ decoder rules above and that the API returns it; whether a given client version 
 
 ## Not implemented (explicitly out of scope)
 
+- **Messages from the server to a client - not possible with the open-source client.** Checked 2026-09-21 in the
+  `master` tree (`763d4ee`): the heartbeat response (`hbbs_http/sync.rs`) is read for exactly three keys -
+  `disconnect` (a list of connection ids), `modified_at` and `strategy` - and the `extra` map of a strategy is parsed
+  and then never used. Nothing else the client polls from an API server (`/api/sysinfo`, `/api/audit/*`, the address
+  book) is turned into something shown to the person at the computer, and a strategy can only set `Config` options,
+  none of which displays text. So a server cannot pop up a note on a client. Chat exists only inside an established
+  session (which needs a connection and, unless a permanent password is used, acceptance). Not checked: whether the
+  Pro server or its client build has a channel for this; it is not part of the open-source protocol either way.
+
+- **Windows installer (Connect page).** Not a client protocol feature: the server writes an NSIS script around the
+  release MSI (`rustdesk.exe --config <string>` then `--install-service`, as in the "Client setup" section above) and
+  runs `makensis`. The MSI names (`rustdesk-<version>-x86_64.msi`, `-aarch64.msi`, the latter from 1.4.8) and their
+  SHA-256 digests come from the GitHub releases API (`tag` `nightly` is a pre-release). Built and inspected for the
+  1.4.8, 1.4.9 and nightly (1.5.0) MSIs; a generated installer has **not** been run on a computer.
+
 - **`/api/sysinfo_ver` - deliberately not implemented, and no client asks for
   it.** Checked 2026-09-20 at the `1.4.9` tag and `master`: the client only
   requests it when its API server host is a `rustdesk.com` one (`is_public`),

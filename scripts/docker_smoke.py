@@ -92,6 +92,12 @@ def first_run(base: str) -> None:
     status, raw = call(base, "/api/heartbeat", body={"id": DEVICE_ID})
     check("heartbeat answered", status == 200 and json.loads(raw).get("data") == "OK", raw.decode()[:60])
     check("device appears in the device list", device_listed(base, token))
+    status, raw = call(base, "/api/v1/admin/installer", token=token)
+    check(
+        "the image has NSIS (installer builder available)",
+        status == 200 and json.loads(raw)["available"] is True,
+        raw.decode()[:80],
+    )
 
 
 def later_run(base: str) -> None:

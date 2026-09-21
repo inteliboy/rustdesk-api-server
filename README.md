@@ -169,7 +169,7 @@ Treat it as a young project: run it against a test client first, and please repo
 [Working with many devices](#working-with-many-devices) · [Device identity](#device-identity) ·
 [Monitoring](#monitoring-and-network-access) · [Log retention](#log-retention) ·
 [Notifications](#notifications) · [Database backups](#database-backups) ·
-[Connecting clients](#connecting-many-clients) · [Default strategy](#default-strategy-and-fleet-hygiene) ·
+[Connecting clients](#connecting-many-clients) · [Windows installer](#windows-installer) · [Default strategy](#default-strategy-and-fleet-hygiene) ·
 [Languages](#languages) · [Database](#database) ·
 [First-run setup](#first-run-setup) · [Client configuration](#rustdesk-client-configuration) ·
 [Older API servers](#moving-clients-from-an-older-api-server) · [Reverse proxy](#reverse-proxy-setup) · [Security](#security-recommendations) ·
@@ -248,7 +248,8 @@ Phase 3. LDAP sign-in and webhook notifications are not implemented.
   locked accounts, failed backups), **scheduled and pre-upgrade database backups**, a **default strategy** for new
   devices, **archiving** of devices that are gone and a flag for **outdated clients** - see Notifications, Database
   backups and Default strategy and fleet hygiene below
-- A **Connect** page with the client's config string, a QR code and setup commands - see Connecting many clients
+- A **Connect** page with the client's config string, a QR code and setup commands - see Connecting many clients - and a
+  **Windows installer** builder (any RustDesk release incl. nightly, x64/ARM64, optional signing) - see Windows installer
 - WebUI in English, Polish, French, German and Spanish - see Languages below
 - Runs natively on Windows/Linux/macOS, or via Docker
 - Alembic database migrations
@@ -688,6 +689,52 @@ The formats come from the client's source (`ServerConfig` in `common.dart`, `cus
 `{"host","relay","api","key"}` as URL-safe base64, reversed. `--config` needs the installed client and administrator
 or root rights. This was checked against the source and the string's round trip in the tests, **not** by running a
 client against the generated commands: try them on one machine first (the macOS one is the least certain).
+
+## Windows installer
+
+Administrators also get a **Windows installer** card on **Connect**: pick a RustDesk release - the latest stable, an
+older one or the **nightly** build - and an architecture (**x64** or **ARM64**; older releases only have x64), and
+the server makes a setup `.exe`. Run on a computer (as administrator) it removes an installed RustDesk, installs
+RustDesk's own MSI silently, applies this server's settings with `rustdesk.exe --config <string>` and installs the
+service. It is the recipe of a hand-made NSIS script, generated for you:
+
+- **Build on the server** downloads the MSI from the RustDesk releases on GitHub (checked against the SHA-256 GitHub
+  publishes for it), writes the NSIS script and runs `makensis`. It needs NSIS on the server - **the Docker image has
+  it**; on Windows install it (`winget install NSIS.NSIS`), on Linux `apt install nsis` - and outbound HTTPS to
+  `github.com`. The build runs in the background (a download and a build outlast a reverse proxy's patience); one at a
+  time; the file is offered for an hour and the last six MSI downloads are cached under `installers/` next to the
+  database (`INSTALLER_DIR`).
+- **Download build kit (.zip)** gives you `rustdesk.nsi`, `build.ps1` and a README instead, to build the same file on
+  **any Windows computer that has NSIS**: it downloads the MSI, builds, and signs if you pass
+  `-Thumbprint <certificate in the store>` or `-PfxFile <file>` (`signtool` from the Windows SDK). Use this when the
+  code-signing certificate lives on another machine (or a hardware token) rather than on the server.
+- **Signing on the server** is optional: set `INSTALLER_SIGN_COMMAND` to the command NSIS should run on the finished
+  file, with `%1` where the file goes, for example
+  `signtool sign /sha1 <THUMBPRINT> /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 "%1"` (a certificate in
+  the server's Windows store, no password involved) or an `osslsigncode` command on Linux. Keep passwords out of it: it
+  is written into a temporary script and can appear in process listings. It is never shown in the WebUI, and any
+  output that could echo it is scrubbed before it is kept. A failing command fails the build.
+- **Where the files are, and removing them.** The downloaded MSIs (`msi/`) and the built setup files (`out/`) live
+  in `installers/` next to the database (`INSTALLER_DIR`; `/app/data/installers` in Docker). The card lists them
+  (**Files on the server**): download an installer again, delete one file, or delete all MSIs / all installers.
+  Deleting is safe - both are made again on demand - and is refused while a build runs. A built installer is also
+  deleted automatically an hour after it was made, the next time a build starts. The build kit is made on the fly and
+  stored nowhere.
+- **Existing settings.** The installer removes an installed RustDesk first (so the version chosen here is the version
+  installed). The client's configuration - and so its **ID** - is only deleted if you tick *Also remove RustDesk's
+  existing settings*.
+
+The file contains the ID server, relay, API server and the public key - the same values as the config string - and
+no password. Only administrators can build it (it runs a program and may sign with your certificate); the audit log
+records who built one, which release and whether it was signed. Settings: `INSTALLER_BUILD_ENABLED`,
+`INSTALLER_MAKENSIS`, `INSTALLER_DIR`, `INSTALLER_SIGN_COMMAND` and `INSTALLER_ICON` (default: RustDesk's own icon,
+fetched from GitHub) - see `.env.example`.
+
+**What has been verified:** builds of a stable and of a nightly release, x64 and ARM64, with the real MSIs and the real
+NSIS on Windows (and the signing hook running), the build kit's `build.ps1` under Windows PowerShell 5.1 including
+signing with a throwaway certificate, and the API, the script generation and the WebUI in the automated tests.
+**Not verified:** running a generated installer on a computer, and (until the CI job for it has run) NSIS from Debian
+inside the Docker image. Try the installer on one machine first.
 
 ## Default strategy and fleet hygiene
 

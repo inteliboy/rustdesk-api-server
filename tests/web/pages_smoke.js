@@ -672,6 +672,95 @@ const listFixtures = (items) => ({
     assert.ok(env.element("output").classList.contains("hidden"));
   });
 
+  const installerFixtures = {
+    "GET ^/api/v1/connect$": { id_server: "id.example.com", relay_server: "", api_server: "https://rustdesk.example.com", key: "PUBKEY" },
+    "POST ^/api/v1/connect/config": { config_string: "CFGSTRING", exe_name: "x.exe", qr_svg: "data:,", warnings: [] },
+    "GET ^/api/v1/admin/installer$": { available: true, reason: null, signing: false },
+    "GET ^/api/v1/admin/installer/files$": {
+      directory: "/app/data/installers",
+      items: [
+        { kind: "installer", name: "rustdesk-1.4.9-x86_64-abc.exe", size: 25165824, modified: "2026-09-21T10:00:00" },
+        { kind: "msi", name: "c87d2f4cef2a5acd-rustdesk-1.4.9-x86_64.msi", size: 24825856, modified: "2026-09-21T09:59:00" },
+      ],
+    },
+    "DELETE ^/api/v1/admin/installer/files/": { deleted: 1 },
+    "GET ^/api/v1/admin/installer/releases": [
+      { tag: "nightly", version: "1.5.0", prerelease: true, published_at: "2026-07-10T05:02:29Z", architectures: ["arm64", "x64"] },
+      { tag: "1.4.9", version: "1.4.9", prerelease: false, published_at: "2026-07-06T10:02:30Z", architectures: ["arm64", "x64"] },
+      { tag: "1.4.7", version: "1.4.7", prerelease: false, published_at: "2026-06-02T15:36:22Z", architectures: ["x64"] },
+      { tag: "1.2.5", version: "1.2.5", prerelease: true, published_at: "2023-01-02T00:00:00Z", architectures: ["x64"] },
+    ],
+  };
+
+  await test("connect: administrators get the installer card, preselecting the latest stable release", async () => {
+    const env = await new Env("connect.html", "connect.js", { user: admin, fixtures: installerFixtures }).run();
+    assert.ok(!env.element("installer").classList.contains("hidden"));
+    const options = env.html_("inst-tag");
+    assert.match(options, /value="nightly"[^>]*>nightly 1\.5\.0 \(pre-release\)/);
+    assert.match(options, /value="1\.4\.9"[^>]*>1\.4\.9 \(latest stable\)/);
+    assert.match(options, /value="1\.4\.7"[^>]*>1\.4\.7</);
+    assert.match(options, /value="1\.2\.5"[^>]*>1\.2\.5 \(pre-release\)</, "an old pre-release is not called nightly");
+    assert.strictEqual(env.element("inst-tag").value, "1.4.9", "the newest stable release, not the nightly");
+    assert.ok(!env.element("inst-build").disabled);
+    assert.match(env.element("inst-status").textContent, /not signed/);
+  });
+
+  await test("connect: a build posts the chosen release and offers the file when it is done", async () => {
+    const done = { id: "job1", state: "done", progress: 100, message: "", tag: "1.4.9", version: "1.4.9", arch: "x64",
+      filename: "rustdesk-1.4.9-x86_64-preconfigured.exe", size: 25165824, signed: false, warnings: ["no_key"] };
+    const env = await new Env("connect.html", "connect.js", {
+      user: admin,
+      fixtures: {
+        ...installerFixtures,
+        "POST ^/api/v1/admin/installer/builds$": { ...done, state: "queued", filename: "", size: 0 },
+        "GET ^/api/v1/admin/installer/builds/job1$": done,
+      },
+    }).run();
+    env.element("inst-reset").checked = true;
+    await env.fire("inst-build", "click", { currentTarget: env.element("inst-build") });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    const request = JSON.parse(env.posted("/api/v1/admin/installer/builds")[0].body);
+    assert.strictEqual(request.tag, "1.4.9");
+    assert.strictEqual(request.arch, "x64");
+    assert.strictEqual(request.reset_settings, true);
+    assert.strictEqual(request.servers.id_server, "id.example.com");
+    const result = env.html_("inst-result");
+    assert.match(result, /href="\/api\/v1\/admin\/installer\/builds\/job1\/file"/);
+    assert.match(result, /rustdesk-1\.4\.9-x86_64-preconfigured\.exe/);
+    assert.match(result, /24\.0 MB, not signed/);
+    assert.match(result, /No key is set/);
+  });
+
+  await test("connect: the stored files are listed with where they are and can be deleted", async () => {
+    const env = await new Env("connect.html", "connect.js", { user: admin, fixtures: installerFixtures }).run();
+    const rows = env.html_("file-rows");
+    assert.match(env.element("files-where").textContent, /Stored in \/app\/data\/installers/);
+    assert.match(rows, /Installer \(built here\)[^]*rustdesk-1\.4\.9-x86_64-abc\.exe[^]*24\.0 MB/);
+    assert.match(rows, /RustDesk MSI \(downloaded\)[^]*c87d2f4cef2a5acd-rustdesk-1\.4\.9-x86_64\.msi/);
+    assert.match(rows, /href="\/api\/v1\/admin\/installer\/files\/installer\/rustdesk-1\.4\.9-x86_64-abc\.exe"/);
+    assert.strictEqual((rows.match(/files\/installer\//g) || []).length, 1, "only an installer can be downloaded, not an MSI");
+    await env.fire("files-clear-msi", "click");
+    await env.fire("files-clear-installer", "click");
+    const deletes = env.requests.filter((r) => r.method === "DELETE").map((r) => r.url);
+    assert.deepStrictEqual(deletes, ["/api/v1/admin/installer/files/msi", "/api/v1/admin/installer/files/installer"]);
+  });
+
+  await test("connect: without NSIS on the server only the kit is offered", async () => {
+    const env = await new Env("connect.html", "connect.js", {
+      user: admin,
+      fixtures: { ...installerFixtures, "GET ^/api/v1/admin/installer$": { available: false, reason: "no_makensis", signing: false } },
+    }).run();
+    assert.ok(env.element("inst-build").disabled);
+    assert.ok(!env.element("inst-kit").disabled);
+    assert.match(env.element("inst-status").textContent, /NSIS \(makensis\) is not installed/);
+  });
+
+  await test("connect: ordinary users never see the installer and it asks the server nothing", async () => {
+    const env = await new Env("connect.html", "connect.js", { user: alice, fixtures: installerFixtures }).run();
+    assert.ok(env.element("installer").classList.contains("hidden"));
+    assert.strictEqual(env.posted("/api/v1/admin/installer/builds").length, 0);
+  });
+
   // ------------------------------------------------- default strategy, flags
   await test("strategies: the default one is marked and offers to stop being the default", async () => {
     const env = await new Env("strategies.html", "strategies.js", {

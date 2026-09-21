@@ -8,6 +8,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+# NSIS (makensis) lets the Connect page build Windows setup files on the server. It runs
+# on Linux and only writes the Windows installer; nothing here is Windows-specific.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends nsis && \
+    rm -rf /var/lib/apt/lists/*
+
 # Install the application first (layer caching): copy only what pip needs to
 # resolve dependencies before the rest of the source tree.
 COPY pyproject.toml README.md ./

@@ -121,6 +121,226 @@ document.querySelectorAll("[data-copy]").forEach((button) =>
   })
 );
 
+// --- Windows installer (administrators): build on the server, or download a kit -------------
+
+let installer = { status: null, releases: [] };
+let polling = null;
+
+function installerBody() {
+  return {
+    servers: values(),
+    tag: document.getElementById("inst-tag").value,
+    arch: document.getElementById("inst-arch").value,
+    reset_settings: document.getElementById("inst-reset").checked,
+  };
+}
+
+function fillReleases() {
+  const select = document.getElementById("inst-tag");
+  const firstStable = installer.releases.find((r) => !r.prerelease);
+  select.innerHTML = installer.releases
+    .map((r) => {
+      let label = r.tag;
+      // Only the release tagged "nightly" is the nightly build; GitHub flags a few old releases as pre-releases too.
+      if (r.tag === "nightly") label = t("nightly {1} (pre-release)", [r.version]);
+      else if (r.prerelease) label = t("{1} (pre-release)", [r.tag]);
+      else if (r === firstStable) label = t("{1} (latest stable)", [r.tag]);
+      return `<option value="${escapeHtml(r.tag)}">${escapeHtml(label)}</option>`;
+    })
+    .join("");
+  if (firstStable) select.value = firstStable.tag;
+  fillArchitectures();
+}
+
+// Older releases have no ARM64 MSI: that choice is left out for them.
+function fillArchitectures() {
+  const release = installer.releases.find((r) => r.tag === document.getElementById("inst-tag").value);
+  const arch = document.getElementById("inst-arch");
+  const wanted = arch.value === "arm64" && (!release || release.architectures.includes("arm64")) ? "arm64" : "x64";
+  const choices = [["x64", t("x64 (Intel/AMD, 64-bit)")]];
+  if (!release || release.architectures.includes("arm64")) choices.push(["arm64", "ARM64"]);
+  arch.innerHTML = choices.map(([value, label]) => `<option value="${value}">${escapeHtml(label)}</option>`).join("");
+  arch.value = wanted;
+}
+
+function paintInstallerStatus() {
+  const status = installer.status;
+  const kit = document.getElementById("inst-kit");
+  const build = document.getElementById("inst-build");
+  const noReleases = installer.releases.length === 0;
+  build.disabled = !status.available || noReleases;
+  kit.disabled = noReleases;
+  let text;
+  if (noReleases) text = t("The list of RustDesk releases could not be loaded from GitHub. Try again in a moment.");
+  else if (status.reason === "no_makensis")
+    text = t("NSIS (makensis) is not installed on this server, so it cannot build the file itself. Use the build kit on a Windows computer that has NSIS.");
+  else if (status.reason === "disabled")
+    text = t("Building on the server is turned off (INSTALLER_BUILD_ENABLED). The build kit still works.");
+  else if (status.signing) text = t("Ready to build here. The file is signed by the server (INSTALLER_SIGN_COMMAND).");
+  else text = t("Ready to build here. The file is not signed: sign it yourself, or use the build kit on the computer that has your certificate.");
+  document.getElementById("inst-status").textContent = text;
+}
+
+function showResult(text, html) {
+  const box = document.getElementById("inst-result");
+  box.classList.toggle("hidden", !text && !html);
+  if (html) box.innerHTML = html;
+  else box.textContent = text;
+}
+
+async function pollBuild(id) {
+  try {
+    const job = await api(`/api/v1/admin/installer/builds/${encodeURIComponent(id)}`);
+    if (job.state === "done") {
+      const size = `${(job.size / 1048576).toFixed(1)} MB`;
+      const signed = job.signed ? t("signed") : t("not signed");
+      const warnings = job.warnings.filter((w) => WARNINGS[w]).map((w) => `<br><span class="text-amber-700 dark:text-amber-400">${escapeHtml(t(WARNINGS[w]))}</span>`).join("");
+      showResult(
+        "",
+        `<a class="text-link underline" href="/api/v1/admin/installer/builds/${encodeURIComponent(job.id)}/file" download>${escapeHtml(t("Download {1}", [job.filename]))}</a> (${escapeHtml(size)}, ${escapeHtml(signed)})${warnings}`
+      );
+      document.getElementById("inst-build").disabled = false;
+      loadFiles().catch(() => {});
+      return;
+    }
+    if (job.state === "failed") {
+      showResult(job.message || t("The installer could not be built."));
+      document.getElementById("inst-build").disabled = false;
+      return;
+    }
+    showResult(job.state === "downloading" ? t("Downloading RustDesk from GitHub... {1}%", [job.progress]) : t("Building the installer..."));
+    polling = setTimeout(() => pollBuild(id), 1000);
+  } catch (err) {
+    showResult(err.message);
+    document.getElementById("inst-build").disabled = false;
+  }
+}
+
+async function buildInstaller() {
+  const build = document.getElementById("inst-build");
+  if (!values().id_server) return toast(t("Enter the ID server first."), "error");
+  build.disabled = true;
+  showResult(t("Starting..."));
+  try {
+    const job = await api("/api/v1/admin/installer/builds", { method: "POST", body: JSON.stringify(installerBody()) });
+    clearTimeout(polling);
+    pollBuild(job.id);
+  } catch (err) {
+    showResult(err.message);
+    build.disabled = false;
+  }
+}
+
+// The kit is a POST (it carries the servers and needs the CSRF header), so it is fetched and
+// saved from here rather than linked to.
+async function downloadKit() {
+  if (!values().id_server) return toast(t("Enter the ID server first."), "error");
+  const button = document.getElementById("inst-kit");
+  button.disabled = true;
+  try {
+    const headers = { "Content-Type": "application/json" };
+    const csrf = getCookie("rd_csrf");
+    if (csrf) headers["X-CSRF-Token"] = csrf;
+    const response = await fetch("/api/v1/admin/installer/kit", {
+      method: "POST",
+      headers,
+      credentials: "same-origin",
+      body: JSON.stringify(installerBody()),
+    });
+    if (!response.ok) {
+      let message = `Request failed (${response.status})`;
+      try {
+        message = (await response.json()).error.message || message;
+      } catch {
+        // Not a JSON error: the generic message stands.
+      }
+      throw new Error(message);
+    }
+    const match = /filename="([^"]+)"/.exec(response.headers.get("Content-Disposition") || "");
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(await response.blob());
+    link.download = match ? match[1] : "rustdesk-build-kit.zip";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(link.href), 10000);
+  } catch (err) {
+    toast(err.message, "error");
+  } finally {
+    button.disabled = false;
+  }
+}
+
+// --- the files the builder keeps on the server ---------------------------------------------
+
+function fileSize(bytes) {
+  return bytes >= 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+
+async function loadFiles() {
+  const stored = await api("/api/v1/admin/installer/files");
+  document.getElementById("files-where").textContent = t("Stored in {1}. Both kinds are made again when needed, so deleting them is safe.", [stored.directory]);
+  const items = stored.items;
+  document.getElementById("files-empty").classList.toggle("hidden", items.length > 0);
+  document.getElementById("files-table").classList.toggle("hidden", items.length === 0);
+  document.getElementById("files-clear-msi").disabled = !items.some((f) => f.kind === "msi");
+  document.getElementById("files-clear-installer").disabled = !items.some((f) => f.kind === "installer");
+  document.getElementById("file-rows").innerHTML = items
+    .map((f) => {
+      const name = escapeHtml(f.name);
+      const kind = f.kind === "msi" ? t("RustDesk MSI (downloaded)") : t("Installer (built here)");
+      const download =
+        f.kind === "installer"
+          ? `<a class="text-link underline mr-3" href="/api/v1/admin/installer/files/installer/${encodeURIComponent(f.name)}" download>${escapeHtml(t("Download"))}</a>`
+          : "";
+      return `<tr class="border-t border-slate-100">
+        <td class="py-1.5 pr-3 whitespace-nowrap">${escapeHtml(kind)}</td>
+        <td class="py-1.5 pr-3 font-mono text-xs break-all">${name}</td>
+        <td class="py-1.5 pr-3 whitespace-nowrap">${escapeHtml(fileSize(f.size))}</td>
+        <td class="py-1.5 pr-3 whitespace-nowrap text-slate-500">${escapeHtml(fmtDate(f.modified))}</td>
+        <td class="py-1.5 whitespace-nowrap text-right">${download}<button type="button" class="file-delete text-red-600 hover:underline" data-kind="${escapeHtml(f.kind)}" data-name="${name}">${escapeHtml(t("Delete"))}</button></td>
+      </tr>`;
+    })
+    .join("");
+}
+
+async function deleteFiles(kind, name, question) {
+  if (!confirm(question)) return;
+  try {
+    const path = `/api/v1/admin/installer/files/${encodeURIComponent(kind)}${name ? `/${encodeURIComponent(name)}` : ""}`;
+    const result = await api(path, { method: "DELETE" });
+    toast(t("Deleted {1} file(s).", [result.deleted]), "success");
+  } catch (err) {
+    toast(err.message, "error");
+  }
+  loadFiles().catch((err) => toast(err.message, "error"));
+}
+
+async function loadInstaller() {
+  document.getElementById("installer").classList.remove("hidden");
+  document.getElementById("inst-tag").addEventListener("change", fillArchitectures);
+  document.getElementById("inst-build").addEventListener("click", buildInstaller);
+  document.getElementById("inst-kit").addEventListener("click", downloadKit);
+  document.getElementById("files-clear-msi").addEventListener("click", () => deleteFiles("msi", null, t("Delete all downloaded RustDesk MSI files?")));
+  document.getElementById("files-clear-installer").addEventListener("click", () => deleteFiles("installer", null, t("Delete all built installers?")));
+  document.getElementById("file-rows").addEventListener("click", (evt) => {
+    const button = evt.target.closest ? evt.target.closest(".file-delete") : null;
+    if (button) deleteFiles(button.dataset.kind, button.dataset.name, t("Delete {1}?", [button.dataset.name]));
+  });
+  loadFiles().catch((err) => toast(err.message, "error"));
+  try {
+    const [status, releases] = await Promise.all([
+      api("/api/v1/admin/installer"),
+      api("/api/v1/admin/installer/releases").catch(() => []),
+    ]);
+    installer = { status, releases };
+    fillReleases();
+    paintInstallerStatus();
+  } catch (err) {
+    toast(err.message, "error");
+  }
+}
+
 (async () => {
   const user = await requireAuth();
   if (!user) return;
@@ -136,4 +356,5 @@ document.querySelectorAll("[data-copy]").forEach((button) =>
   } catch (err) {
     toast(err.message, "error");
   }
+  if (user.is_admin) loadInstaller();
 })();
