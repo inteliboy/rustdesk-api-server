@@ -28,6 +28,14 @@ RustDesk Client
    WebUI / Management
 ```
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="screenshots/dashboard-dark.png">
+    <img alt="The dashboard: device counts, recent activity and the server's health" src="screenshots/dashboard-light.png" width="900">
+  </picture>
+</p>
+<p align="center"><sub>The dashboard, in the theme your GitHub is using. More in <a href="#screenshots">Screenshots</a>.</sub></p>
+
 ## Highlights
 
 - **Devices**: automatic registration from client heartbeats, online/offline status, search, filters, sorting,
@@ -44,6 +52,23 @@ RustDesk Client
 - **Self-contained WebUI**: light/dark themes, accent colours, no third-party requests, no Node.js at runtime
 
 See [Features](#features) for the complete list.
+
+## Screenshots
+
+All screenshots are in the [`screenshots/`](screenshots/) folder. The WebUI has light and dark themes (choose
+**Appearance** in the top bar, or leave it on "system"), so the main pages are shown in both. Everything on
+them is fictional demo data: made-up people, devices and addresses, and made-up hardware in the server panel.
+
+| Page | Light | Dark |
+| ---- | ----- | ---- |
+| Dashboard: counts, recent activity | [dashboard-light.png](screenshots/dashboard-light.png) | [dashboard-dark.png](screenshots/dashboard-dark.png) |
+| Dashboard: server panel (CPU and memory charts, version, commit) | [dashboard-server-light.png](screenshots/dashboard-server-light.png) | [dashboard-server-dark.png](screenshots/dashboard-server-dark.png) |
+| Devices: status, owner, group, tags | [devices-light.png](screenshots/devices-light.png) | [devices-dark.png](screenshots/devices-dark.png) |
+| A device: details, strategy, sharing | [device-detail-light.png](screenshots/device-detail-light.png) | [device-detail-dark.png](screenshots/device-detail-dark.png) |
+| Connection logs reported by the clients | [logs-light.png](screenshots/logs-light.png) | [logs-dark.png](screenshots/logs-dark.png) |
+| Address book | [address-book-light.png](screenshots/address-book-light.png) | |
+| Users (administrators) | [users-light.png](screenshots/users-light.png) | |
+| Security: password, sessions, API keys | [security-light.png](screenshots/security-light.png) | |
 
 ## Quick start
 
@@ -131,7 +156,7 @@ Treat it as a young project: run it against a test client first, and please repo
 
 ## Contents
 
-[Features](#features) · [Requirements](#requirements) · [Installation](#windows-installation) ·
+[Screenshots](#screenshots) · [Features](#features) · [Requirements](#requirements) · [Installation](#windows-installation) ·
 [Docker](#docker-installation) · [Configuration](#configuration) · [Managing clients](#managing-clients) ·
 [Two-factor authentication](#two-factor-authentication) · [Accounts and access](#accounts-and-access) ·
 [Working with many devices](#working-with-many-devices) · [Device identity](#device-identity) ·

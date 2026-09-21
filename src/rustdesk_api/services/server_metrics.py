@@ -36,6 +36,7 @@ from typing import Any
 import psutil
 
 from rustdesk_api import __version__
+from rustdesk_api.buildinfo import get_build_info
 from rustdesk_api.config import Settings
 
 logger = logging.getLogger(__name__)
@@ -232,6 +233,7 @@ def describe_host(settings: Settings) -> dict[str, Any]:
     }
     software = {
         "app_version": __version__,
+        "build": get_build_info(settings.git_commit).as_dict(),
         "python": platform.python_version(),
         "python_implementation": platform.python_implementation(),
         "packages": _package_versions(),

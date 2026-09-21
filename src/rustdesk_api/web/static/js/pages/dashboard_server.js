@@ -238,6 +238,17 @@ function row(label, value) {
   </div>`;
 }
 
+// A row whose value is a link. Only https GitHub URLs (what the server builds from a
+// validated commit hash) become links; anything else is shown as plain text.
+function linkRow(label, text, url) {
+  if (!text) return row(label, null);
+  if (!url || !url.startsWith("https://github.com/")) return row(label, text);
+  return `<div class="flex justify-between gap-6 px-4 py-2 text-sm">
+    <dt class="text-slate-500 shrink-0">${escapeHtml(label)}</dt>
+    <dd class="text-right break-words min-w-0"><a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="font-mono text-link hover:underline">${escapeHtml(text)}</a></dd>
+  </div>`;
+}
+
 function panel(title, rows) {
   return `<section class="card">
     <h2 class="px-4 pt-4 pb-2 text-sm font-semibold">${escapeHtml(title)}</h2>
@@ -253,6 +264,7 @@ function drawInfo() {
   const disk = hw.data_disk
     ? `${fmtBytes(hw.data_disk.free)} free of ${fmtBytes(hw.data_disk.total)}`
     : null;
+  const build = sw.build || {};
   const packages = Object.entries(sw.packages).map(([name, version]) => row(name, version));
 
   document.getElementById("info").innerHTML =
@@ -276,6 +288,8 @@ function drawInfo() {
     ]) +
     panel("API server", [
       row("Version", sw.app_version),
+      linkRow("Commit", build.commit_short ? build.commit_short + (build.dirty ? " (uncommitted changes)" : "") : "unknown", build.commit_url),
+      row("Written against RustDesk client", build.rustdesk_client_source ? `${build.rustdesk_client_source} source` : null),
       row("Python", `${sw.python_implementation} ${sw.python}`),
       row("SQLite", sw.sqlite),
       // Two different questions: this server's own certificate (usually "No" behind a

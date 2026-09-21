@@ -30,6 +30,10 @@ def test_server_status_describes_the_host(admin_client):
 
     assert body["system"]["os"]
     assert body["software"]["python"]
+    build = body["software"]["build"]
+    assert build["version"] == body["software"]["app_version"]
+    assert build["rustdesk_client_source"]
+    assert {"commit", "commit_short", "commit_url", "dirty"} <= build.keys()
     assert body["software"]["packages"]["fastapi"]
     assert body["database"]["engine"] == "sqlite"
     assert body["database"]["size_bytes"] > 0
