@@ -41,6 +41,8 @@ CHANGES MADE HERE (AGPL section 5(a))
   it (Chromium), falls back to a browser-chosen decoder if that fails, draws to
   an opaque canvas, and the statistics panel says whether decoding is in
   hardware or software.
+- Look: the client's colors are the WebUI's own theme (light and dark, and the six accent colors), chosen by the
+  attributes the WebUI's theme.js puts on the page; its former fixed dark palette and orange accent are gone.
 - Build: the output goes into the Python package's static folder, without
   source maps, and with no linked licence files.
 - scripts/print-frames.mjs (new): prints the two frames the server's bridge reads,

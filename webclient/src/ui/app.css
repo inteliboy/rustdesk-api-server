@@ -1,41 +1,56 @@
-/* RustDesk API Server web client — top bar, command dock, side panel, connect overlay.
-   Dark by default; light overrides keyed off Bootstrap's data-bs-theme (Attex).
-   Palette mirrors the console's own tokens so the client reads as the same
-   product, not a bolted-on page. */
+/* RustDesk API Server web client - top bar, command dock, side panel, connect overlay.
+   It wears the WebUI's theme: the colors below are that theme's (frontend/tailwind.css), chosen by the
+   attributes the WebUI's theme.js puts on <html> - data-theme (light or dark) and data-accent - so the
+   client follows what was picked under Appearance, including "system". */
 
 :root {
-  --rd-bg: #0b0e14;
-  --rd-surface: #141a24;
-  --rd-surface-2: #1d2532;
-  --rd-surface-3: #242e3d;
-  --rd-border: #2a3444;
-  --rd-fg: #e7ebf3;
-  --rd-muted: #8d97aa;
-  --rd-accent: #e2652e;
-  --rd-accent-2: #c9531f;
+  color-scheme: light;
+  --rd-bg: #f8fafc; /* slate-50 */
+  --rd-surface: #ffffff;
+  --rd-surface-2: #f1f5f9; /* slate-100 */
+  --rd-surface-3: #e2e8f0; /* slate-200 */
+  --rd-border: #e2e8f0;
+  --rd-fg: #0f172a; /* slate-900 */
+  --rd-muted: #64748b; /* slate-500 */
+  --rd-accent: #2563eb; /* the accent's 600, its 700 below */
+  --rd-accent-2: #1d4ed8;
   --rd-accent-fg: #ffffff;
-  --rd-danger: #ff5d5d;
-  --rd-ok: #38c98e;
-  --rd-warn: #f2b34e;
+  --rd-danger: #dc2626;
+  --rd-ok: #16a34a;
+  --rd-warn: #d97706;
+  --rd-shadow: rgba(15, 23, 42, 0.18);
   --rd-toolbar-h: 56px;
   --rd-side-w: 380px;
 }
 
-[data-bs-theme='light'] {
-  --rd-bg: #eef1f6;
-  --rd-surface: #ffffff;
-  --rd-surface-2: #eef1f6;
-  --rd-surface-3: #e2e8f1;
-  --rd-border: #d8dee8;
-  --rd-fg: #1d2430;
-  --rd-muted: #66707f;
-  --rd-accent: #d35a24;
-  --rd-accent-2: #b74a1a;
-  --rd-accent-fg: #ffffff;
-  --rd-danger: #d43a3a;
-  --rd-ok: #1f9e6d;
-  --rd-warn: #c07f1f;
+html[data-theme='dark'] {
+  color-scheme: dark;
+  --rd-bg: #0b1120;
+  --rd-surface: #111827;
+  --rd-surface-2: #1e293b;
+  --rd-surface-3: #334155;
+  --rd-border: #334155;
+  --rd-fg: #f1f5f9;
+  --rd-muted: #94a3b8;
+  --rd-danger: #f87171;
+  --rd-ok: #4ade80;
+  --rd-warn: #fbbf24;
+  --rd-shadow: rgba(0, 0, 0, 0.55);
 }
+
+/* The accents of the WebUI's Appearance menu. Light: the 600 shade, darker 700 for its gradient; dark: the
+   500 shade (readable on dark surfaces) and 600. */
+html[data-accent='indigo'] { --rd-accent: #4f46e5; --rd-accent-2: #4338ca; }
+html[data-accent='violet'] { --rd-accent: #7c3aed; --rd-accent-2: #6d28d9; }
+html[data-accent='emerald'] { --rd-accent: #059669; --rd-accent-2: #047857; }
+html[data-accent='rose'] { --rd-accent: #e11d48; --rd-accent-2: #be123c; }
+html[data-accent='amber'] { --rd-accent: #d97706; --rd-accent-2: #b45309; }
+html[data-theme='dark'] { --rd-accent: #3b82f6; --rd-accent-2: #2563eb; }
+html[data-theme='dark'][data-accent='indigo'] { --rd-accent: #6366f1; --rd-accent-2: #4f46e5; }
+html[data-theme='dark'][data-accent='violet'] { --rd-accent: #8b5cf6; --rd-accent-2: #7c3aed; }
+html[data-theme='dark'][data-accent='emerald'] { --rd-accent: #10b981; --rd-accent-2: #059669; }
+html[data-theme='dark'][data-accent='rose'] { --rd-accent: #f43f5e; --rd-accent-2: #e11d48; }
+html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent-2: #d97706; }
 
 #rd-root [hidden] {
   display: none !important;
@@ -73,7 +88,7 @@
   align-items: center;
   gap: 12px;
   padding: 0 14px;
-  background: color-mix(in srgb, var(--rd-bg) 88%, black 12%);
+  background: var(--rd-surface);
   border-bottom: 1px solid var(--rd-border);
 }
 
@@ -363,6 +378,11 @@
      page (a focus, an overscroll gesture) reveals a ghost of the closed panel
      — and shifts every coordinate the input mapper relies on. */
   overflow: hidden;
+}
+
+/* Black only around a live remote screen; the connect and status screens are the page's own background. */
+#rd-root:not([data-state='streaming']) #rd-viewport {
+  background: var(--rd-bg);
 }
 
 #rd-video {
@@ -964,14 +984,10 @@
   width: 460px;
   max-width: 100%;
   padding: 40px 44px 36px;
-  background: linear-gradient(180deg, #1a2434 0%, #121a27 100%);
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: linear-gradient(180deg, var(--rd-surface) 0%, var(--rd-surface-2) 100%);
+  border: 1px solid var(--rd-border);
   border-radius: 22px;
-  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.04);
-}
-[data-bs-theme='light'] .rd-card {
-  background: linear-gradient(180deg, #ffffff 0%, #f2f5fa 100%);
-  border-color: var(--rd-border);
+  box-shadow: 0 30px 70px var(--rd-shadow);
 }
 
 .rd-brand {
@@ -986,7 +1002,7 @@
   height: 60px;
   border-radius: 14px;
   object-fit: contain;
-  filter: drop-shadow(0 6px 16px rgba(201, 83, 31, 0.4));
+  filter: drop-shadow(0 6px 16px color-mix(in srgb, var(--rd-accent) 40%, transparent));
 }
 .rd-wordmark {
   font-size: 28px;
@@ -1008,9 +1024,6 @@
   width: 64px;
   height: 1px;
   margin: 22px auto;
-  background: rgba(255, 255, 255, 0.14);
-}
-[data-bs-theme='light'] .rd-divider {
   background: var(--rd-border);
 }
 .rd-help {
@@ -1064,14 +1077,10 @@
   height: 60px;
   padding: 0 16px;
   gap: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--rd-border);
   border-radius: 14px;
-  background: rgba(0, 0, 0, 0.22);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-[data-bs-theme='light'] .rd-input {
   background: var(--rd-bg);
-  border-color: var(--rd-border);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .rd-input:focus-within {
   border-color: var(--rd-accent);
@@ -1101,13 +1110,13 @@
   width: 76px;
   border: 0;
   border-radius: 14px;
-  background: linear-gradient(160deg, #e77e42 0%, var(--rd-accent) 55%, var(--rd-accent-2) 100%);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--rd-accent) 78%, white) 0%, var(--rd-accent) 55%, var(--rd-accent-2) 100%);
   color: #fff;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 6px 16px rgba(201, 83, 31, 0.35);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--rd-accent) 35%, transparent);
   transition: filter 0.15s ease, transform 0.05s ease, opacity 0.15s ease;
 }
 .rd-go:hover:not(:disabled) {

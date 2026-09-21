@@ -58,15 +58,17 @@ See [Features](#features) for the complete list.
 ## Screenshots
 
 All screenshots are in the [`screenshots/`](screenshots/) folder. The WebUI has light and dark themes (choose
-**Appearance** in the top bar, or leave it on "system"), so every page is shown in both. Everything on
+**Appearance** at the top right, or leave it on "system"), so every page is shown in both. Everything on
 them is fictional demo data: made-up people, devices and addresses, made-up hardware in the server panel and typical container paths.
 
 | Page | Light | Dark |
 | ---- | ----- | ---- |
 | Dashboard: counts and what needs a look | [dashboard-light.png](screenshots/dashboard-light.png) | [dashboard-dark.png](screenshots/dashboard-dark.png) |
-| Dashboard: server panel (CPU and memory charts, version, commit) | [dashboard-server-light.png](screenshots/dashboard-server-light.png) | [dashboard-server-dark.png](screenshots/dashboard-server-dark.png) |
+| Dashboard: server panel (CPU and memory charts, version, commit, whether a newer build exists) | [dashboard-server-light.png](screenshots/dashboard-server-light.png) | [dashboard-server-dark.png](screenshots/dashboard-server-dark.png) |
+| Dashboard with the menu on the left (**Appearance > Menu**), and the account controls at the top right | [dashboard-menu-left-light.png](screenshots/dashboard-menu-left-light.png) | [dashboard-menu-left-dark.png](screenshots/dashboard-menu-left-dark.png) |
 | Devices: status, owner, group, tags | [devices-light.png](screenshots/devices-light.png) | [devices-dark.png](screenshots/devices-dark.png) |
-| A device: details, strategy, sharing | [device-detail-light.png](screenshots/device-detail-light.png) | [device-detail-dark.png](screenshots/device-detail-dark.png) |
+| A device: details, strategy, sharing, and **Open in browser** (when the web client is on) | [device-detail-light.png](screenshots/device-detail-light.png) | [device-detail-dark.png](screenshots/device-detail-dark.png) |
+| The [web client](#web-client-control-a-device-in-the-browser): the password screen of a session in the browser (it follows the WebUI's theme and accent color) | [webclient-light.png](screenshots/webclient-light.png) | [webclient-dark.png](screenshots/webclient-dark.png) |
 | Logs: Activity (what happened in the WebUI and the API) | [logs-activity-light.png](screenshots/logs-activity-light.png) | [logs-activity-dark.png](screenshots/logs-activity-dark.png) |
 | Logs: connections reported by the clients | [logs-light.png](screenshots/logs-light.png) | [logs-dark.png](screenshots/logs-dark.png) |
 | Address book | [address-book-light.png](screenshots/address-book-light.png) | [address-book-dark.png](screenshots/address-book-dark.png) |
@@ -832,6 +834,24 @@ to whatever the browser picks if that fails. Measured on Edge 153 with a GPU, de
 second used about 5% of one CPU core in hardware (H.264, VP9, AV1) and 23-26% (H.264), 35-39% (VP9) or 55-61% (AV1)
 in software; VP8 has no hardware decoder there and used 26%. On that machine the browser's own default already
 chose hardware, so asking for it changed nothing; it matters only where the default would not.
+
+**When it does not connect.** The client itself only says "ID server connection lost", which means a socket closed
+before hbbs answered. So **Open in browser** first runs a check (`GET /api/v1/webclient/check?device_id=...`): this
+server opens a WebSocket to hbbs and to hbbr, sends hbbs the same request the browser will send for that device
+and says what came back, in words: *cannot resolve the host*, *connection refused*, *no answer within 4 s*, *answered
+HTTP 404, not a WebSocket*, *hbbs says the device is offline*, *the ID server does not know this ID*, *refused the
+key* (`RUSTDESK_KEY` differs from hbbs's `id_ed25519.pub`), *closed the connection without answering*. Administrators
+see the addresses and the exact reason, other users only a general sentence; **Try anyway** starts the client
+regardless. The bridge also logs, at warning level and without any secret, why it turned a browser away (no ticket,
+an `Origin` that is not the `Host` the server was addressed as - a reverse proxy must pass the original `Host` -, a
+device that is not the ticket's, `WEB_CLIENT_MAX_SESSIONS` reached) or that hbbs closed its socket without saying
+anything; the newest of these is also in the administrator's check. The usual causes are hbbs and hbbr not being
+reachable *from this server* (another container or host, a published port missing, the public name resolving to the
+router's own address from inside the network: set `WEB_CLIENT_HBBS_URL` / `WEB_CLIENT_HBBR_URL` to an address that
+works from here), a reverse proxy that does not pass WebSocket upgrades, and a key that differs from hbbs's.
+
+**Look.** The client wears the WebUI's theme: light or dark (including "system") and the accent color chosen under
+**Appearance**, read from the same per-browser setting, so it matches the pages around it.
 
 **Reverse proxy.** Let the WebSocket upgrade through on `/api/v1/webclient/ws/` (Nginx: `proxy_http_version 1.1;`
 `proxy_set_header Upgrade $http_upgrade;` `proxy_set_header Connection "upgrade";`, and a long `proxy_read_timeout`).

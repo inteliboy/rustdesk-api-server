@@ -648,6 +648,52 @@ function renderThemeMenu() {
   });
 }
 
+// The top menu stays on one row for as long as it can. When its items do not fit next to each other it
+//   1. may use the room beyond the page's content column (rd-fit-wide),
+//   2. then drops the icons (rd-fit-noicons),
+//   3. and only then wraps onto a second row.
+// (The classes are on the header; frontend/tailwind.css has what they do.) It is measured, not guessed: the
+// label widths differ per language and font. The left layout is a column and needs none of this.
+function fitNav(nav) {
+  const shell = nav.closest ? nav.closest(".rd-shell") : null;
+  if (!shell) return;
+  const classes = shell.classList;
+  const fit = ["rd-fit-nowrap", "rd-fit-wide", "rd-fit-noicons"];
+  fit.forEach((c) => classes.remove(c));
+  const left = document.documentElement.getAttribute("data-layout") === "left" && (window.innerWidth || 1024) >= 768;
+  if (left) return;
+  const fits = () => nav.scrollWidth <= nav.clientWidth + 1;
+  classes.add("rd-fit-nowrap");
+  if (fits()) return;
+  classes.add("rd-fit-wide");
+  if (fits()) return;
+  classes.add("rd-fit-noicons");
+  if (fits()) return;
+  classes.remove("rd-fit-nowrap"); // no room even so: wrap
+}
+
+// Re-fits when the window, the language (label widths), the fonts or the layout change.
+function watchNavFit(nav) {
+  let queued = false;
+  const refit = () => {
+    if (queued) return;
+    queued = true;
+    const run = () => {
+      queued = false;
+      fitNav(nav);
+    };
+    if (typeof window.requestAnimationFrame === "function") window.requestAnimationFrame(run);
+    else run();
+  };
+  refit();
+  if (typeof window.addEventListener === "function") window.addEventListener("resize", refit);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(refit);
+  if (typeof MutationObserver === "function") {
+    new MutationObserver(refit).observe(nav, { childList: true, characterData: true, subtree: true });
+    new MutationObserver(refit).observe(document.documentElement, { attributes: true, attributeFilter: ["data-layout"] });
+  }
+}
+
 // The button that narrows the left menu to its icons and widens it again (only shown in the left layout).
 function renderNavCollapse() {
   const button = document.getElementById("nav-collapse");
@@ -696,6 +742,7 @@ function renderNav(active, user) {
 
   renderThemeMenu();
   renderNavCollapse();
+  watchNavFit(nav);
 
   const userLabel = document.getElementById("current-user-label");
   if (userLabel && user) {

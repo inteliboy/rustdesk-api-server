@@ -1019,6 +1019,12 @@ code (`webclient/scripts/print-frames.mjs`):
 - Relay socket: the first frame is a `RendezvousMessage` with only `request_relay` (18): `id` (1) the device,
   `uuid` (2), `licence_key` (6). After it the stream is encrypted and passes through unread.
 - The bridge sets `X-Real-IP` to the browser's address (hbbs and hbbr use it for a peer behind a proxy).
+- `GET /api/v1/webclient/check` (the launcher page calls it first) opens the same two WebSockets from the server
+  and sends hbbs that `punch_hole_request` (built byte for byte like the client's; the tests compare them), then
+  reads the first reply: `relay_response` (19; a non-empty `refuse_reason`, field 6, is a refusal) or
+  `punch_hole_response` (11; a socket address is success, `other_failure` field 7, else `failure` field 3:
+  0 ID_NOT_EXIST, 2 OFFLINE, 3 LICENSE_MISMATCH, 4 LICENSE_OVERUSE). No reply, or a closed socket, is reported as such.
+  Tested against stand-in servers that send those frames; not yet against a real hbbs.
 
 Seen with a stand-in hbbs: the client's first message arrives for the right device. Not seen: a real hbbs's
 `relay_response`, the relay pairing, or a whole session. RustDesk's self-hosting docs list the WebSocket ports as 21118 (hbbs)

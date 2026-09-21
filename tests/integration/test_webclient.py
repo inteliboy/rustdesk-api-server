@@ -41,6 +41,8 @@ class FakeServer:
         self._loop: asyncio.AbstractEventLoop | None = None
         self._stop: asyncio.Event | None = None
         self.headers: list[dict[str, str]] = []
+        # What it answers a binary frame with: None = echo it back, a frame = that, "close" = hang up.
+        self.answer: bytes | str | None = None
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
         assert self._ready.wait(10)
@@ -61,7 +63,12 @@ class FakeServer:
             async for message in connection:
                 if isinstance(message, bytes):
                     self.received.append(message)
-                    await connection.send(b"reply:" + message)
+                    if self.answer == "close":
+                        await connection.close()
+                        return
+                    await connection.send(
+                        self.answer if isinstance(self.answer, bytes) else b"reply:" + message
+                    )
 
         async with serve(handler, "127.0.0.1", 0) as server:
             self.port = server.sockets[0].getsockname()[1]
@@ -382,3 +389,134 @@ def test_the_bridge_is_closed_when_the_web_client_is_off(admin_client):
     with pytest.raises(WebSocketDisconnect):
         with admin_client.websocket_connect(f"{WS}/id"):
             pass
+
+
+# --- the connection check: where a failure is, in words ----------------------------------------------
+
+
+def _relay_response(uuid=b"u-1", refuse=b""):
+    inner = b"\x12" + bytes([len(uuid)]) + uuid
+    if refuse:
+        inner += b"\x32" + bytes([len(refuse)]) + refuse
+    return b"\x9a\x01" + bytes([len(inner)]) + inner  # RendezvousMessage.relay_response (19)
+
+
+def _punch_hole_failure(code):
+    return b"\x5a\x02\x18" + bytes([code])  # RendezvousMessage.punch_hole_response (11), failure = code
+
+
+def _check(client, device_id):
+    return client.get(f"/api/v1/webclient/check?device_id={device_id}")
+
+
+def test_our_request_to_hbbs_is_byte_for_byte_the_clients():
+    from rustdesk_api.services import webclient as wc
+
+    assert wc.punch_hole_request(PEER, "PLACEHOLDER-KEY", "1.4.0") == PUNCH_HOLE_REQUEST
+
+
+def test_the_check_passes_when_hbbs_would_relay(webclient_env, admin_client, hbbs):
+    hbbs.answer = _relay_response()
+    device_id = _register(admin_client)
+    body = _check(admin_client, device_id).json()
+    assert body["ok"] is True and body["message"] == ""
+    assert body["hbbs"]["ok"] and body["hbbr"]["ok"] and body["answer"] == "relay_response"
+    from rustdesk_api.services import webclient as wc
+
+    assert hbbs.received == [wc.punch_hole_request(PEER, "placeholder-public-key")]
+
+
+@pytest.mark.parametrize(
+    ("answer", "code", "fragment"),
+    [
+        (_punch_hole_failure(2), "OFFLINE", "offline"),
+        (_punch_hole_failure(0), "ID_NOT_EXIST", "does not know"),
+        (_punch_hole_failure(3), "LICENSE_MISMATCH", "RUSTDESK_KEY"),
+        (_relay_response(refuse=b"blocked"), "refused: blocked", "declined"),
+        ("close", "closed", "closed the connection"),
+    ],
+)
+def test_the_check_says_what_hbbs_answered(webclient_env, admin_client, hbbs, answer, code, fragment):
+    hbbs.answer = answer
+    device_id = _register(admin_client)
+    body = _check(admin_client, device_id).json()
+    assert body["ok"] is False and body["answer"] == code
+    assert fragment in body["message"]
+
+
+def test_an_unreachable_hbbs_is_named_with_its_reason_for_an_administrator(
+    monkeypatch, webclient_env, admin_client
+):
+    device_id = _register(admin_client)
+    dead = FakeServer()
+    url = dead.url
+    dead.close()
+    monkeypatch.setenv("WEB_CLIENT_HBBS_URL", url)
+    from rustdesk_api.config import clear_settings_cache
+
+    clear_settings_cache()
+    body = _check(admin_client, device_id).json()
+    assert body["ok"] is False and body["hbbs"]["ok"] is False
+    assert (
+        url.split("://")[1] in body["message"] and "refused" in body["message"] and "21118" in body["message"]
+    )
+    assert body["answer"] is None
+
+    # A person who is not an administrator is not told hosts or reasons.
+    _user(admin_client, "bob")
+    _sign_in(admin_client, "admin", "adminpass123")
+    admin_client.post(
+        f"/api/v1/devices/{device_id}/shares", json={"username": "bob", "permission": "control"}
+    )
+    _sign_in(admin_client, "bob", "bobpassword1")
+    plain = _check(admin_client, device_id).json()
+    assert plain["ok"] is False and plain["hbbs"] is None and plain["last_problem"] is None
+    assert url.split("://")[1] not in plain["message"] and "refused" not in plain["message"]
+
+
+def test_the_check_follows_the_same_rules_as_a_session(webclient_env, admin_client):
+    device_id = _register(admin_client)
+    _user(admin_client, "bob")
+    _sign_in(admin_client, "bob", "bobpassword1")
+    assert _check(admin_client, device_id).status_code == 404  # not theirs
+    assert _check(admin_client, 9999).status_code == 404
+    assert admin_client.get("/api/v1/webclient/check").status_code == 422  # a device is needed
+
+
+def test_the_check_is_off_with_the_web_client(admin_client):
+    device_id = _register(admin_client)
+    assert _check(admin_client, device_id).json()["error"]["code"] == "WEB_CLIENT_DISABLED"
+
+
+def test_a_refused_bridge_is_logged_with_its_reason_and_shown_to_the_administrator(
+    webclient_env, admin_client, caplog
+):
+    import logging
+
+    device_id = _register(admin_client)
+    _open_session(admin_client, device_id)
+    with (
+        caplog.at_level(logging.WARNING),
+        pytest.raises(WebSocketDisconnect),
+        _connect(admin_client, "id", origin="http://evil.example"),
+    ):
+        pass
+    assert "Origin (http://evil.example)" in caplog.text
+    body = _check(admin_client, device_id).json()
+    assert "Origin" in body["last_problem"] and "id:" in body["last_problem"]
+    # no ticket or session value in the log
+    assert admin_client.cookies.get("rd_webclient") not in caplog.text
+    assert admin_client.cookies.get("rd_session") not in caplog.text
+
+
+def test_hbbs_hanging_up_before_it_says_anything_is_logged(webclient_env, admin_client, hbbs, caplog):
+    import logging
+
+    hbbs.answer = "close"
+    device_id = _register(admin_client)
+    _open_session(admin_client, device_id)
+    with caplog.at_level(logging.WARNING), _connect(admin_client, "id") as ws:
+        ws.send_bytes(PUNCH_HOLE_REQUEST)
+        message = ws.receive()
+    assert message["type"] == "websocket.close"
+    assert "without hbbs sending anything" in caplog.text

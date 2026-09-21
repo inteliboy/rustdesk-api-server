@@ -19,6 +19,7 @@ What the bridge decides, and what it cannot:
 
 from __future__ import annotations
 
+import asyncio
 import dataclasses
 from collections.abc import Iterator
 from urllib.parse import urlsplit
@@ -204,3 +205,205 @@ def named_device(frame: bytes, expected: int) -> str | None:
     except (ValueError, UnicodeDecodeError):
         return None
     return None
+
+
+# --- checking the way through, so a failure says where it is ----------------------------------------
+#
+# The browser only learns that a socket closed ("ID server connection lost"). The check opens the same
+# sockets from this server and, for one device, asks hbbs the question the browser asks, so the answer
+# can be "hbbs is not reachable from here: connection refused" or "hbbs says the device is offline".
+
+PROBE_TIMEOUT_SECONDS = 4.0
+ANSWER_TIMEOUT_SECONDS = 6.0
+CLIENT_VERSION = "1.4.0"
+PUNCH_HOLE_RESPONSE = 11
+RELAY_RESPONSE = 19
+PUNCH_HOLE_FAILURES = {0: "ID_NOT_EXIST", 2: "OFFLINE", 3: "LICENSE_MISMATCH", 4: "LICENSE_OVERUSE"}
+NAT_TYPE_SYMMETRIC = 2
+
+
+def _encode_varint(value: int) -> bytes:
+    out = bytearray()
+    while True:
+        byte = value & 0x7F
+        value >>= 7
+        out.append(byte | (0x80 if value else 0))
+        if not value:
+            return bytes(out)
+
+
+def _length_delimited(number: int, payload: bytes) -> bytes:
+    return _encode_varint((number << 3) | 2) + _encode_varint(len(payload)) + payload
+
+
+def punch_hole_request(peer_id: str, licence_key: str, version: str = CLIENT_VERSION) -> bytes:
+    """The request the web client sends to hbbs for a device: a `RendezvousMessage` holding a
+    `punch_hole_request` (id, nat_type SYMMETRIC, licence_key, version, force_relay). Byte for byte what
+    the client's own code produces (the tests compare them)."""
+    inner = (
+        _length_delimited(1, peer_id.encode())
+        + _encode_varint((2 << 3) | 0)
+        + _encode_varint(NAT_TYPE_SYMMETRIC)
+        + _length_delimited(3, licence_key.encode())
+        + _length_delimited(6, version.encode())
+        + _encode_varint((8 << 3) | 0)
+        + b"\x01"
+    )
+    return _length_delimited(PUNCH_HOLE_REQUEST, inner)
+
+
+def describe_error(exc: BaseException) -> str:
+    """A failure to open a WebSocket, in words."""
+    import socket
+
+    from websockets.exceptions import InvalidHandshake, InvalidStatus
+
+    if isinstance(exc, socket.gaierror):
+        return "the host name cannot be resolved"
+    if isinstance(exc, ConnectionRefusedError):
+        return "connection refused (nothing is listening on that port)"
+    if isinstance(exc, TimeoutError):
+        return f"no answer within {PROBE_TIMEOUT_SECONDS:.0f} s (a firewall may be dropping it)"
+    if isinstance(exc, InvalidStatus):
+        return f"it answered HTTP {exc.response.status_code}, not a WebSocket upgrade"
+    if isinstance(exc, (InvalidHandshake, EOFError)):
+        return "it closed the connection during the WebSocket handshake (is that a WebSocket port?)"
+    if isinstance(exc, OSError):
+        return f"network error ({exc.strerror or type(exc).__name__})"
+    return type(exc).__name__
+
+
+def _host_port(url: str) -> str:
+    return url.split("://", 1)[-1].split("/", 1)[0]
+
+
+def _inner(data: bytes) -> dict[int, int | bytes]:
+    found: dict[int, int | bytes] = {}
+    for number, value in _fields(data):
+        found.setdefault(number, value)
+    return found
+
+
+def classify_answer(frame: bytes) -> str:
+    """What hbbs's first reply to the request means: `relay_response`, a refusal with its reason, one of
+    the punch hole failures, or `other`."""
+    single = _single_message(frame)
+    if single is None:
+        return "other"
+    number, data = single
+    try:
+        fields = _inner(data)
+    except ValueError:
+        return "other"
+    if number == RELAY_RESPONSE:
+        reason = fields.get(6)
+        if isinstance(reason, bytes) and reason:
+            return f"refused: {reason.decode('utf-8', 'replace')}"
+        return "relay_response"
+    if number == PUNCH_HOLE_RESPONSE:
+        if fields.get(1):  # a socket address: hbbs is willing to connect us
+            return "relay_response"
+        other = fields.get(7)
+        if isinstance(other, bytes) and other:
+            return f"failed: {other.decode('utf-8', 'replace')}"
+        failure = fields.get(3, 0)
+        return PUNCH_HOLE_FAILURES.get(failure if isinstance(failure, int) else 0, "other")
+    return "other"
+
+
+async def _open(url: str, client_ip: str | None):
+    from websockets.asyncio.client import connect
+
+    headers = {"X-Real-IP": client_ip} if client_ip else {}
+    return await connect(
+        url,
+        additional_headers=headers,
+        open_timeout=PROBE_TIMEOUT_SECONDS,
+        ping_interval=None,
+        max_size=MAX_FRAME_BYTES,
+    )
+
+
+async def _probe_target(url: str, client_ip: str | None) -> dict:
+    try:
+        ws = await _open(url, client_ip)
+    except Exception as exc:  # noqa: BLE001 - any failure to connect is the answer being asked for
+        return {"ok": False, "where": _host_port(url), "error": describe_error(exc)}
+    await ws.close()
+    return {"ok": True, "where": _host_port(url), "error": None}
+
+
+async def _ask_hbbs(url: str, settings: Settings, peer_id: str, client_ip: str | None) -> str:
+    """Send hbbs the browser's request for this device and classify the reply."""
+    from websockets.exceptions import ConnectionClosed
+
+    try:
+        ws = await _open(url, client_ip)
+    except Exception:  # noqa: BLE001 - reported by the target probe; nothing to ask
+        return "unreachable"
+    try:
+        await ws.send(punch_hole_request(peer_id, settings.rustdesk_key.strip()))
+        try:
+            reply = await asyncio.wait_for(ws.recv(), ANSWER_TIMEOUT_SECONDS)
+        except asyncio.TimeoutError:
+            return "no_answer"
+        except ConnectionClosed:
+            return "closed"
+        return classify_answer(reply) if isinstance(reply, bytes) else "other"
+    finally:
+        await ws.close()
+
+
+async def check(settings: Settings, peer_id: str | None, client_ip: str | None) -> dict:
+    hbbs_target, hbbr_target = hbbs_url(settings), hbbr_url(settings)
+    hbbs, hbbr = await asyncio.gather(
+        _probe_target(hbbs_target, client_ip), _probe_target(hbbr_target, client_ip)
+    )
+    answer = None
+    if hbbs["ok"] and peer_id:
+        answer = await _ask_hbbs(hbbs_target, settings, peer_id, client_ip)
+    return {"hbbs": hbbs, "hbbr": hbbr, "answer": answer}
+
+
+def summarise(result: dict, *, admin: bool) -> str:
+    """One sentence for the person who pressed Open in browser; empty when everything is in order.
+    Host names and low-level reasons are for administrators only."""
+    hbbs, hbbr, answer = result["hbbs"], result["hbbr"], result["answer"]
+    for name, target, setting in (
+        ("ID server (hbbs)", hbbs, "WEB_CLIENT_HBBS_URL"),
+        ("relay (hbbr)", hbbr, "WEB_CLIENT_HBBR_URL"),
+    ):
+        if not target["ok"]:
+            if not admin:
+                return "The server cannot reach the RustDesk servers. Tell your administrator."
+            return (
+                f"This server cannot open a WebSocket to the {name} at {target['where']}: {target['error']}. "
+                "hbbs listens for WebSockets on port 21118 and hbbr on 21119, and they must be reachable "
+                f"from this server (set {setting} if they are elsewhere)."
+            )
+    if answer in (None, "relay_response"):
+        return ""
+    if answer == "OFFLINE":
+        return "The ID server says this device is offline: it has not reported to it recently."
+    if answer == "ID_NOT_EXIST":
+        return "The ID server does not know this device's ID."
+    if answer == "LICENSE_MISMATCH":
+        if admin:
+            return (
+                "The ID server refused the key: RUSTDESK_KEY here does not match the one hbbs was "
+                "started with (the contents of its id_ed25519.pub)."
+            )
+        return "The ID server refused the key."
+    if answer == "LICENSE_OVERUSE":
+        return "The ID server refuses more connections for this key."
+    if answer in ("closed", "no_answer"):
+        what = (
+            "closed the connection"
+            if answer == "closed"
+            else f"did not answer within {ANSWER_TIMEOUT_SECONDS:.0f} s"
+        )
+        hint = " Look at hbbs's own log for the reason." if admin else ""
+        return f"The ID server {what} after the request for this device.{hint}"
+    if answer.startswith(("refused:", "failed:")):
+        return f"The ID server declined the request ({answer})."
+    return "The ID server answered in a way the web client does not expect."

@@ -277,6 +277,21 @@
   }
 }
 
+/* Top menu fitting (see fitNav in app.js): one row while it can be, wrapping last. */
+.rd-shell.rd-fit-nowrap #app-nav {
+  flex-wrap: nowrap;
+}
+.rd-shell.rd-fit-noicons .rd-nav-link .rd-icon {
+  display: none;
+}
+/* Beyond the content column, but starting where the column starts. */
+.rd-shell.rd-fit-wide .rd-shell-inner {
+  max-width: none;
+  margin: 0;
+  padding-left: max(1rem, calc((100% - 72rem) / 2 + 1rem));
+  padding-right: 1.25rem;
+}
+
 /* The account controls: Appearance, the signed-in user, Log out. */
 .rd-ctl {
   display: inline-flex;
