@@ -309,6 +309,7 @@ def timeline(
                     "peer_name": names.get((c.peer_id or "", c.peer_name or ""), c.peer_name),
                     "from_ip": c.from_ip,
                     "conn_type": c.conn_type,
+                    "note": c.note,
                     "ended_at": c.ended_at.isoformat() if c.ended_at else None,
                 },
             )

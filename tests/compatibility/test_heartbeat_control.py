@@ -403,3 +403,31 @@ def test_a_users_own_view_names_the_strategy_but_not_its_options(app, admin_clie
     body = alice.get(f"/api/v1/devices/{device['id']}").json()
     assert body["effective_strategy_name"] == "Corporate"
     assert "options" not in body and "enable-file-transfer" not in str(body)
+
+
+def test_options_the_client_reads_from_its_config_can_be_set(admin_client):
+    options = {
+        "temporary-password-length": "10",
+        "allow-numeric-one-time-password": "Y",
+        "allow-scope-violation-close": "Y",
+        "enable-remote-printer": "N",
+        "enable-hwcodec": "N",
+    }
+    r = admin_client.post("/api/v1/strategies", json={"name": "Tight", "options": options})
+    assert r.status_code == 201, r.text
+    bad = {"temporary-password-length": "7"}
+    assert admin_client.post("/api/v1/strategies", json={"name": "Bad", "options": bad}).status_code == 422
+
+
+def test_options_a_strategy_cannot_reach_are_not_offered_and_old_ones_are_dropped(admin_client):
+    from rustdesk_api.services.strategies import CATALOG, RETIRED_KEYS
+
+    assert RETIRED_KEYS and not RETIRED_KEYS & set(CATALOG)
+    offered = {item["key"] for item in admin_client.get("/api/v1/strategies/options").json()}
+    assert not RETIRED_KEYS & offered
+
+    # A strategy saved before they were retired still saves; the value is dropped.
+    old = {"lock_after_session_end": "Y", "enable-audio": "N"}
+    r = admin_client.post("/api/v1/strategies", json={"name": "Old", "options": old})
+    assert r.status_code == 201, r.text
+    assert r.json()["options"] == {"enable-audio": "N"}

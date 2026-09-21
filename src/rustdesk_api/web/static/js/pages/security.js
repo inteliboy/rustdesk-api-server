@@ -161,6 +161,63 @@ async function startSetup() {
   });
 }
 
+// ---------------------------------------------------------------- single sign-on
+
+// Shown when the server has an OpenID Connect provider (or the account already has
+// a linked one). Linking sends the browser to the provider and back; the provider
+// account is then what "Sign in with ..." recognises.
+async function renderSso() {
+  const status = await api("/api/v1/auth/oidc/identities");
+  const section = document.getElementById("sso-section");
+  if (!status.enabled && status.identities.length === 0) return;
+  section.classList.remove("hidden");
+  const box = document.getElementById("sso");
+  const name = escapeHtml(status.name || "the provider");
+
+  const rows = status.identities
+    .map(
+      (i) => `<div class="flex items-center justify-between gap-3 py-1">
+        <span>Linked to ${name}${i.email ? `: <span class="font-medium">${escapeHtml(i.email)}</span>` : ""}
+          <span class="block text-xs text-slate-500">since ${fmtDate(i.created_at)}${
+            i.last_login_at ? `, last used ${fmtDate(i.last_login_at)}` : ""
+          }</span></span>
+        <button data-id="${Number(i.id)}" class="sso-unlink text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300">Unlink</button>
+      </div>`
+    )
+    .join("");
+  const canLink = status.enabled && status.identities.length === 0;
+  box.innerHTML = `${rows}
+    ${canLink ? `<p class="text-sm text-slate-500 mb-3">Link your ${name} account to sign in with it, in the browser and in the RustDesk client.</p>
+      <button id="sso-link" class="${PRIMARY_BUTTON}">Link ${name} account</button>` : ""}
+    ${!status.has_password && status.identities.length ? `<p class="text-xs text-slate-500 mt-2">This account has no password; single sign-on is its only way in.</p>` : ""}`;
+
+  const link = document.getElementById("sso-link");
+  if (link) {
+    link.addEventListener("click", async () => {
+      link.disabled = true;
+      try {
+        const started = await api("/api/v1/auth/oidc/link", { method: "POST" });
+        window.location.href = started.url;
+      } catch (err) {
+        link.disabled = false;
+        toast(err.message, "error");
+      }
+    });
+  }
+  document.querySelectorAll(".sso-unlink").forEach((btn) =>
+    btn.addEventListener("click", async () => {
+      if (!confirm("Unlink this account? You will no longer be able to sign in with it.")) return;
+      try {
+        await api(`/api/v1/auth/oidc/identities/${btn.dataset.id}`, { method: "DELETE" });
+        toast("Unlinked.", "success");
+        renderSso();
+      } catch (err) {
+        toast(err.message, "error");
+      }
+    })
+  );
+}
+
 // -------------------------------------------------------------------- sessions
 
 async function renderSessions() {
@@ -440,8 +497,12 @@ function setupPasswordForm(user) {
   if (!user) return;
   renderNav("security", user);
   setupPasswordForm(user);
+  if (new URLSearchParams(window.location.search).get("sso") === "linked") {
+    toast("Account linked.", "success");
+    window.history.replaceState({}, "", window.location.pathname);
+  }
   try {
-    await Promise.all([renderTwoFactor(), renderSessions(), renderApiKeys(), renderEnrollment()]);
+    await Promise.all([renderTwoFactor(), renderSso(), renderSessions(), renderApiKeys(), renderEnrollment()]);
   } catch (err) {
     toast(err.message, "error");
   }

@@ -21,6 +21,12 @@
         Sign in
       </button>
     </form>
+    <div id="sso-block" class="mt-4 hidden">
+      <a id="sso-button" href="/api/v1/auth/oidc/login"
+         class="block w-full text-center rounded-md border border-slate-300 py-2 text-sm font-medium hover:bg-slate-50">
+        Sign in with <span id="sso-name"></span>
+      </a>
+    </div>
     <p id="login-links" class="text-sm text-center text-slate-500 mt-4">
       <a id="register-link" href="/register" class="text-link hover:underline hidden">Create an account</a>
       <span id="register-sep" class="hidden"> &middot; </span>

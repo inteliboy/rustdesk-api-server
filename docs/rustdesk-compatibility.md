@@ -23,6 +23,8 @@ re-checked against a newer client's source, not merely because a newer client ex
 | Source-derived   | `/api/ab/personal`, `/api/ab/settings`, `/api/ab/shared/profiles`, `/api/ab/peers`, `/api/ab/tags/{guid}`, `/api/ab/peer/{add,update}/{guid}`, `/api/ab/peer/{guid}`, `/api/ab/tag/{add,rename,update}/{guid}`, `/api/ab/tag/{guid}` - the newer per-item address book | Implemented from the client source (2026-09-20); `ADDRESS_BOOK_LEGACY_MODE=true` falls back to the legacy book | **No** - see "Address book, newer per-item protocol" |
 | 1.4.9 (Windows)  | `/api/device-group/accessible`, `/api/users` (list), `/api/login-options` | Implemented from the client source (2026-09-21); an earlier string-encoded `data` left the tab empty - see the section on the Accessible devices tab | Paths confirmed via 404 capture; no error seen after implementing, not otherwise verified |
 | Source-derived   | `/api/audit/conn`, `/api/audit/file`, `/api/audit/alarm` | Implemented from the client source (paths + payloads); see "`/api/audit/alarm`" for its response shape | **No** - needs a second machine connecting in (alarms: one that gets refused) |
+| Source-derived   | `GET /api/audit/conn/active`, `PUT /api/audit` (connection notes; the older client posts `{id, session_id, note}` to `/api/audit/conn`) | Implemented from the client source (2026-09-21) - see "Connection notes" | **No** - needs the controlling client signed in with "Ask for note at end of connection" on |
+| Source-derived   | `POST /api/oidc/auth`, `GET /api/oidc/auth-query` (the client's "Continue with ..." button) and our `GET /api/oidc/callback` | Implemented from the client source (2026-09-21) - see "OIDC sign-in" | **No** - only tested against an in-process provider; needs a real provider and a client |
 | Source-derived   | Heartbeat `conns` / `disconnect`, `modified_at` / `strategy`; `POST /api/devices/cli` (`--assign`); `preset-*` keys in sysinfo; the two-step 2FA `/api/login` | Implemented from the client source (2026-09-20) - see "Heartbeat: connections and strategies", "`--assign`", "Two-factor login" | **No** - the 1.4.9 client has all of it; not yet exercised live |
 | 1.4.9 (Windows)  | `/api/logout` | Implemented, not exercised in this session | No |
 | 1.4.9 (Windows)  | `/api/peers` (list, same query shape as `/api/users`) | Implemented from the client source (2026-09-21) - reference project's `peers` view is a non-functional stub | Path/method/query confirmed real via live 404 capture ("Błąd odświeżania grup" / "Error refreshing groups" shown in the client's Available Devices panel); fix not yet retested live
@@ -315,8 +317,8 @@ Design choices, still not 100% confirmed:
   just the least-surprising one consistent with everything observed (no
   distinct write behavior was ever seen on this path; the one confirmed
   write path is `POST /api/ab`).
-- `GET /api/login-options` always returns `[]` - no OIDC/LDAP providers
-  are configured (Phase 3). Not present in the reference project at all.
+- `GET /api/login-options` returns `[]`, or `["oidc/<name>"]` when OIDC is configured (see "OIDC sign-in";
+  it always returned `[]` before 2026-09-21). No LDAP. Not present in the reference project at all.
 - None of these hard-fail on missing/invalid auth; they return an empty
   result instead, matching the tolerant style of the other rustdesk-compat
   endpoints.
@@ -673,7 +675,60 @@ Behaviour here:
   deliberate allow-list of permission/behaviour switches: no server addresses, keys, passwords or IP whitelists.
   Values follow the client's `option2bool`: `enable-*` options are on unless `N`, `allow-*` options off unless
   `Y`; `access-mode` is `custom|full|view`, `approve-mode` `password|click`, `verification-method`
-  `use-temporary-password|use-permanent-password`.
+  `use-temporary-password|use-permanent-password`, `temporary-password-length` `6|8|10`.
+- **Which keys work (source-checked 2026-09-21, `libs/base/src/config/keys.rs` on `master` `a5d4ef9`).**
+  `handle_config_options` stores the pushed map with `Config::set_options`, i.e. in the client's `Config` options,
+  so a key only has an effect if the client reads it from there: `KEYS_SETTINGS` in `keys.rs`. Every key in the
+  catalog is on that list. Five keys the catalog offered until 2026-09-21 are **not**, so a strategy setting them
+  did nothing on the client, and they were removed (`RETIRED_KEYS`; a strategy saved with one still loads and saves,
+  the value is dropped and never pushed): `enable-check-update` and `allow-auto-record-outgoing` (read from
+  `LocalConfig`), `one-way-clipboard-redirection` and `one-way-file-transfer` (read with `get_builtin_option`,
+  the custom-build settings), `lock_after_session_end` (a per-session view option of the controlling side).
+  Options added 2026-09-21: `enable-remote-printer`, `allow-only-conn-window-open`, `enable-trusted-devices`,
+  `allow-numeric-one-time-password`, `temporary-password-length`, `allow-scope-violation-close` and
+  `allow-scope-violation-alarm` (see the Alarms log), `keep-awake-during-incoming-sessions`, `enable-abr`,
+  `enable-hwcodec`, `enable-directx-capture`. Not observed on a live client. Deliberately not offered although on
+  `KEYS_SETTINGS`: server addresses and key (`api-server`, `custom-rendezvous-server`, `relay-server`, `key`),
+  `whitelist`/`id-whitelist`, `direct-server`/`direct-access-port`, proxy settings, the `preset-*` keys,
+  `allow-insecure-tls-fallback` (weakens TLS) and network tuning (`disable-udp`, `allow-kcp-congestion-control`,
+  ...). `allow-ask-for-note` (below) is a `LocalConfig` key and cannot be pushed either.
+
+## Connection notes (`GET /api/audit/conn/active`, `PUT /api/audit`) - source-derived, NOT yet live-verified
+
+Source: `flutter/lib/models/model.dart` (`_queryAuditGuid`), `flutter/lib/common/widgets/dialog.dart`
+(`updateAuditNoteByGuid`), `src/ui_session_interface.rs` (`send_note`), identical in `1.4.9` and `master`. The
+client setting is the local option `allow-ask-for-note` (client Settings, "Ask for note at end of connection";
+off by default, can only be switched on while signed in). It lives in the client's `LocalConfig`, so a strategy
+cannot turn it on: each user does that on the machine they control from.
+
+1. Once connected, the **controlling** client calls `GET <api>/api/audit/conn/active?id=<controlled id>&session_id=
+   <n>&conn_type=<0-4>` with its login token (`Authorization: Bearer`). It expects a JSON *string* (the GUID). Any
+   status other than 200 ends the attempts; a 200 without a string is retried up to six times (1, 1, 2, 2, 3 s), which
+   covers the controlled device's own `/api/audit/conn` report arriving late. `conn_type` is 0 remote control, 1 file
+   transfer, 2 port forward or RDP, 3 view camera, 4 terminal, as in the audit type table above.
+2. When the session closes and the user typed something, `PUT <api>/api/audit` with `{"guid", "note"}` and the same
+   token. The client only logs the status.
+3. The older (Sciter) client instead posts `{"id", "session_id", "note"}` to `/api/audit/conn` with **no** token and
+   no `uuid`.
+
+Behaviour here:
+
+- The session is the newest `connection_logs` row of that device with that `session_id` (a random 64-bit number the
+   two clients share; the client keeps it across reconnects) and, when the controlled device reported a type, the
+   same `conn_type`. It must be open or ended within 12 hours (a session that never reported a close counts as
+   open for a week).
+- `GET` needs a valid client token (API keys and enrollment tokens are not client tokens) and answers `401
+  {"error": ...}` without one, JSON `null` while there is no such session yet, else the GUID, made the first time it
+  is asked for and stable after. `PUT` needs a token too and answers `200` (empty), `401` or `404` (unknown GUID,
+  session too old, empty note). The old-client `POST` answers an empty `200` whatever happens, like the other audit
+  posts, so it cannot be used to probe ids or session ids.
+- The GUID is an unguessable handle for setting the note of that one session, nothing else; the management API never
+  returns it. Notes are trimmed, stripped of control characters and cut at 1000 characters, stored in
+  `connection_logs.note` (migration `a9c4b7e2d6f1`), shown as plain text under Logs and in the device timeline, and
+  removed with the connection log. They are not written to the server log (the DEBUG capture masks `note`).
+- Not covered: notes are set by whoever holds a client token for *any* account, not only the owner of the controlled
+  device, because the controlling user is generally not its owner; the note describes the session, and the session's
+  own visibility rules (owner, share, administrator) decide who reads it.
 
 ## `--assign` (`POST /api/devices/cli`)
 
@@ -810,51 +865,7 @@ login resets the count. Not yet seen on a live client; the client treats any `er
     `{"result": "OK" | "NOT_ENABLED" | "INVALID_INPUT" | "ID_TAKEN"}`. The
     open-source `hbbs` has no `NOT_DEPLOYED` state, so no device is ever asked
     to deploy, and a deploy recorded here would not be enforced by anything.
-- **OIDC login (`/api/oidc/auth`, `/api/oidc/auth-query`) - implementable, not
-  implemented; findings from client `master` (`a5d4ef9`), 2026-09-20.** The
-  1.4.9 client has the same flow. Nothing Pro-only is involved.
-  - `GET /api/login-options` must return a JSON *array* of strings: `oidc/<name>`
-    per provider (button label "Continue with <Name>"), or
-    `common-oidc/<json list of {name, ...}>`. We answer `[]` (fixed 2026-09-20; it
-    used to be `{}`, which `master` shows as a "network error" with a Retry
-    button - see the "Second fix" note above).
-  - `POST /api/oidc/auth`, body `{op, id, uuid, deviceInfo, apiDomain}` -> `{"code":
-    "<poll handle>", "url": "<authorize URL>"}` or `{"error": "..."}`. The client
-    opens `url` in the user's browser (or copies it).
-  - `GET /api/oidc/auth-query?code=&id=&uuid=`, polled every 1 s for up to 3
-    minutes: `{"error": "No authed oidc is found"}` while pending (that substring
-    keeps it polling; any other `error` aborts), then the login body
-    `{access_token, type: "access_token", user: {name, display_name?, avatar?,
-    email?, status: 1, is_admin, info: {}}}`. `user.name` and `user.info` are
-    required by the client's parser (`info` may be `{}`); our `/api/login` sends
-    `user: {name, id}` without `info`.
-  - The browser leg is not client code: a server callback (`GET
-    /api/oidc/callback`) at `EXTERNAL_URL` receives the IdP redirect.
-  - **Plan.** Authorization-code flow with PKCE (S256), `state` and `nonce`;
-    validate the ID token (signature via JWKS, `iss`, `aud`, `exp`, `nonce`,
-    `email_verified`). Persist pending requests in the database (not memory:
-    several workers), with a 256-bit single-use poll handle bound to the
-    `id`/`uuid` that started it and short expiry, purged by the retention loop.
-    Ignore the client-supplied `apiDomain`; build the redirect URI from
-    `EXTERNAL_URL`; `op` must name a configured provider. Link identities by
-    `(issuer, sub)` only - linking an existing local account by email is an
-    account-takeover risk and would be an explicit, default-off opt-in.
-    Auto-creating users is also opt-in (non-admin). Rate-limit both endpoints,
-    reject disabled accounts, audit success and failure, never log tokens or
-    the client secret. New table `external_identities`, new table for pending
-    requests, an unusable password hash for SSO-created users (or a nullable
-    column). Dependencies to approve: `httpx` (moves from dev to runtime) and
-    `PyJWT` (uses the `cryptography` package already shipped); Authlib is
-    larger than this needs. Tests use an in-process fake IdP (RSA key,
-    discovery, JWKS, token endpoint on `httpx.MockTransport`) covering the
-    happy path and: bad/replayed state, expired request, wrong
-    nonce/audience/issuer, unverified email, disabled user, `id`/`uuid`
-    mismatch, reused poll handle. The redirect URI must match the IdP
-    registration exactly; most IdPs require HTTPS unless it is `localhost`.
-  - **Open decisions:** one env-configured provider vs several managed in the
-    admin UI (secrets then encrypted with `DATA_ENCRYPTION_KEY`); auto-create
-    users; email linking; WebUI login too (cookie/CSRF flow, separate work);
-    which IdP to test with.
+- **OIDC login (`/api/oidc/auth`, `/api/oidc/auth-query`) - implemented 2026-09-21**: see "OIDC sign-in" below.
 
 - The management additions of 2026-09-20 (`/api/v1/api-keys`, `/api/v1/auth/sessions`,
   `/api/v1/auth/register|reset-password|options`, `/api/v1/devices/bulk|{id}/timeline|{id}/uuid/*`,
@@ -866,6 +877,49 @@ login resets the count. Not yet seen on a live client; the client treats any `er
   reference project) - out of scope for this project, which is a
   control-plane/management layer, not a full reimplementation of every
   reference-project feature.
+
+## OIDC sign-in (implemented 2026-09-21, source-derived, NOT yet live-verified)
+
+Source: `src/hbbs_http/account.rs`, `flutter/lib/models/user_model.dart` (`queryOidcLoginOptions`),
+`flutter/lib/common/widgets/login.dart`, client `master` (`a5d4ef9`); the 1.4.9 client has the same flow. Nothing
+Pro-only is involved. Tested against an in-process provider (real RSA-signed tokens over `httpx.MockTransport`), never
+a real provider or a real client.
+
+- `GET /api/login-options` answers `["oidc/<OIDC_NAME>"]` when configured, else `[]` (an array either way; the client
+  iterates it). The client labels the button "Continue with <Name>" (`azure` shows as Microsoft, `github`, `gitlab`
+  and the names it has icons for get them).
+- `POST /api/oidc/auth`, body `{op, id, uuid, deviceInfo, apiDomain}` -> `{"code": "<poll handle>", "url": "<authorize
+  URL>"}` or `{"error": "..."}` (HTTP 200, like the other login answers). `op` must be the configured name
+  (case-insensitive), `id` and `uuid` are required. `apiDomain` is ignored: the redirect URI is `EXTERNAL_URL` +
+  `/api/oidc/callback`, never something the caller sends.
+- `GET /api/oidc/auth-query?code=&id=&uuid=`, polled once a second for up to three minutes. While the user has not
+  finished it answers `{"error": "No authed oidc is found"}` - that text is what keeps the client polling, so **no
+  other answer may contain it**. A wrong `id`/`uuid`, an unknown or expired handle, and a used handle answer
+  `{"error": "The sign-in request was not found or has expired."}`, a refused sign-in its reason (for example "No
+  account is linked to this sign-in..."), and success the login body `{access_token, type: "access_token", user:
+  {name, id, email, status: 1, is_admin, info: {}}}`. The client's parser (`AuthBody`/`UserPayload`) needs
+  `user.name` and `user.info` (an object, may be empty); the password login's `user: {name, id}` lacks `info`, which
+  `master` would reject for this flow. A result is handed over once, then the request is deleted.
+- The browser leg is ours: `GET /api/oidc/callback?code=&state=` at `EXTERNAL_URL`. For a client request it shows
+  "You are signed in. You can close this window"; the client (not the browser) receives the session.
+- A device that signs in this way is registered and owned exactly as with a password login (`id` + `uuid` are the ones
+  the client started the request with, and the poll must repeat them), so the uuid rules of "Device identity" apply.
+
+Security decisions (`security/oidc.py`, `services/oidc.py`): authorization code + PKCE (S256), `state` and `nonce`;
+the PKCE verifier and nonce are derived (HMAC of `SECRET_KEY` and a per-request salt) and never stored, `state` and the
+poll handle only as SHA-256; requests live ten minutes, are single-use (claimed before the provider is contacted) and
+are purged. ID tokens: signature against the provider's JWKS with an allow-list of asymmetric algorithms (`none` and
+HMAC are refused, which blocks algorithm-confusion forgeries), `iss` = the discovered issuer, `aud` contains the client
+id (and `azp` when there are several), `exp`/`iat`/`sub` required, the nonce. Discovery, JWKS and token endpoints must be
+https (http only for a loopback host), redirects are not followed, answers are size-capped, only ID-token claims are used.
+A WebUI sign-in or link is bound to the browser that started it by a cookie (`rd_oidc`, HttpOnly, SameSite=Lax, path
+`/api/oidc`), so a copied link cannot be finished elsewhere. Who the user is: the linked identity `(issuer, subject)`;
+else, only with `OIDC_LINK_BY_EMAIL`, the local user with the same *verified* address; else, only with
+`OIDC_AUTO_CREATE_USERS` and `OIDC_ALLOWED_EMAIL_DOMAINS`, a new non-admin user; else refused. Users created this way get
+an unusable password hash. The provider is trusted for MFA: a linked sign-in skips the local TOTP.
+
+Not covered: several providers at once, the user-info endpoint, group/role mapping (a provider can never make anyone an
+administrator), logout at the provider, refresh tokens, `common-oidc/<json>` login options, and `id_token` decryption.
 
 ## How to verify against a real client
 

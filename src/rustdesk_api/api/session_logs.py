@@ -44,6 +44,7 @@ class ConnectionLogOut(BaseModel):
     conn_type: int | None
     primary_auth: int | None
     two_factor: int | None
+    note: str | None
     started_at: datetime.datetime
     ended_at: datetime.datetime | None
 
@@ -149,6 +150,7 @@ def list_connection_logs(
             peer_name=_peer_name_of(names, r),
             conn_type=r.conn_type,
             primary_auth=r.primary_auth,
+            note=r.note,
             two_factor=r.two_factor,
             started_at=r.started_at,
             ended_at=r.ended_at,

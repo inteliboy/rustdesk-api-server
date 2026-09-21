@@ -20,6 +20,15 @@ services:
       # The address users type into the browser. Needed for password-reset links; set it to
       # https://... when you put a reverse proxy in front.
       EXTERNAL_URL: ${EXTERNAL_URL:-http://127.0.0.1:21114}
+      # Single sign-on (OpenID Connect); off while OIDC_ISSUER and OIDC_CLIENT_ID are empty. See README.
+      OIDC_ISSUER: ${OIDC_ISSUER:-}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
+      OIDC_NAME: ${OIDC_NAME:-sso}
+      OIDC_SCOPES: ${OIDC_SCOPES:-openid email profile}
+      OIDC_AUTO_CREATE_USERS: ${OIDC_AUTO_CREATE_USERS:-false}
+      OIDC_LINK_BY_EMAIL: ${OIDC_LINK_BY_EMAIL:-false}
+      OIDC_ALLOWED_EMAIL_DOMAINS: ${OIDC_ALLOWED_EMAIL_DOMAINS:-}
       ALLOW_REGISTRATION: "false"
       DEVICE_ONLINE_TIMEOUT: "120"
       LOG_LEVEL: INFO

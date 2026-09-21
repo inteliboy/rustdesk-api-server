@@ -223,6 +223,7 @@ def _finish_rustdesk_login(
     client_ip: str | None,
     *,
     two_factor: bool = False,
+    via: str = "rustdesk_client",
 ) -> dict:
     auth_service.register_success(user)
     session_obj, raw_token = token_service.create_session(
@@ -264,7 +265,7 @@ def _finish_rustdesk_login(
         result="success",
         ip_address=client_ip,
         detail={
-            "via": "rustdesk_client",
+            "via": via,
             **({"two_factor": True} if two_factor else {}),
             **client_version,
             **audit_client_detail(request.headers.get("user-agent")),
@@ -457,6 +458,7 @@ def _start_webui_session(
     client_ip: str | None,
     *,
     two_factor: bool = False,
+    via: str = "webui",
 ) -> LoginResponse:
     auth_service.register_success(user)
     session_obj, raw_token = token_service.create_session(
@@ -475,7 +477,7 @@ def _start_webui_session(
         result="success",
         ip_address=client_ip,
         detail={
-            "via": "webui",
+            "via": via,
             **({"two_factor": True} if two_factor else {}),
             **audit_client_detail(request.headers.get("user-agent")),
         },

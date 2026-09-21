@@ -11,6 +11,7 @@ from rustdesk_api.models.client_audit import AlarmLog, ConnectionLog, FileTransf
 from rustdesk_api.models.device import Device
 from rustdesk_api.models.device_event import DeviceEvent
 from rustdesk_api.models.group import Group
+from rustdesk_api.models.oidc import OidcIdentity, OidcRequest
 from rustdesk_api.models.session import AuthSession
 from rustdesk_api.models.share import DeviceShare
 from rustdesk_api.models.strategy import Strategy
@@ -32,6 +33,8 @@ __all__ = [
     "FileTransferLog",
     "Group",
     "LoginChallenge",
+    "OidcIdentity",
+    "OidcRequest",
     "PasswordResetToken",
     "RecoveryCode",
     "SavedView",

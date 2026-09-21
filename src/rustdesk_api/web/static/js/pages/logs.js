@@ -56,6 +56,14 @@ function peerCell(item) {
   return `${name}${item.peer_id ? connectLink(item.peer_id) : ""}`;
 }
 
+// What the controlling user typed when the client asked for a note at the end
+// of the session.
+function noteLine(item) {
+  return item.note
+    ? `<div class="text-xs text-slate-500 break-words max-w-xs">Note: ${escapeHtml(item.note)}</div>`
+    : "";
+}
+
 function durationText(start, end) {
   if (!end) return "-";
   const secs = Math.max(0, Math.round((parseServerDate(end) - parseServerDate(start)) / 1000));
@@ -69,7 +77,7 @@ function connRow(c) {
   return `<tr>
     ${td(fmtDate(c.started_at), "text-slate-500 whitespace-nowrap")}
     ${td(deviceCell(c))}
-    ${td(peerCell(c))}
+    ${td(peerCell(c) + noteLine(c))}
     ${td(escapeHtml(type))}
     ${td(escapeHtml(auth))}
     ${td(c.from_ip ? ipLabel(c.from_ip) : "-", "font-mono whitespace-nowrap")}

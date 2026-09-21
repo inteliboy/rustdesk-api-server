@@ -13,8 +13,17 @@
     notice.textContent = "Your password was changed. Sign in with the new one.";
     notice.classList.remove("hidden");
   }
+  if (new URLSearchParams(window.location.search).get("sso") === "unavailable") {
+    const notice = document.getElementById("login-notice");
+    notice.textContent = "Single sign-on is not available right now. Sign in with your password, or try again.";
+    notice.classList.remove("hidden");
+  }
   try {
     const options = await api("/api/v1/auth/options");
+    if (options.oidc_name) {
+      document.getElementById("sso-name").textContent = options.oidc_name;
+      document.getElementById("sso-block").classList.remove("hidden");
+    }
     if (options.registration_enabled) {
       document.getElementById("register-link").classList.remove("hidden");
       document.getElementById("register-sep").classList.remove("hidden");

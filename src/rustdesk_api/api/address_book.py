@@ -32,12 +32,15 @@ import logging
 from fastapi import APIRouter, Depends, Header, Query, Request
 from sqlalchemy.orm import Session
 
+from rustdesk_api.api.deps import get_settings_dep
+from rustdesk_api.config import Settings
 from rustdesk_api.db.database import get_db
 from rustdesk_api.models.address_book_entry import AddressBook
 from rustdesk_api.models.user import User
 from rustdesk_api.services import address_book as address_book_service
 from rustdesk_api.services import devices as device_service
 from rustdesk_api.services import groups as group_service
+from rustdesk_api.services import oidc as oidc_service
 from rustdesk_api.services import tokens as token_service
 
 logger = logging.getLogger(__name__)
@@ -86,16 +89,17 @@ def _build_ab_response(db: Session, book: AddressBook) -> dict:
 
 
 @router.get("/api/login-options")
-def login_options() -> list[str]:
+def login_options(settings: Settings = Depends(get_settings_dep)) -> list[str]:
     """The extra ways to sign in: one `oidc/<name>` string per OIDC provider
-    (or `common-oidc/<json>`). None are configured (OIDC is not implemented),
-    so an empty array.
+    (or `common-oidc/<json>`). Ours is the one configured with OIDC_ISSUER, if
+    any; otherwise an empty array.
 
     The client's only reader, `UserModel.queryOidcLoginOptions`, iterates the
     decoded body (`for (final item in jsonDecode(resp.body))`), so it has to be
     an array: 1.4.9 swallows the error a JSON object causes there, but `master`
     shows a "network error" line and a Retry button in its login dialog."""
-    return []
+    provider = oidc_service.provider_from_settings(settings)
+    return [f"oidc/{provider.name}"] if provider else []
 
 
 def _accessible_page(items: list[dict], current: int, page_size: int) -> dict:

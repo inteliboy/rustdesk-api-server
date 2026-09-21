@@ -1,5 +1,6 @@
 """RustDesk client audit endpoints: POST /api/audit/conn, /api/audit/file and
-/api/audit/alarm.
+/api/audit/alarm, plus the connection-note pair the *controlling* client uses
+(GET /api/audit/conn/active, PUT /api/audit).
 
 Paths and payload shapes taken from the real client source
 (`get_audit_server` in src/common.rs, `post_conn_audit` / `post_file_audit` /
@@ -19,11 +20,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Header, Query, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from rustdesk_api.api.address_book import current_client_user
 from rustdesk_api.api.deps import enforce_client_audit_rate_limit
 from rustdesk_api.db.database import get_db
 from rustdesk_api.services import client_audit as audit_service
@@ -44,6 +46,13 @@ class ConnAuditRequest(BaseModel):
     conn_type: Any = Field(default=None, alias="type")
     primary_auth: Any = None
     two_factor: Any = None
+    # Only the older (Sciter) controlling client: {id, session_id, note}.
+    note: Any = None
+
+
+class NoteRequest(BaseModel):
+    guid: str | None = None
+    note: Any = None
 
 
 class FileAuditRequest(BaseModel):
@@ -75,6 +84,11 @@ class AlarmAuditRequest(BaseModel):
 def audit_connection(payload: ConnAuditRequest, db: Session = Depends(get_db)) -> Response:
     if not payload.id:
         return JSONResponse({"error": "Missing device id."})
+    if payload.note is not None and payload.session_id is not None:
+        # A note from the controlling side, not an event from the controlled one.
+        audit_service.set_note_by_session(db, payload.id, str(payload.session_id), payload.note)
+        db.commit()
+        return Response(status_code=200)
     device = audit_service.resolve_reporting_device(db, payload.id, payload.uuid)
     if device is not None:
         audit_service.record_connection_event(
@@ -130,4 +144,43 @@ def audit_alarm(payload: AlarmAuditRequest, db: Session = Depends(get_db)) -> Re
             info=payload.info,
         )
         db.commit()
+    return Response(status_code=200)
+
+
+_NOT_SIGNED_IN = {"error": "Sign in to the account first."}
+
+
+@router.get("/api/audit/conn/active")
+def active_connection_guid(
+    rustdesk_id: str = Query(alias="id", max_length=64),
+    session_id: str = Query(max_length=64),
+    conn_type: int | None = Query(default=None),
+    db: Session = Depends(get_db),
+    authorization: str | None = Header(default=None),
+) -> JSONResponse:
+    """The controlling client, once connected, asks for the GUID of the session
+    (`id` is the device it connected to). It sends its login token, and retries a
+    few times on a JSON `null` while the controlled device's own report of the
+    session is still on its way; any other status ends the attempts."""
+    user = current_client_user(db, authorization)
+    if user is None or not user.is_active:
+        return JSONResponse(_NOT_SIGNED_IN, status_code=401)
+    guid = audit_service.guid_for_session(db, rustdesk_id, session_id, conn_type)
+    db.commit()
+    return JSONResponse(guid)
+
+
+@router.put("/api/audit", response_class=Response)
+def set_connection_note(
+    payload: NoteRequest,
+    db: Session = Depends(get_db),
+    authorization: str | None = Header(default=None),
+) -> Response:
+    """The note the user typed when closing a session, keyed by the GUID above."""
+    user = current_client_user(db, authorization)
+    if user is None or not user.is_active:
+        return JSONResponse(_NOT_SIGNED_IN, status_code=401)
+    if not payload.guid or not audit_service.set_note_by_guid(db, payload.guid, payload.note):
+        return JSONResponse({"error": "No such session."}, status_code=404)
+    db.commit()
     return Response(status_code=200)

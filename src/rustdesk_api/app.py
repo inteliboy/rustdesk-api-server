@@ -121,9 +121,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         "/api/users",
         "/api/peers",
         "/api/audit/conn",
+        "/api/audit/conn/active",
         "/api/audit/file",
+        "/api/audit",
     }
-    _redacted_fields = {"password"}
+    # A connection note is text the user typed: log that it was sent, not what it says.
+    _redacted_fields = {"password", "note"}
 
     def _is_rustdesk_compat_path(path: str) -> bool:
         # The newer address-book protocol has a book guid in most of its paths.

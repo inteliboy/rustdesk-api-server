@@ -18,6 +18,7 @@ from rustdesk_api.api import (
     heartbeat,
     ip_info,
     metrics,
+    oidc,
     session_logs,
     shares,
     strategies,
@@ -37,6 +38,8 @@ api_router.include_router(client_audit.router)
 api_router.include_router(address_book.router)
 api_router.include_router(address_book_protocol.router)
 api_router.include_router(auth.v1_router)
+api_router.include_router(oidc.router)
+api_router.include_router(oidc.v1_router)
 api_router.include_router(account.router)
 api_router.include_router(api_keys.router)
 api_router.include_router(two_factor.router)

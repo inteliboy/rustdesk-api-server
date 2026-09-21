@@ -158,7 +158,8 @@ Treat it as a young project: run it against a test client first, and please repo
 
 [Screenshots](#screenshots) · [Features](#features) · [Requirements](#requirements) · [Installation](#windows-installation) ·
 [Docker](#docker-installation) · [Configuration](#configuration) · [Managing clients](#managing-clients) ·
-[Two-factor authentication](#two-factor-authentication) · [Accounts and access](#accounts-and-access) ·
+[Two-factor authentication](#two-factor-authentication) · [Single sign-on](#single-sign-on-openid-connect) ·
+[Accounts and access](#accounts-and-access) ·
 [Working with many devices](#working-with-many-devices) · [Device identity](#device-identity) ·
 [Monitoring](#monitoring-and-network-access) · [Log retention](#log-retention) · [Database](#database) ·
 [First-run setup](#first-run-setup) · [Client configuration](#rustdesk-client-configuration) ·
@@ -194,6 +195,8 @@ notifications are not implemented.
   place devices with `rustdesk --assign` - see Managing clients below
 - Optional **two-factor authentication** (authenticator-app codes plus recovery codes) for the WebUI and
   for the RustDesk client's own login - see Two-factor authentication below
+- Optional **single sign-on with OpenID Connect** (Keycloak, Authentik, Google, Microsoft Entra, Okta, ...) in
+  the WebUI and behind the RustDesk client's "Continue with ..." button - see Single sign-on below
 - Account self-service and hardening: optional **self-registration** (with admin approval),
   administrator-issued **password-reset links**, **account lockout**, a list of your signed-in
   **sessions**, and personal **API keys** for scripts - see Accounts and access below
@@ -214,6 +217,9 @@ notifications are not implemented.
   `API Server` to point at this server. File transfers show direction and From -> To (the
   client reports only the path on the controlled device). Only administrators can delete
   entries (one, all, or one device's); each deletion is itself audit-logged
+- **Connection notes**: a user who turns on **Ask for note at end of connection** in the RustDesk client
+  (Settings, off by default, needs the client signed in to this server) is asked for a note when a session ends;
+  it is shown with that connection under Logs and on the device's timeline
 - Address books for the RustDesk client: a personal book per user plus **shared books** you can
   share with other users (read-only, read/write or full control), managed from the WebUI or by
   the client itself. Speaks the client's newer per-item address-book protocol (no more
@@ -363,7 +369,9 @@ permissions incoming sessions get (keyboard, clipboard, file transfer, ...), how
 client behaviours. Assign it to a device (its page) or to a group (the Groups page); a device's own strategy wins
 over its group's. The client applies it with its next heartbeat. Settings a strategy leaves unset are reset to
 the client's default, so removing a setting, or unassigning the strategy, takes effect too. Only the switches
-listed on the Strategies page can be pushed - never server addresses, keys, passwords or IP whitelists.
+listed on the Strategies page can be pushed - never server addresses, keys, passwords or IP whitelists. They
+are the options the client keeps in its own `Config` store; settings it reads from its local or per-session
+config (for example update checks or outgoing-session recording) cannot be reached this way and are not offered.
 
 **`rustdesk --assign`.** Run on a device as administrator/root,
 `rustdesk --assign --token <token> --user_name alice --address_book_name "My address book" --address_book_tag office`
@@ -393,6 +401,52 @@ codes needs your password and a current code.
   `rustdesk-api disable-2fa --username alice`. Either signs that user out everywhere.
 - Codes are accepted a step either side of now and never twice; a sign-in attempt dies after five wrong codes.
   The RustDesk client can only type six digits, so recovery codes are for the WebUI.
+
+## Single sign-on (OpenID Connect)
+
+Let people sign in with your identity provider (Keycloak, Authentik, Google, Microsoft Entra, Okta, ...) in the
+WebUI and in the RustDesk client, whose login window then shows a **Continue with ...** button. It is off until
+you set both `OIDC_ISSUER` and `OIDC_CLIENT_ID`.
+
+1. At the provider, create a **web / confidential** application (a public client with PKCE also works: leave
+   `OIDC_CLIENT_SECRET` empty) and register this redirect URI exactly: `EXTERNAL_URL` + `/api/oidc/callback`, for
+   example `https://rustdesk.example.com/api/oidc/callback`. It has to be `https`, except for `localhost`.
+2. Set `EXTERNAL_URL` to the address users open, a real `SECRET_KEY` (the sign-in's PKCE verifier and nonce are
+   derived from it), and:
+
+   ```env
+   OIDC_ISSUER=https://keycloak.example.com/realms/main
+   OIDC_CLIENT_ID=rustdesk
+   OIDC_CLIENT_SECRET=...
+   OIDC_NAME=keycloak
+   ```
+
+   The issuer is the address whose `/.well-known/openid-configuration` describes the provider: Keycloak
+   `https://HOST/realms/REALM`, Authentik `https://HOST/application/o/SLUG/`, Google `https://accounts.google.com`,
+   Microsoft Entra `https://login.microsoftonline.com/TENANT-ID/v2.0` (a single tenant; the multi-tenant `common`
+   issuer is not supported). `OIDC_NAME` is the button label; `google`, `github`, `gitlab` and `azure` also get the
+   client's own icon. The provider has to put `email` (and `email_verified`) in the ID token: this server never
+   calls the user-info endpoint.
+3. **Who a provider account is.** Nothing is guessed:
+   - A user **links** their account under **Security > Single sign-on** (they sign in as usual, go to the
+     provider and come back). From then on the provider account, identified by its issuer and subject and not by
+     its e-mail address, signs in as that user.
+   - `OIDC_LINK_BY_EMAIL=true` also links, on first sign-in, the local user with the same **verified** e-mail
+     address. Leave it off unless you trust the provider: anyone who controls that address there would get that
+     account.
+   - `OIDC_AUTO_CREATE_USERS=true` creates a plain (never administrator) user for a verified address, and needs
+     `OIDC_ALLOWED_EMAIL_DOMAINS` (`example.com,example.org`), which also limits e-mail linking. Such a user has no
+     password until an administrator sends a reset link, and cannot unlink their last way in.
+   - Otherwise the sign-in is refused and nothing is created. A disabled user cannot sign in either way.
+4. In the RustDesk client, sign in as usual under **Settings > Account**; **Continue with ...** opens the
+   provider in the browser and the client signs in when you finish there.
+
+Good to know: the provider does the authentication, including any multi-factor step, so a linked account does not
+also get the local two-factor prompt. Every sign-in and link is in the audit log (`via` shows `webui_oidc` or
+`rustdesk_client_oidc`; failures carry a short reason, never a token). The flow is the authorization code with
+PKCE, `state` and `nonce`; ID tokens are checked (signature against the provider's keys with asymmetric
+algorithms only, issuer, audience, expiry, nonce) and every provider URL must be https. Not yet tried against a
+real provider or a real RustDesk client: see `docs/rustdesk-compatibility.md`.
 
 ## Accounts and access
 
@@ -656,6 +710,8 @@ A self-signed cert is untrusted by default:
 - Set `DATA_ENCRYPTION_KEY` if you want saved passwords in shared address books (see above), and keep it out of the database backups
 - Keep `ALLOW_REGISTRATION=false` unless you specifically need open registration, and leave
   `REGISTRATION_REQUIRES_APPROVAL=true` when you do
+- If you use single sign-on, keep `OIDC_LINK_BY_EMAIL` off unless you trust the provider, and never use
+  `OIDC_AUTO_CREATE_USERS` without `OIDC_ALLOWED_EMAIL_DOMAINS` (the server will not start that way)
 - Keep `DEVICE_UUID_REBIND=approve` (the default), and consider `WEBUI_ALLOWED_NETWORKS` if the WebUI need not be
   reachable from everywhere
 - Treat API keys like passwords; prefer *read* keys, and revoke ones that are no longer used

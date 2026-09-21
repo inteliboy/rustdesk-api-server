@@ -12,9 +12,10 @@ from __future__ import annotations
 
 import datetime
 import json
+import uuid
 from typing import Any
 
-from sqlalchemy import CursorResult, delete, func, or_, select
+from sqlalchemy import CursorResult, and_, delete, func, or_, select
 from sqlalchemy.orm import Session
 
 from rustdesk_api.models.client_audit import AlarmLog, ConnectionLog, FileTransferLog
@@ -25,6 +26,13 @@ from rustdesk_api.services import devices as device_service
 
 MAX_FILES_STORED = 200
 MAX_STORED_FILE_NAME = 255
+MAX_NOTE_LENGTH = 1000
+# A session can be given a note while it is open and for this long after it
+# ended (the client asks the user when the session closes, and the dialog can
+# sit there for a while). Sessions that never reported a close count as open for
+# a week at most.
+NOTE_WINDOW = datetime.timedelta(hours=12)
+OPEN_SESSION_LIFETIME = datetime.timedelta(days=7)
 
 
 def _utcnow() -> datetime.datetime:
@@ -146,6 +154,87 @@ def record_connection_event(
     row.conn_type = _as_int(conn_type)
     row.primary_auth = _as_int(primary_auth)
     row.two_factor = _as_int(two_factor)
+
+
+def _clean_note(note: Any) -> str | None:
+    """The note as stored, or None when there is nothing to store. Control
+    characters are dropped; a note is shown as text and never interpreted."""
+    if not isinstance(note, str):
+        return None
+    text = "".join(ch for ch in note if ch.isprintable() or ch in "\n\t").strip()
+    return text[:MAX_NOTE_LENGTH] or None
+
+
+def _open_or_recent(now: datetime.datetime):
+    """SQL condition: the session is still open, or ended within NOTE_WINDOW."""
+    return or_(
+        and_(ConnectionLog.ended_at.is_(None), ConnectionLog.started_at > now - OPEN_SESSION_LIFETIME),
+        ConnectionLog.ended_at > now - NOTE_WINDOW,
+    )
+
+
+def _session_row(
+    db: Session, rustdesk_id: str, session_id: str, conn_type: int | None = None
+) -> ConnectionLog | None:
+    """The newest connection of `rustdesk_id` made with `session_id` that can
+    still take a note. The client keeps one `session_id` across reconnects, and
+    a remote-control and a file-transfer connection can share it, so the
+    connection type tells those apart when the client says which one it means."""
+    stmt = (
+        select(ConnectionLog)
+        .where(
+            ConnectionLog.rustdesk_id == rustdesk_id,
+            ConnectionLog.session_id == session_id,
+            _open_or_recent(_utcnow()),
+        )
+        .order_by(ConnectionLog.started_at.desc(), ConnectionLog.id.desc())
+    )
+    for row in db.execute(stmt).scalars():
+        if conn_type is None or row.conn_type is None or row.conn_type == conn_type:
+            return row
+    return None
+
+
+def guid_for_session(db: Session, rustdesk_id: str, session_id: str, conn_type: int | None) -> str | None:
+    """GET /api/audit/conn/active: the GUID the controlling client then sends
+    back with its note. Made the first time it is asked for; None while the
+    controlled device's own report of the session has not arrived (the client
+    asks again a few times)."""
+    row = _session_row(db, _clip(rustdesk_id, 64) or "", _clip(session_id, 64) or "", conn_type)
+    if row is None:
+        return None
+    if row.guid is None:
+        row.guid = str(uuid.uuid4())
+    return row.guid
+
+
+def set_note_by_guid(db: Session, guid: str, note: Any) -> bool:
+    """PUT /api/audit. False when the GUID is unknown or its session is too old."""
+    text = _clean_note(note)
+    if text is None:
+        return False
+    row = db.execute(
+        select(ConnectionLog).where(ConnectionLog.guid == guid[:36], _open_or_recent(_utcnow()))
+    ).scalar_one_or_none()
+    if row is None:
+        return False
+    row.note = text
+    return True
+
+
+def set_note_by_session(db: Session, rustdesk_id: str, session_id: str, note: Any) -> bool:
+    """POST /api/audit/conn with {id, session_id, note}: the older (Sciter)
+    client, which sends no token and no GUID. `session_id` is a random 64-bit
+    number the two clients share, so together with the id it is what identifies
+    the session; a wrong pair changes nothing."""
+    text = _clean_note(note)
+    if text is None:
+        return False
+    row = _session_row(db, _clip(rustdesk_id, 64) or "", _clip(session_id, 64) or "")
+    if row is None:
+        return False
+    row.note = text
+    return True
 
 
 def _parse_info(info: Any) -> dict[str, Any]:

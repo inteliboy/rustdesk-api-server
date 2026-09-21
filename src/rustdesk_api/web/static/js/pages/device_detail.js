@@ -183,7 +183,10 @@ function timelineText(e) {
     const who = detail.peer_id ? `${escapeHtml(detail.peer_name || "")} (${escapeHtml(detail.peer_id)})` : "Someone";
     const from = detail.from_ip ? ` from ${ipLabel(detail.from_ip)}` : "";
     const ended = detail.ended_at ? ` &middot; ended ${escapeHtml(fmtDate(detail.ended_at))}` : " &middot; still open or not reported closed";
-    return `${who} connected${from}${ended}`;
+    const note = detail.note
+      ? `<div class="text-xs text-slate-500 break-words">Note: ${escapeHtml(detail.note)}</div>`
+      : "";
+    return `${who} connected${from}${ended}${note}`;
   }
   const ip = detail.ip ? ` from ${ipLabel(detail.ip)}` : "";
   switch (e.kind) {

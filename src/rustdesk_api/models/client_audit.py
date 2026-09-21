@@ -59,6 +59,13 @@ class ConnectionLog(Base):
     # when the client retries after a timeout/5xx (CLAUDE.md section 43).
     nonce: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True)
 
+    # Handed to the controlling client that asks for it (GET /api/audit/conn/active)
+    # so it can attach a note to this session afterwards (PUT /api/audit). Made on
+    # first request, so a session nobody asks about never gets one.
+    guid: Mapped[str | None] = mapped_column(String(36), nullable=True, unique=True, index=True)
+    # What the controlling user typed in the client's end-of-session dialog.
+    note: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+
 
 class FileTransferLog(Base):
     """A file-transfer event reported via POST /api/audit/file."""

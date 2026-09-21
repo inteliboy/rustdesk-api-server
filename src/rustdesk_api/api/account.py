@@ -28,6 +28,7 @@ from rustdesk_api.models.user import User
 from rustdesk_api.security.passwords import verify_password
 from rustdesk_api.services import audit as audit_service
 from rustdesk_api.services import authentication as auth_service
+from rustdesk_api.services import oidc as oidc_service
 from rustdesk_api.services import password_reset as reset_service
 from rustdesk_api.services import tokens as token_service
 
@@ -42,6 +43,8 @@ router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 class AuthOptions(BaseModel):
     registration_enabled: bool
     registration_requires_approval: bool
+    # The name of the OpenID Connect provider, when one is configured.
+    oidc_name: str | None = None
 
 
 @router.get("/options", response_model=AuthOptions)
@@ -54,6 +57,7 @@ def auth_options(
     return AuthOptions(
         registration_enabled=enabled,
         registration_requires_approval=settings.registration_requires_approval,
+        oidc_name=provider.name if (provider := oidc_service.provider_from_settings(settings)) else None,
     )
 
 

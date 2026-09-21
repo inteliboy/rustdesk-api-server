@@ -22,6 +22,7 @@ from rustdesk_api.models.audit import AuditLog
 from rustdesk_api.models.client_audit import AlarmLog, ConnectionLog, FileTransferLog
 from rustdesk_api.models.device_event import DeviceEvent
 from rustdesk_api.services import audit as audit_service
+from rustdesk_api.services import oidc as oidc_service
 from rustdesk_api.services import password_reset as reset_service
 from rustdesk_api.services import tokens as token_service
 
@@ -104,6 +105,7 @@ def purge_expired(
     # or expired password-reset links go with the sessions.
     _purge_older_than(db, DeviceEvent, DeviceEvent.created_at, audit_cutoff)
     reset_service.purge_expired(db)
+    oidc_service.purge_expired(db)
     sessions = token_service.cleanup_expired(db)
     db.commit()
     result = PurgeResult(*counts, sessions=sessions)

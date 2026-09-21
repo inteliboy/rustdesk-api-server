@@ -12,7 +12,7 @@ from functools import lru_cache
 from ipaddress import IPv4Network, IPv6Network
 from pathlib import Path
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -156,6 +156,27 @@ class Settings(BaseSettings):
 
     secure_cookies: bool = Field(default=False, alias="SECURE_COOKIES")
 
+    # OpenID Connect sign-in (WebUI and the RustDesk client's "Continue with ..."
+    # button). Off unless both OIDC_ISSUER and OIDC_CLIENT_ID are set. The provider
+    # must be told the redirect URI EXTERNAL_URL + /api/oidc/callback.
+    oidc_issuer: str = Field(default="", alias="OIDC_ISSUER")
+    oidc_client_id: str = Field(default="", alias="OIDC_CLIENT_ID")
+    # Empty for a public client (PKCE is then the only proof of the exchange).
+    oidc_client_secret: str = Field(default="", alias="OIDC_CLIENT_SECRET", repr=False)
+    # The button's name in the RustDesk client ("Continue with <Name>") and the WebUI.
+    oidc_name: str = Field(default="sso", alias="OIDC_NAME")
+    oidc_scopes: str = Field(default="openid email profile", alias="OIDC_SCOPES")
+    # A provider sign-in with no linked account may create a (non-admin) user. Needs
+    # OIDC_ALLOWED_EMAIL_DOMAINS, or anyone the provider will sign in could get one.
+    oidc_auto_create_users: bool = Field(default=False, alias="OIDC_AUTO_CREATE_USERS")
+    # ... or may be linked to the local user with the same verified e-mail address.
+    # Off: control of an address at the provider then cannot take over a local account.
+    oidc_link_by_email: bool = Field(default=False, alias="OIDC_LINK_BY_EMAIL")
+    # Comma-separated. Limits auto-creation and linking by e-mail to these domains.
+    oidc_allowed_email_domains: str = Field(default="", alias="OIDC_ALLOWED_EMAIL_DOMAINS")
+    oidc_username_claim: str = Field(default="preferred_username", alias="OIDC_USERNAME_CLAIM")
+    oidc_timeout_seconds: float = Field(default=10.0, alias="OIDC_TIMEOUT_SECONDS", gt=0, le=60)
+
     ssl_certfile: str = Field(default="", alias="SSL_CERTFILE")
     ssl_keyfile: str = Field(default="", alias="SSL_KEYFILE")
 
@@ -198,6 +219,47 @@ class Settings(BaseSettings):
                     ) from None
         return value.strip()
 
+    @field_validator("oidc_name")
+    @classmethod
+    def _check_oidc_name(cls, value: str) -> str:
+        import re
+
+        value = value.strip()
+        # It is sent to the client as `oidc/<name>` and shown as a button label.
+        if not re.fullmatch(r"[A-Za-z0-9_-]{1,32}", value):
+            raise ValueError("OIDC_NAME must be 1-32 letters, digits, '-' or '_'.")
+        return value
+
+    @field_validator("oidc_scopes")
+    @classmethod
+    def _check_oidc_scopes(cls, value: str) -> str:
+        scopes = value.split()
+        if "openid" not in scopes:
+            raise ValueError("OIDC_SCOPES must include 'openid'.")
+        return " ".join(scopes)
+
+    @model_validator(mode="after")
+    def _check_oidc(self) -> Settings:
+        if not self.oidc_issuer and not self.oidc_client_id:
+            return self
+        if not self.oidc_issuer or not self.oidc_client_id:
+            raise ValueError("Set both OIDC_ISSUER and OIDC_CLIENT_ID, or neither.")
+        from rustdesk_api.security.oidc import OidcError, require_https
+
+        try:
+            require_https(self.oidc_issuer, "issuer")
+            require_https(self.external_url, "external_url")
+        except OidcError:
+            raise ValueError(
+                "OIDC_ISSUER and EXTERNAL_URL must be https:// URLs (http only for localhost)."
+            ) from None
+        if self.secret_key == "change-me" or len(self.secret_key) < 16:
+            # The PKCE verifier and nonce of a sign-in are derived from it.
+            raise ValueError("OIDC needs a real SECRET_KEY (at least 16 characters, not 'change-me').")
+        if self.oidc_auto_create_users and not self.oidc_allowed_email_domain_list:
+            raise ValueError("OIDC_AUTO_CREATE_USERS needs OIDC_ALLOWED_EMAIL_DOMAINS.")
+        return self
+
     @field_validator("database_url")
     @classmethod
     def _resolve_sqlite_path(cls, value: str) -> str:
@@ -220,6 +282,12 @@ class Settings(BaseSettings):
             path.parent.mkdir(parents=True, exist_ok=True)
             return f"{prefix}{path.as_posix()}"
         return value
+
+    @property
+    def oidc_allowed_email_domain_list(self) -> list[str]:
+        return [
+            d.strip().lstrip("@").lower() for d in self.oidc_allowed_email_domains.split(",") if d.strip()
+        ]
 
     @property
     def cors_origin_list(self) -> list[str]:

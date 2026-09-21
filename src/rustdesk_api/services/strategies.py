@@ -13,6 +13,11 @@ Two consequences shape this module:
   of permission and behaviour switches - never server addresses, keys,
   passwords or IP whitelists - so a strategy can neither redirect a fleet to
   another server nor lock people out.
+* A strategy is written into the client's `Config` options (`handle_config_options`),
+  so only keys the client itself keeps there (`KEYS_SETTINGS` in
+  `libs/base/src/config/keys.rs`) can work. Keys the client reads from its local,
+  built-in or per-session stores are ignored on the client even if pushed; they are
+  listed in `RETIRED_KEYS` and are not offered.
 * Every response carries *all* catalog keys (unset ones empty), so removing an
   option from a strategy, or unassigning it, resets the option on the client
   instead of leaving the last pushed value behind.
@@ -84,20 +89,7 @@ OPTIONS: tuple[OptionSpec, ...] = (
     OptionSpec("enable-record-session", "Session recording", "Incoming permissions", "bool", help=_ON_OFF),
     OptionSpec("enable-block-input", "Block user input", "Incoming permissions", "bool", help=_ON_OFF),
     OptionSpec("enable-privacy-mode", "Privacy mode", "Incoming permissions", "bool", help=_ON_OFF),
-    OptionSpec(
-        "one-way-clipboard-redirection",
-        "One-way clipboard",
-        "Incoming permissions",
-        "bool",
-        help="Y = the controlled machine's clipboard is not sent to the controller.",
-    ),
-    OptionSpec(
-        "one-way-file-transfer",
-        "One-way file transfer",
-        "Incoming permissions",
-        "bool",
-        help="Y = files can be sent to this machine but not pulled from it.",
-    ),
+    OptionSpec("enable-remote-printer", "Remote printer", "Incoming permissions", "bool", help=_ON_OFF),
     # How connections are approved.
     OptionSpec(
         "approve-mode",
@@ -123,7 +115,49 @@ OPTIONS: tuple[OptionSpec, ...] = (
         help="Y = end a session after the idle time below.",
     ),
     OptionSpec("auto-disconnect-timeout", "Idle time (minutes)", "Approval", "int", minimum=1, maximum=1440),
-    OptionSpec("lock_after_session_end", "Lock screen after a session", "Approval", "bool", help=_ON_OFF),
+    OptionSpec(
+        "allow-only-conn-window-open",
+        "Accept connections only while the window is open",
+        "Approval",
+        "bool",
+        help="Y = refuse connections while the client window is closed. Installed clients only.",
+    ),
+    OptionSpec(
+        "enable-trusted-devices",
+        "Remember trusted devices (2FA)",
+        "Approval",
+        "bool",
+        help="On = a peer that passed two-factor sign-in can be trusted and skip it next time.",
+    ),
+    OptionSpec(
+        "allow-numeric-one-time-password",
+        "Numeric temporary passwords",
+        "Approval",
+        "bool",
+        help="Y = temporary passwords are digits only.",
+    ),
+    OptionSpec(
+        "temporary-password-length",
+        "Temporary password length",
+        "Approval",
+        "choice",
+        ("6", "8", "10"),
+    ),
+    # A controlling client sending something its session type does not allow.
+    OptionSpec(
+        "allow-scope-violation-close",
+        "End a session that steps outside its scope",
+        "Session safety",
+        "bool",
+        help="Y = close the session when the peer sends a message its session type does not allow.",
+    ),
+    OptionSpec(
+        "allow-scope-violation-alarm",
+        "Report a scope violation",
+        "Session safety",
+        "bool",
+        help="Y = send an alarm to this server (shown under Logs > Alarms) the first time it happens.",
+    ),
     # Client behaviour.
     OptionSpec(
         "allow-remote-config-modification",
@@ -134,10 +168,34 @@ OPTIONS: tuple[OptionSpec, ...] = (
     ),
     OptionSpec("allow-remove-wallpaper", "Remove wallpaper while connected", "Client", "bool", help=_ON_OFF),
     OptionSpec("allow-auto-record-incoming", "Record incoming sessions", "Client", "bool", help=_ON_OFF),
-    OptionSpec("allow-auto-record-outgoing", "Record outgoing sessions", "Client", "bool", help=_ON_OFF),
     OptionSpec("enable-lan-discovery", "LAN discovery", "Client", "bool", help=_ON_OFF),
-    OptionSpec("enable-check-update", "Check for updates", "Client", "bool", help=_ON_OFF),
     OptionSpec("allow-auto-update", "Update automatically", "Client", "bool", help=_ON_OFF),
+    OptionSpec(
+        "keep-awake-during-incoming-sessions",
+        "Keep the machine awake during incoming sessions",
+        "Client",
+        "bool",
+        help="On unless N.",
+    ),
+    # Video encoding on the controlled machine.
+    OptionSpec("enable-abr", "Adaptive bitrate", "Video", "bool", help=_ON_OFF),
+    OptionSpec("enable-hwcodec", "Hardware video codec", "Video", "bool", help=_ON_OFF),
+    OptionSpec("enable-directx-capture", "DirectX screen capture (Windows)", "Video", "bool", help=_ON_OFF),
+)
+
+# Keys an earlier version offered that a strategy cannot reach: the client reads
+# them from its local config (`enable-check-update`, `allow-auto-record-outgoing`),
+# its built-in settings (`one-way-*`) or a per-session view option
+# (`lock_after_session_end`), none of which the heartbeat writes. A strategy saved
+# with one of them still loads and saves; the value is dropped and never pushed.
+RETIRED_KEYS = frozenset(
+    {
+        "one-way-clipboard-redirection",
+        "one-way-file-transfer",
+        "lock_after_session_end",
+        "allow-auto-record-outgoing",
+        "enable-check-update",
+    }
 )
 
 CATALOG: dict[str, OptionSpec] = {spec.key: spec for spec in OPTIONS}
@@ -173,6 +231,8 @@ def validate_options(raw: object) -> dict[str, str]:
         raise InvalidStrategy("The options must be an object of option name to value.")
     options: dict[str, str] = {}
     for key, value in raw.items():
+        if key in RETIRED_KEYS:
+            continue
         spec = CATALOG.get(key)
         if spec is None:
             raise InvalidStrategy(f"{key!r} is not an option a strategy may set.")
