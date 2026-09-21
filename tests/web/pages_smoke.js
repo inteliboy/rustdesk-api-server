@@ -581,6 +581,147 @@ const listFixtures = (items) => ({
     assert.ok(!env.element("audit-export").classList.contains("hidden"));
   });
 
+  // ----------------------------------------------------------------- settings
+  const system = {
+    notifications: {
+      channels: [
+        { name: "webhook", configured: true, target: "hooks.example.com" },
+        { name: "ntfy", configured: false, target: null },
+        { name: "email", configured: false, target: null },
+      ],
+      events: [
+        { name: "new_device", description: "A device registered for the first time", enabled: true },
+        { name: "device_back_online", description: "Back", enabled: false },
+      ],
+      offline_after_minutes: 10, max_per_minute: 20, watched_devices: 2,
+    },
+    backups: {
+      supported: true, directory: "/app/data/backups", schedule_hours: 24, keep: 7, before_migration: true,
+      items: [{ name: "rustdesk-auto-20260921T100000Z.db", kind: "auto", size: 2048, created_at: "2026-09-21T10:00:00" }],
+    },
+    fleet: { stale_days: 45, min_client_version: "1.4.0" },
+  };
+
+  await test("settings: shows channels, events, backups and the device-list rules", async () => {
+    const env = await new Env("settings.html", "settings.js", { user: admin, fixtures: { "GET ^/api/v1/admin/system": system } }).run();
+    assert.match(env.html_("channels"), /hooks\.example\.com/);
+    assert.match(env.html_("channels"), /Not configured/);
+    assert.match(env.html_("events"), /new_device/);
+    assert.ok(!env.element("test-notification").classList.contains("hidden"), "a channel is set, so the test button shows");
+    assert.match(env.html_("backups"), /rustdesk-auto-20260921T100000Z\.db/);
+    assert.match(env.html_("backups"), /Scheduled/);
+    assert.match(env.element("backup-summary").textContent, /every 24 hour/);
+    assert.match(env.html_("fleet"), /45 day/);
+    assert.match(env.html_("fleet"), /1\.4\.0/);
+    assert.deepStrictEqual(env.toasts, []);
+  });
+
+  await test("settings: without a channel there is nothing to test; the test and backup buttons post", async () => {
+    const quiet = JSON.parse(JSON.stringify(system));
+    quiet.notifications.channels.forEach((c) => { c.configured = false; c.target = null; });
+    const env0 = await new Env("settings.html", "settings.js", { user: admin, fixtures: { "GET ^/api/v1/admin/system": quiet } }).run();
+    assert.ok(env0.element("test-notification").classList.contains("hidden"));
+
+    const env = await new Env("settings.html", "settings.js", {
+      user: admin,
+      fixtures: {
+        "GET ^/api/v1/admin/system": system,
+        "POST ^/api/v1/admin/notifications/test": [{ channel: "webhook", ok: false, error: "the server answered HTTP 401" }],
+        "POST ^/api/v1/admin/backups": { name: "rustdesk-20260921T110000Z.db", kind: "manual", size: 4096, created_at: "2026-09-21T11:00:00" },
+      },
+    }).run();
+    await env.fire("test-notification", "click", { currentTarget: env.element("test-notification") });
+    assert.strictEqual(env.posted("/api/v1/admin/notifications/test").length, 1);
+    assert.match(env.html_("test-result"), /failed \(the server answered HTTP 401\)/);
+    await env.fire("backup-now", "click", { currentTarget: env.element("backup-now") });
+    assert.strictEqual(env.posted("/api/v1/admin/backups").length, 1);
+    assert.ok(env.toasts.some(([m]) => /Backup written/.test(m)));
+  });
+
+  // ------------------------------------------------------------------ connect
+  await test("connect: starts from the server settings, asks for the config string and builds the commands", async () => {
+    const env = await new Env("connect.html", "connect.js", {
+      user: alice,
+      fixtures: {
+        "GET ^/api/v1/connect$": { id_server: "id.example.com", relay_server: "", api_server: "https://rustdesk.example.com", key: "PUBKEY" },
+        "POST ^/api/v1/connect/config": {
+          config_string: "CFGSTRING", exe_name: "rustdesk-host=id.example.com,.exe", qr_svg: "data:image/svg+xml;base64,AAA",
+          warnings: ["no_key", "made_up_code"],
+        },
+      },
+    }).run();
+    assert.strictEqual(env.element("cfg-id").value, "id.example.com");
+    assert.strictEqual(env.element("cfg-key").value, "PUBKEY");
+    const request = JSON.parse(env.posted("/api/v1/connect/config")[0].body);
+    assert.deepStrictEqual(request, { id_server: "id.example.com", relay_server: "", api_server: "https://rustdesk.example.com", key: "PUBKEY" });
+    assert.ok(!env.element("output").classList.contains("hidden"));
+    assert.strictEqual(env.element("config-string").value, "CFGSTRING");
+    assert.strictEqual(env.element("config-qr").src, "data:image/svg+xml;base64,AAA");
+    assert.match(env.element("script").value, /rustdesk\.exe" --config "CFGSTRING"/);
+    assert.match(env.element("script").value, /--token <TOKEN>/, "the token is only a placeholder");
+    assert.match(env.html_("warnings"), /No key is set/);
+    assert.ok(!/made_up_code/.test(env.html_("warnings")), "an unknown warning code shows nothing");
+  });
+
+  await test("connect: no ID server means nothing to build", async () => {
+    const env = await new Env("connect.html", "connect.js", {
+      user: alice,
+      fixtures: { "GET ^/api/v1/connect$": { id_server: "", relay_server: "", api_server: "http://x", key: "" } },
+    }).run();
+    assert.strictEqual(env.posted("/api/v1/connect/config").length, 0);
+    assert.ok(env.element("output").classList.contains("hidden"));
+  });
+
+  // ------------------------------------------------- default strategy, flags
+  await test("strategies: the default one is marked and offers to stop being the default", async () => {
+    const env = await new Env("strategies.html", "strategies.js", {
+      user: admin,
+      fixtures: {
+        "GET ^/api/v1/strategies/options": [],
+        "GET ^/api/v1/strategies$": [
+          { id: 1, name: "Baseline", description: null, options: {}, device_count: 0, group_count: 0, is_default: true },
+          { id: 2, name: "Other", description: null, options: {}, device_count: 1, group_count: 0, is_default: false },
+        ],
+      },
+    }).run();
+    const rows = env.html_("strategy-rows");
+    assert.match(rows, /Baseline[^]*Default/);
+    assert.match(rows, /Stop being the default/);
+    assert.match(rows, /Make default/);
+  });
+
+  await test("devices: archived and outdated devices are flagged and the new bulk actions exist for administrators", async () => {
+    const env = await new Env("devices.html", "devices.js", {
+      user: admin,
+      fixtures: listFixtures([device({ archived: true }), device({ id: 8, rustdesk_id: "222", outdated: true })]),
+    }).run();
+    const rows = env.html_("device-rows");
+    assert.match(rows, /Archived/);
+    assert.match(rows, /Outdated/);
+    const actions = env.html_("bulk-action");
+    assert.match(actions, /Notify when offline/);
+    assert.match(actions, /Restore from archive/);
+    const plain = await new Env("devices.html", "devices.js", { user: alice, fixtures: listFixtures([device()]) }).run();
+    assert.ok(!/Notify when offline/.test(plain.html_("bulk-action")), "offline alerts are for administrators");
+    assert.match(plain.html_("bulk-action"), /Archive/);
+  });
+
+  await test("dashboard: things worth a look are listed from the stats", async () => {
+    const fixtures = {
+      "GET ^/api/v1/admin/dashboard": {
+        total_devices: 3, online_devices: 1, offline_devices: 2, total_users: 1, total_groups: 0, total_tags: 0,
+        new_devices_24h: 2, outdated_devices: 1, archived_devices: 0, devices_without_strategy: 3,
+      },
+      "GET ^/api/v1/admin/audit-logs": { items: [], page: 1, page_size: 10, total: 0 },
+    };
+    const env = await new Env("dashboard.html", "dashboard.js", { user: admin, fixtures }).run();
+    const attention = env.html_("attention");
+    assert.match(attention, /2 new devices registered in the last 24 hours/);
+    assert.match(attention, /1 device runs an outdated RustDesk client/);
+    assert.match(attention, /3 devices receive no strategy/);
+    assert.ok(!/archived/.test(attention));
+  });
+
   console.log(failures ? `\n${failures} page smoke test(s) failed` : "\nall page smoke tests passed");
   process.exit(failures ? 1 : 0);
 })();

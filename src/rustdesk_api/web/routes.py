@@ -17,7 +17,31 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 WEB_DIR = Path(__file__).resolve().parent
-templates = Jinja2Templates(directory=str(WEB_DIR / "templates"))
+
+# The WebUI's languages: English is the source text, the others are catalogs in
+# static/i18n (built from i18n/catalog.tsv by scripts/build_i18n.py).
+SUPPORTED_LANGUAGES = ("en", "pl", "fr", "de", "es")
+LANGUAGE_COOKIE = "rd_lang"
+
+
+def pick_language(request: Request) -> str:
+    """The language the person chose (cookie), else the first one their browser asks
+    for that we have, else English."""
+    chosen = request.cookies.get(LANGUAGE_COOKIE)
+    if chosen in SUPPORTED_LANGUAGES:
+        return chosen
+    for part in request.headers.get("accept-language", "").split(","):
+        code = part.split(";")[0].strip().lower().split("-")[0]
+        if code in SUPPORTED_LANGUAGES:
+            return code
+    return "en"
+
+
+def _language_context(request: Request) -> dict[str, str]:
+    return {"lang": pick_language(request)}
+
+
+templates = Jinja2Templates(directory=str(WEB_DIR / "templates"), context_processors=[_language_context])
 
 web_router = APIRouter(include_in_schema=False)
 web_router.mount("/static", StaticFiles(directory=str(WEB_DIR / "static")), name="static")
@@ -100,6 +124,16 @@ def logs_page(request: Request) -> HTMLResponse:
 @web_router.get("/strategies", response_class=HTMLResponse)
 def strategies_page(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(request, "strategies.html", {"active": "strategies"})
+
+
+@web_router.get("/connect", response_class=HTMLResponse)
+def connect_page(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse(request, "connect.html", {"active": "connect"})
+
+
+@web_router.get("/settings", response_class=HTMLResponse)
+def settings_page(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse(request, "settings.html", {"active": "settings"})
 
 
 @web_router.get("/security", response_class=HTMLResponse)

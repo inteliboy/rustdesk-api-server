@@ -15,7 +15,7 @@ import psutil
 
 from rustdesk_api.config import Settings
 from rustdesk_api.db.database import get_session_factory
-from rustdesk_api.services import retention
+from rustdesk_api.services import backup, fleet, notifications, retention
 from rustdesk_api.services.server_metrics import MetricsSampler
 
 logger = logging.getLogger(__name__)
@@ -48,6 +48,62 @@ async def retention_loop(settings: Settings) -> None:
         except Exception:
             logger.exception("log retention run failed; retrying in %d hour(s)", interval // 3600)
         await asyncio.sleep(interval)
+
+
+def run_backup_once(settings: Settings) -> None:
+    """A scheduled backup when one is due. A failure is announced (the one thing worse
+    than no backup schedule is one that has quietly stopped working)."""
+    try:
+        backup.run_scheduled_backup(settings)
+    except backup.BackupError as exc:
+        logger.error("scheduled database backup failed: %s", exc)
+        notifications.dispatch(
+            "backup_failed",
+            "Database backup failed",
+            f"The scheduled backup could not be written: {exc}",
+            dedupe_key="scheduled",
+            throttle_seconds=6 * 3600,
+            settings=settings,
+        )
+
+
+async def backup_loop(settings: Settings) -> None:
+    """Checks hourly whether a backup is due (so a restart neither skips nor doubles
+    one). The first look comes a minute after startup, when the migrations and the first
+    requests are out of the way."""
+    if settings.backup_interval_hours <= 0 or backup.sqlite_path(settings) is None:
+        return
+    await asyncio.sleep(60)
+    while True:
+        try:
+            await asyncio.to_thread(run_backup_once, settings)
+        except Exception:
+            logger.exception("scheduled database backup crashed; retrying in an hour")
+        await asyncio.sleep(3600)
+
+
+def run_fleet_checks_once(settings: Settings, *, archive: bool) -> None:
+    with get_session_factory()() as db:
+        if notifications.configured_channels(settings):
+            fleet.check_watched_devices(db, settings)
+        if archive:
+            count = fleet.archive_stale(db, settings)
+            if count:
+                logger.info("archived %d device(s) unseen for %d day(s)", count, settings.device_stale_days)
+
+
+async def fleet_loop(settings: Settings) -> None:
+    """Every minute: announce watched devices that went quiet. Every hour: archive
+    devices that have been gone for good."""
+    await asyncio.sleep(30)
+    tick = 0
+    while True:
+        try:
+            await asyncio.to_thread(run_fleet_checks_once, settings, archive=tick % 60 == 0)
+        except Exception:
+            logger.exception("fleet housekeeping failed; retrying in a minute")
+        tick += 1
+        await asyncio.sleep(60)
 
 
 async def metrics_loop(sampler: MetricsSampler) -> None:

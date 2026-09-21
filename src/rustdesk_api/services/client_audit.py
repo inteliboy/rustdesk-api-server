@@ -23,6 +23,7 @@ from rustdesk_api.models.device import Device
 from rustdesk_api.models.share import DeviceShare
 from rustdesk_api.models.user import User
 from rustdesk_api.services import devices as device_service
+from rustdesk_api.services import notifications
 
 MAX_FILES_STORED = 200
 MAX_STORED_FILE_NAME = 255
@@ -43,6 +44,19 @@ def _clip(value: Any, limit: int) -> str | None:
     if value is None:
         return None
     return str(value)[:limit]
+
+
+# AlarmAuditType in the client's connection.rs (also the labels of the Logs page).
+ALARM_LABELS = {
+    0: "IP not on the whitelist",
+    1: "too many failed attempts (over 30)",
+    2: "too many failed attempts (over 6 in a minute)",
+    6: "too many failed attempts from an IPv6 prefix",
+    7: "terminal OS login backoff",
+    8: "terminal OS login concurrency limit",
+    9: "session scope violation",
+    10: "ID not on the whitelist",
+}
 
 
 def _as_int(value: Any) -> int | None:
@@ -320,6 +334,17 @@ def record_alarm_event(
     if _nonce_seen(db, AlarmLog, nonce):
         return
     parsed = _parse_info(info)
+    kind = _as_int(alarm_type)
+    label = ALARM_LABELS.get(kind, f"type {kind}") if kind is not None else "unknown type"
+    from_ip = _clip(parsed.get("ip"), 64)
+    notifications.dispatch(
+        "client_alarm",
+        "Security alarm on a device",
+        f"Device {device.rustdesk_id} reported: {label}" + (f" (from {from_ip})." if from_ip else "."),
+        data={"rustdesk_id": device.rustdesk_id, "alarm_type": kind, "from_ip": from_ip},
+        dedupe_key=f"{device.id}:{kind}",
+        throttle_seconds=300,
+    )
     db.add(
         AlarmLog(
             device_id=device.id,

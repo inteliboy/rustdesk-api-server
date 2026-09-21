@@ -6,9 +6,7 @@ database (CLAUDE.md section 52).
 
 from __future__ import annotations
 
-import datetime
 import getpass
-import sqlite3
 import sys
 from pathlib import Path
 
@@ -25,11 +23,10 @@ from rustdesk_api.models.user import User
 from rustdesk_api.security.encryption import generate_key, get_secret_box
 from rustdesk_api.services import address_book as address_book_service
 from rustdesk_api.services import authentication as auth_service
+from rustdesk_api.services import backup as backup_service
 from rustdesk_api.services import retention as retention_service
 from rustdesk_api.services import tokens as token_service
 from rustdesk_api.services import two_factor as two_factor_service
-
-_SQLITE_PREFIX = "sqlite:///"
 
 
 def _bootstrap_db(settings: Settings) -> None:
@@ -86,7 +83,7 @@ def migrate() -> None:
     "--output",
     "output_path",
     default=None,
-    help="Backup file path (default: <db directory>/backups/rustdesk-<timestamp>.db)",
+    help="Backup file path (default: BACKUP_DIR, else <db directory>/backups, as rustdesk-<timestamp>.db)",
 )
 def backup(output_path: str | None) -> None:
     """Back up the live SQLite database using SQLite's own VACUUM INTO.
@@ -97,31 +94,12 @@ def backup(output_path: str | None) -> None:
     telling users that copying an actively-written SQLite file is always
     safe, and asks for a SQLite-aware mechanism where practical."""
     settings = get_settings()
-    if not settings.database_url.startswith(_SQLITE_PREFIX):
-        raise click.ClickException("backup only supports SQLite (DATABASE_URL must start with sqlite:///).")
-
-    source_path = Path(settings.database_url[len(_SQLITE_PREFIX) :])
-    if not source_path.exists():
-        raise click.ClickException(f"Database file not found: {source_path}")
-
-    if output_path:
-        dest_path = Path(output_path)
-    else:
-        timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-        dest_path = source_path.parent / "backups" / f"rustdesk-{timestamp}.db"
-
-    dest_path.parent.mkdir(parents=True, exist_ok=True)
-    if dest_path.exists():
-        raise click.ClickException(f"{dest_path} already exists; refusing to overwrite.")
-
-    # Autocommit (isolation_level=None) so this connection never wraps
-    # VACUUM in an implicit transaction - SQLite rejects VACUUM inside one.
-    connection = sqlite3.connect(str(source_path), isolation_level=None)
     try:
-        connection.execute("VACUUM INTO ?", (str(dest_path),))
-    finally:
-        connection.close()
-
+        dest_path = backup_service.create_backup(
+            settings, destination=Path(output_path) if output_path else None
+        )
+    except backup_service.BackupError as exc:
+        raise click.ClickException(str(exc)) from exc
     click.echo(f"Backup written to {dest_path}")
 
 
@@ -252,7 +230,17 @@ def check_config() -> None:
     """Print resolved configuration (secrets redacted) and validate it."""
     settings = get_settings()
     redacted = settings.model_dump()
-    for key in ("secret_key", "rustdesk_key", "data_encryption_key", "metrics_token"):
+    for key in (
+        "secret_key",
+        "rustdesk_key",
+        "data_encryption_key",
+        "metrics_token",
+        "notify_webhook_url",
+        "notify_webhook_secret",
+        "notify_ntfy_url",
+        "notify_ntfy_token",
+        "notify_smtp_password",
+    ):
         if redacted.get(key):
             redacted[key] = "***redacted***"
     for key, value in redacted.items():

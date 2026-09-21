@@ -25,7 +25,7 @@ from rustdesk_api.config import Settings, get_settings
 from rustdesk_api.db.database import init_engine
 from rustdesk_api.db.migrations.runner import run_migrations
 from rustdesk_api.errors import ApiError
-from rustdesk_api.maintenance import metrics_loop, retention_loop
+from rustdesk_api.maintenance import backup_loop, fleet_loop, metrics_loop, retention_loop
 from rustdesk_api.security import network as network_policy
 from rustdesk_api.services.address_book import AddressBookError
 from rustdesk_api.services.metrics import Counters
@@ -70,6 +70,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     background_tasks = [
         asyncio.create_task(retention_loop(settings), name="log-retention"),
         asyncio.create_task(metrics_loop(sampler), name="server-metrics"),
+        asyncio.create_task(backup_loop(settings), name="database-backup"),
+        asyncio.create_task(fleet_loop(settings), name="fleet-housekeeping"),
     ]
     try:
         yield

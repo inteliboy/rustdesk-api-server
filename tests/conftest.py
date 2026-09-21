@@ -35,6 +35,8 @@ def settings(tmp_path, monkeypatch) -> Iterator[Settings]:
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path.as_posix()}")
     monkeypatch.setenv("SECRET_KEY", "test-secret-key")
     monkeypatch.setenv("SESSION_LIFETIME_SECONDS", "3600")
+    # No scheduled backups running behind a test's back (the tests that want one call the service).
+    monkeypatch.setenv("BACKUP_INTERVAL_HOURS", "0")
     clear_settings_cache()
     yield get_settings()
     clear_settings_cache()

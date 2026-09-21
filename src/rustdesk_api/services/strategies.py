@@ -445,9 +445,9 @@ def update_strategy(
 
 
 def delete_strategy(db: Session, strategy: Strategy) -> None:
-    """Devices and groups that used it fall back to no strategy (the foreign
-    keys are ON DELETE SET NULL); their clients are reset on their next
-    heartbeat."""
+    """Devices and groups that used it fall back to the default strategy, or to none
+    (the foreign keys are ON DELETE SET NULL); their clients are updated or reset on
+    their next heartbeat."""
     db.delete(strategy)
 
 
@@ -474,8 +474,24 @@ def usage_counts(db: Session, strategy_ids: list[int]) -> dict[int, tuple[int, i
     return {sid: (devices.get(sid, 0), groups.get(sid, 0)) for sid in strategy_ids}
 
 
+def get_default(db: Session) -> Strategy | None:
+    return db.execute(select(Strategy).where(Strategy.is_default.is_(True)).limit(1)).scalar_one_or_none()
+
+
+def set_default(db: Session, strategy: Strategy | None) -> None:
+    """Makes `strategy` the default (None: there is none). Devices that already have a
+    strategy of their own or through their group are unaffected; the rest receive it
+    at their next heartbeat."""
+    for other in db.execute(select(Strategy).where(Strategy.is_default.is_(True))).scalars():
+        if strategy is None or other.id != strategy.id:
+            other.is_default = False
+    if strategy is not None:
+        strategy.is_default = True
+    db.flush()
+
+
 def effective_strategy(db: Session, device: Device) -> Strategy | None:
-    """The device's own strategy, else its group's."""
+    """The device's own strategy, else its group's, else the default one."""
     if device.strategy_id is not None:
         return db.get(Strategy, device.strategy_id)
     if device.group_id is not None:
@@ -484,7 +500,7 @@ def effective_strategy(db: Session, device: Device) -> Strategy | None:
         ).scalar_one_or_none()
         if group_strategy_id is not None:
             return db.get(Strategy, group_strategy_id)
-    return None
+    return get_default(db)
 
 
 # How long to wait before sending a strategy again to a client that says it has it.

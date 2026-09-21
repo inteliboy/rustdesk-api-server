@@ -1,0 +1,167 @@
+# ---- device list
+First-run setup || Pierwsze uruchomienie || Première configuration || Ersteinrichtung || Configuración inicial
+Device || Urządzenie || Appareil || Gerät || Dispositivo
+← Back to devices || ← Wróć do urządzeń || ← Retour aux appareils || ← Zurück zu den Geräten || ← Volver a los dispositivos
+Any status || Dowolny stan || Tous les statuts || Beliebiger Status || Cualquier estado
+All groups || Wszystkie grupy || Tous les groupes || Alle Gruppen || Todos los grupos
+All tags || Wszystkie tagi || Toutes les étiquettes || Alle Tags || Todas las etiquetas
+Sort by || Sortuj według || Trier par || Sortieren nach || Ordenar por
+Sort: last seen || Sortuj: ostatnio widziane || Tri : dernière activité || Sortierung: zuletzt gesehen || Orden: visto por última vez
+Sort: registered || Sortuj: data rejestracji || Tri : date d'enregistrement || Sortierung: registriert || Orden: registro
+Sort: name || Sortuj: nazwa || Tri : nom || Sortierung: Name || Orden: nombre
+Sort: RustDesk ID || Sortuj: ID RustDesk || Tri : ID RustDesk || Sortierung: RustDesk-ID || Orden: ID de RustDesk
+Search by id, hostname, alias, IP... || Szukaj wg ID, nazwy hosta, aliasu, IP... || Rechercher par ID, nom d'hôte, alias, IP... || Suche nach ID, Hostname, Alias, IP... || Buscar por ID, nombre de host, alias, IP...
+Saved views || Zapisane widoki || Vues enregistrées || Gespeicherte Ansichten || Vistas guardadas
+Delete view || Usuń widok || Supprimer la vue || Ansicht löschen || Eliminar vista
+Save these filters || Zapisz te filtry || Enregistrer ces filtres || Diese Filter speichern || Guardar estos filtros
+Name this view || Nazwij ten widok || Nommer cette vue || Diese Ansicht benennen || Ponga nombre a esta vista
+View name || Nazwa widoku || Nom de la vue || Name der Ansicht || Nombre de la vista
+Check only || Tylko sprawdź || Vérifier seulement || Nur prüfen || Solo comprobar
+Bulk action || Akcja zbiorcza || Action groupée || Sammelaktion || Acción masiva
+Bulk target || Cel akcji zbiorczej || Cible de l'action groupée || Ziel der Sammelaktion || Destino de la acción masiva
+Clear selection || Wyczyść zaznaczenie || Effacer la sélection || Auswahl aufheben || Borrar selección
+Select all devices on this page || Zaznacz wszystkie urządzenia na tej stronie || Sélectionner tous les appareils de cette page || Alle Geräte auf dieser Seite auswählen || Seleccionar todos los dispositivos de esta página
+Select this device || Zaznacz to urządzenie || Sélectionner cet appareil || Dieses Gerät auswählen || Seleccionar este dispositivo
+How the client's last heartbeat reached the API server || Jak ostatni sygnał życia klienta dotarł do serwera API || Comment le dernier signal du client a atteint le serveur API || Wie der letzte Heartbeat des Clients den API-Server erreicht hat || Cómo llegó al servidor API el último latido del cliente
+Connection || Połączenie || Connexion || Verbindung || Conexión
+RustDesk ID || ID RustDesk || ID RustDesk || RustDesk-ID || ID de RustDesk
+Hostname / Alias || Nazwa hosta / alias || Nom d'hôte / alias || Hostname / Alias || Nombre de host / alias
+Hostname || Nazwa hosta || Nom d'hôte || Hostname || Nombre de host
+Alias || Alias || Alias || Alias || Alias
+Platform || Platforma || Plateforme || Plattform || Plataforma
+CPU || Procesor || Processeur || Prozessor || Procesador
+Memory || Pamięć || Mémoire || Arbeitsspeicher || Memoria
+Registered || Zarejestrowano || Enregistré || Registriert || Registrado
+Last seen || Ostatnio widziane || Dernière activité || Zuletzt gesehen || Visto por última vez
+No devices found. || Nie znaleziono urządzeń. || Aucun appareil trouvé. || Keine Geräte gefunden. || No se encontraron dispositivos.
+Page {1} of {2} ({3} total) || Strona {1} z {2} (łącznie: {3}) || Page {1} sur {2} ({3} au total) || Seite {1} von {2} (insgesamt {3}) || Página {1} de {2} ({3} en total)
+{1} selected || Zaznaczono: {1} || {1} sélectionné(s) || {1} ausgewählt || {1} seleccionado(s)
+A different install is claiming this device || Inna instalacja podaje się za to urządzenie || Une autre installation revendique cet appareil || Eine andere Installation beansprucht dieses Gerät || Otra instalación reclama este dispositivo
+Silent for a long time; it returns to the list when it reports again || Od dawna nie odzywa się; wróci na listę, gdy znów się zgłosi || Silencieux depuis longtemps ; il revient dans la liste dès qu'il se manifeste || Meldet sich seit langem nicht; kehrt in die Liste zurück, sobald es sich wieder meldet || Sin actividad desde hace tiempo; vuelve a la lista cuando reporte de nuevo
+This RustDesk client is older than the minimum version || Ten klient RustDesk jest starszy niż wersja minimalna || Ce client RustDesk est plus ancien que la version minimale || Dieser RustDesk-Client ist älter als die Mindestversion || Este cliente de RustDesk es anterior a la versión mínima
+Reaches the API server over HTTPS || Łączy się z serwerem API przez HTTPS || Atteint le serveur API en HTTPS || Erreicht den API-Server über HTTPS || Llega al servidor API por HTTPS
+Reaches the API server over plain HTTP || Łączy się z serwerem API przez zwykły HTTP || Atteint le serveur API en HTTP simple || Erreicht den API-Server über unverschlüsseltes HTTP || Llega al servidor API por HTTP sin cifrar
+Connect with RustDesk || Połącz przez RustDesk || Se connecter avec RustDesk || Mit RustDesk verbinden || Conectar con RustDesk
+
+# ---- bulk actions
+Add tag... || Dodaj tag... || Ajouter une étiquette... || Tag hinzufügen... || Añadir etiqueta...
+Remove tag... || Usuń tag... || Retirer une étiquette... || Tag entfernen... || Quitar etiqueta...
+Move to group... || Przenieś do grupy... || Déplacer vers un groupe... || In Gruppe verschieben... || Mover a un grupo...
+(no group) || (bez grupy) || (aucun groupe) || (keine Gruppe) || (sin grupo)
+Set owner... || Ustaw właściciela... || Définir le propriétaire... || Besitzer festlegen... || Asignar propietario...
+(no owner) || (bez właściciela) || (aucun propriétaire) || (kein Besitzer) || (sin propietario)
+Set strategy... || Ustaw strategię... || Définir la stratégie... || Strategie festlegen... || Asignar estrategia...
+(no strategy) || (bez strategii) || (aucune stratégie) || (keine Strategie) || (sin estrategia)
+Notify when offline || Powiadamiaj o braku łączności || Notifier en cas de déconnexion || Bei Offline benachrichtigen || Avisar cuando esté sin conexión
+Stop offline notifications || Przestań powiadamiać o braku łączności || Arrêter les notifications de déconnexion || Offline-Benachrichtigungen beenden || Dejar de avisar de la falta de conexión
+Restore from archive || Przywróć z archiwum || Restaurer depuis l'archive || Aus dem Archiv wiederherstellen || Restaurar del archivo
+Choose... || Wybierz... || Choisir... || Auswählen... || Elegir...
+Choose what to apply. || Wybierz, co zastosować. || Choisissez ce qu'il faut appliquer. || Wählen Sie, was angewendet werden soll. || Elija qué aplicar.
+Delete {1} device(s)? This cannot be undone. || Usunąć urządzenia ({1})? Tej operacji nie można cofnąć. || Supprimer {1} appareil(s) ? Cette action est irréversible. || {1} Gerät(e) löschen? Das kann nicht rückgängig gemacht werden. || ¿Eliminar {1} dispositivo(s)? Esta acción no se puede deshacer.
+Updated {1} device(s) || Zaktualizowano urządzenia: {1} || {1} appareil(s) mis à jour || {1} Gerät(e) aktualisiert || {1} dispositivo(s) actualizado(s)
+, skipped {1} you cannot change. || , pominięto {1}, których nie możesz zmienić. || , {1} ignoré(s) car vous ne pouvez pas les modifier. || , {1} übersprungen, die Sie nicht ändern dürfen. || , se omitieron {1} que no puede modificar.
+Give the view a name. || Nadaj widokowi nazwę. || Donnez un nom à la vue. || Geben Sie der Ansicht einen Namen. || Ponga un nombre a la vista.
+View saved. || Widok zapisany. || Vue enregistrée. || Ansicht gespeichert. || Vista guardada.
+Delete this saved view? || Usunąć ten zapisany widok? || Supprimer cette vue enregistrée ? || Diese gespeicherte Ansicht löschen? || ¿Eliminar esta vista guardada?
+View deleted. || Widok usunięty. || Vue supprimée. || Ansicht gelöscht. || Vista eliminada.
+{1} to create || do utworzenia: {1} || {1} à créer || {1} zu erstellen || {1} por crear
+{1} to update || do zaktualizowania: {1} || {1} à mettre à jour || {1} zu aktualisieren || {1} por actualizar
+{1} new tag(s) || nowe tagi: {1} || {1} nouvelle(s) étiquette(s) || {1} neue(s) Tag(s) || {1} etiqueta(s) nueva(s)
+Row {1}: {2} || Wiersz {1}: {2} || Ligne {1} : {2} || Zeile {1}: {2} || Fila {1}: {2}
+Nothing was imported. Fix these rows first: || Nic nie zaimportowano. Najpierw popraw te wiersze: || Rien n'a été importé. Corrigez d'abord ces lignes : || Es wurde nichts importiert. Korrigieren Sie zuerst diese Zeilen: || No se importó nada. Corrija primero estas filas:
+Imported || Zaimportowano || Importé || Importiert || Importado
+This would be || To by było || Cela donnerait || Das wäre || Esto sería
+Choose a file first. || Najpierw wybierz plik. || Choisissez d'abord un fichier. || Wählen Sie zuerst eine Datei. || Elija primero un archivo.
+Import finished. || Import zakończony. || Import terminé. || Import abgeschlossen. || Importación terminada.
+@devices.import || Plik CSV z wierszem nagłówkowym (lub lista JSON) z dowolnymi z tych kolumn: <code>rustdesk_id</code> (wymagana), <code>alias</code>, <code>name</code>, <code>note</code>, <code>owner</code> (nazwa użytkownika), <code>group</code> (nazwa istniejącej grupy) i <code>tags</code> (oddzielone znakiem <code>;</code>, tworzone w razie potrzeby). Pusta komórka pozostawia to pole bez zmian. Jeśli którykolwiek wiersz ma błąd, nic nie zostanie zaimportowane. || Un fichier CSV avec une ligne d'en-tête (ou une liste JSON) utilisant certaines de ces colonnes : <code>rustdesk_id</code> (obligatoire), <code>alias</code>, <code>name</code>, <code>note</code>, <code>owner</code> (un nom d'utilisateur), <code>group</code> (le nom d'un groupe existant) et <code>tags</code> (séparées par <code>;</code>, créées si elles manquent). Une cellule vide laisse le champ inchangé. Si une ligne pose problème, rien n'est importé. || Eine CSV-Datei mit Kopfzeile (oder eine JSON-Liste) mit beliebigen dieser Spalten: <code>rustdesk_id</code> (erforderlich), <code>alias</code>, <code>name</code>, <code>note</code>, <code>owner</code> (ein Benutzername), <code>group</code> (der Name einer vorhandenen Gruppe) und <code>tags</code> (getrennt durch <code>;</code>, werden bei Bedarf angelegt). Eine leere Zelle lässt das Feld unverändert. Hat eine Zeile ein Problem, wird nichts importiert. || Un archivo CSV con fila de encabezado (o una lista JSON) con cualquiera de estas columnas: <code>rustdesk_id</code> (obligatoria), <code>alias</code>, <code>name</code>, <code>note</code>, <code>owner</code> (un nombre de usuario), <code>group</code> (el nombre de un grupo existente) y <code>tags</code> (separadas por <code>;</code>, se crean si faltan). Una celda vacía deja el campo como está. Si alguna fila tiene un problema, no se importa nada.
+
+# ---- device page
+No group || Bez grupy || Aucun groupe || Keine Gruppe || Sin grupo
+None (use the group's, else the default) || Brak (użyj strategii grupy, a w razie jej braku domyślnej) || Aucune (celle du groupe, sinon celle par défaut) || Keine (die der Gruppe, sonst die Standardstrategie) || Ninguna (usar la del grupo o, si no, la predeterminada)
+Applies: {1} || Obowiązuje: {1} || Appliquée : {1} || Gilt: {1} || Se aplica: {1}
+OS version || Wersja systemu || Version de l'OS || Betriebssystemversion || Versión del SO
+Client version || Wersja klienta || Version du client || Client-Version || Versión del cliente
+Older than the minimum client version || Starszy niż minimalna wersja klienta || Plus ancien que la version minimale du client || Älter als die Mindestversion des Clients || Anterior a la versión mínima del cliente
+IP address || Adres IP || Adresse IP || IP-Adresse || Dirección IP
+API connection || Połączenie z API || Connexion à l'API || API-Verbindung || Conexión con la API
+Offline alerts || Alerty o braku łączności || Alertes de déconnexion || Offline-Warnungen || Alertas de desconexión
+Sends a notification (see Settings) when this device stops reporting || Wysyła powiadomienie (zob. Ustawienia), gdy to urządzenie przestanie się zgłaszać || Envoie une notification (voir Paramètres) quand cet appareil ne se manifeste plus || Sendet eine Benachrichtigung (siehe Einstellungen), wenn sich dieses Gerät nicht mehr meldet || Envía una notificación (vea Ajustes) cuando este dispositivo deje de reportar
+Notify me when this device goes offline || Powiadom mnie, gdy to urządzenie straci łączność || Me notifier quand cet appareil passe hors ligne || Mich benachrichtigen, wenn dieses Gerät offline geht || Avisarme cuando este dispositivo se quede sin conexión
+Restore to the list || Przywróć na listę || Remettre dans la liste || In die Liste zurückholen || Volver a la lista
+Hide it from the default device list; it returns when it reports again || Ukrywa je na domyślnej liście urządzeń; wróci, gdy znów się zgłosi || Le masque de la liste par défaut ; il revient quand il se manifeste de nouveau || Blendet es in der Standardliste aus; es kehrt zurück, sobald es sich wieder meldet || Lo oculta de la lista predeterminada; vuelve cuando reporte de nuevo
+No tags exist yet - create one on the Tags page. || Nie ma jeszcze tagów - utwórz je na stronie Tagi. || Aucune étiquette pour l'instant - créez-en sur la page Étiquettes. || Es gibt noch keine Tags - legen Sie auf der Seite Tags eines an. || Aún no hay etiquetas: cree una en la página Etiquetas.
+Delete device || Usuń urządzenie || Supprimer l'appareil || Gerät löschen || Eliminar dispositivo
+Delete this device? This cannot be undone. || Usunąć to urządzenie? Tej operacji nie można cofnąć. || Supprimer cet appareil ? Cette action est irréversible. || Dieses Gerät löschen? Das kann nicht rückgängig gemacht werden. || ¿Eliminar este dispositivo? Esta acción no se puede deshacer.
+The new install was accepted. || Nowa instalacja została zaakceptowana. || La nouvelle installation a été acceptée. || Die neue Installation wurde akzeptiert. || Se aceptó la instalación nueva.
+The new install was rejected. || Nowa instalacja została odrzucona. || La nouvelle installation a été rejetée. || Die neue Installation wurde abgelehnt. || Se rechazó la instalación nueva.
+You will be notified when this device goes offline. || Otrzymasz powiadomienie, gdy to urządzenie straci łączność. || Vous serez notifié quand cet appareil passera hors ligne. || Sie werden benachrichtigt, wenn dieses Gerät offline geht. || Se le avisará cuando este dispositivo se quede sin conexión.
+Offline notifications are off for this device. || Powiadomienia o braku łączności są wyłączone dla tego urządzenia. || Les notifications de déconnexion sont désactivées pour cet appareil. || Offline-Benachrichtigungen sind für dieses Gerät ausgeschaltet. || Las notificaciones de desconexión están desactivadas para este dispositivo.
+The device is back in the list. || Urządzenie wróciło na listę. || L'appareil est de retour dans la liste. || Das Gerät ist wieder in der Liste. || El dispositivo volvió a la lista.
+The device was archived. || Urządzenie zostało zarchiwizowane. || L'appareil a été archivé. || Das Gerät wurde archiviert. || El dispositivo se archivó.
+Accept the new install? Only do this if you reinstalled or replaced this machine. || Zaakceptować nową instalację? Zrób to tylko, jeśli ten komputer został przeinstalowany lub wymieniony. || Accepter la nouvelle installation ? Ne le faites que si vous avez réinstallé ou remplacé cette machine. || Neue Installation akzeptieren? Tun Sie das nur, wenn Sie diesen Rechner neu installiert oder ersetzt haben. || ¿Aceptar la instalación nueva? Hágalo solo si reinstaló o reemplazó este equipo.
+A different install is claiming this device. || Inna instalacja podaje się za to urządzenie. || Une autre installation revendique cet appareil. || Eine andere Installation beansprucht dieses Gerät. || Otra instalación reclama este dispositivo.
+Accept the new install || Zaakceptuj nową instalację || Accepter la nouvelle installation || Neue Installation akzeptieren || Aceptar la instalación nueva
+Reject || Odrzuć || Rejeter || Ablehnen || Rechazar
+Something{1}{2} sent this device's ID with a different identity than the one on record. Until it is accepted, its heartbeats are ignored and none of its details are used. Accept it if you reinstalled or replaced this machine; reject it if you did not. || Coś{1}{2} wysłało ID tego urządzenia z inną tożsamością niż zapisana. Dopóki nie zostanie zaakceptowane, jego sygnały życia są ignorowane, a żadne jego dane nie są używane. Zaakceptuj, jeśli ten komputer został przeinstalowany lub wymieniony; w przeciwnym razie odrzuć. || Quelque chose{1}{2} a envoyé l'ID de cet appareil avec une identité différente de celle enregistrée. Tant qu'elle n'est pas acceptée, ses signaux sont ignorés et aucun de ses détails n'est utilisé. Acceptez si vous avez réinstallé ou remplacé cette machine ; rejetez sinon. || Etwas{1}{2} hat die ID dieses Geräts mit einer anderen Identität gesendet als der gespeicherten. Bis sie akzeptiert wird, werden seine Heartbeats ignoriert und keine seiner Angaben verwendet. Akzeptieren Sie es, wenn Sie diesen Rechner neu installiert oder ersetzt haben; sonst lehnen Sie es ab. || Algo{1}{2} envió el ID de este dispositivo con una identidad distinta a la registrada. Hasta que se acepte, se ignoran sus latidos y no se usa ninguno de sus datos. Acéptelo si reinstaló o reemplazó este equipo; recházelo si no.
+
+# ---- device page: sharing, connections, timeline
+Sharing || Udostępnianie || Partage || Freigabe || Uso compartido
+Permission || Uprawnienie || Autorisation || Berechtigung || Permiso
+no expiry || bez wygaśnięcia || sans expiration || ohne Ablauf || sin caducidad
+Share revoked. || Udostępnianie cofnięte. || Partage révoqué. || Freigabe widerrufen. || Se revocó el uso compartido.
+Username is required. || Nazwa użytkownika jest wymagana. || Le nom d'utilisateur est obligatoire. || Der Benutzername ist erforderlich. || El nombre de usuario es obligatorio.
+Device shared. || Urządzenie udostępnione. || Appareil partagé. || Gerät freigegeben. || Dispositivo compartido.
+Not shared with anyone yet. || Nie udostępniono jeszcze nikomu. || Pas encore partagé. || Noch mit niemandem geteilt. || Aún no se comparte con nadie.
+Active connections || Aktywne połączenia || Connexions actives || Aktive Verbindungen || Conexiones activas
+Nobody is connected right now. || Nikt nie jest teraz połączony. || Personne n'est connecté en ce moment. || Im Moment ist niemand verbunden. || Nadie está conectado ahora.
+ending… || kończenie… || fermeture… || wird beendet… || finalizando…
+Disconnect || Rozłącz || Déconnecter || Trennen || Desconectar
+Disconnect all || Rozłącz wszystkich || Tout déconnecter || Alle trennen || Desconectar todo
+Connected from || Połączono z || Connecté depuis || Verbunden von || Conectado desde
+Address || Adres || Adresse || Adresse || Dirección
+Since || Od || Depuis || Seit || Desde
+The client will end it at its next check-in. || Klient zakończy je przy następnym zgłoszeniu. || Le client y mettra fin à son prochain contact. || Der Client beendet sie bei seiner nächsten Meldung. || El cliente la terminará en su próxima comprobación.
+Disconnect this connection? || Rozłączyć to połączenie? || Déconnecter cette connexion ? || Diese Verbindung trennen? || ¿Desconectar esta conexión?
+Disconnect everyone? || Rozłączyć wszystkich? || Déconnecter tout le monde ? || Alle trennen? || ¿Desconectar a todos?
+· ended {1} || · zakończono {1} || · terminée {1} || · beendet {1} || · finalizada {1}
+· still open or not reported closed || · nadal otwarte lub nie zgłoszono zamknięcia || · encore ouverte ou fermeture non signalée || · noch offen oder Ende nicht gemeldet || · sigue abierta o no se informó el cierre
+Note: {1} || Notatka: {1} || Note : {1} || Notiz: {1} || Nota: {1}
+Device registered{1} || Urządzenie zarejestrowane{1} || Appareil enregistré{1} || Gerät registriert{1} || Dispositivo registrado{1}
+Came back online (silent since {1}) || Znów online (milczało od {1}) || De nouveau en ligne (silencieux depuis {1}) || Wieder online (still seit {1}) || Volvió a conectarse (sin actividad desde {1})
+Came back online || Znów online || De nouveau en ligne || Wieder online || Volvió a conectarse
+Added by an import || Dodane przez import || Ajouté par un import || Durch einen Import hinzugefügt || Añadido por una importación
+The new install was accepted{1} || Nowa instalacja została zaakceptowana{1} || La nouvelle installation a été acceptée{1} || Die neue Installation wurde akzeptiert{1} || Se aceptó la instalación nueva{1}
+The new install was rejected{1} || Nowa instalacja została odrzucona{1} || La nouvelle installation a été rejetée{1} || Die neue Installation wurde abgelehnt{1} || Se rechazó la instalación nueva{1}
+Nothing recorded yet. || Nic jeszcze nie zapisano. || Rien d'enregistré pour l'instant. || Noch nichts aufgezeichnet. || Aún no hay nada registrado.
+Show older || Pokaż starsze || Afficher les plus anciens || Ältere anzeigen || Mostrar anteriores
+Timeline || Oś czasu || Chronologie || Zeitverlauf || Cronología
+
+# ---- groups and tags
+New group || Nowa grupa || Nouveau groupe || Neue Gruppe || Nuevo grupo
+No groups yet. || Nie ma jeszcze grup. || Aucun groupe pour l'instant. || Noch keine Gruppen. || Aún no hay grupos.
+Strategy updated. || Strategia zaktualizowana. || Stratégie mise à jour. || Strategie aktualisiert. || Estrategia actualizada.
+Delete this group? Devices in it will become ungrouped. || Usunąć tę grupę? Urządzenia w niej zostaną bez grupy. || Supprimer ce groupe ? Les appareils qu'il contient n'auront plus de groupe. || Diese Gruppe löschen? Die Geräte darin sind danach keiner Gruppe zugeordnet. || ¿Eliminar este grupo? Los dispositivos que contiene quedarán sin grupo.
+Name is required. || Nazwa jest wymagana. || Le nom est obligatoire. || Der Name ist erforderlich. || El nombre es obligatorio.
+Group created. || Grupa utworzona. || Groupe créé. || Gruppe erstellt. || Grupo creado.
+New tag || Nowy tag || Nouvelle étiquette || Neues Tag || Nueva etiqueta
+No tags yet. || Nie ma jeszcze tagów. || Aucune étiquette pour l'instant. || Noch keine Tags. || Aún no hay etiquetas.
+Delete this tag? It will be removed from every device. || Usunąć ten tag? Zostanie usunięty ze wszystkich urządzeń. || Supprimer cette étiquette ? Elle sera retirée de tous les appareils. || Dieses Tag löschen? Es wird von allen Geräten entfernt. || ¿Eliminar esta etiqueta? Se quitará de todos los dispositivos.
+Tag created. || Tag utworzony. || Étiquette créée. || Tag erstellt. || Etiqueta creada.
+
+# ---- dashboard
+Total devices || Wszystkie urządzenia || Appareils au total || Geräte insgesamt || Dispositivos en total
+Recent activity || Ostatnia aktywność || Activité récente || Letzte Aktivität || Actividad reciente
+Export last 30 days (CSV) || Eksportuj ostatnie 30 dni (CSV) || Exporter les 30 derniers jours (CSV) || Letzte 30 Tage exportieren (CSV) || Exportar los últimos 30 días (CSV)
+No activity yet. || Brak aktywności. || Aucune activité pour l'instant. || Noch keine Aktivität. || Aún no hay actividad.
+Dashboard stats require administrator access. || Statystyki pulpitu wymagają uprawnień administratora. || Les statistiques du tableau de bord nécessitent les droits d'administrateur. || Die Statistiken der Übersicht erfordern Administratorrechte. || Las estadísticas del panel requieren permisos de administrador.
+Failed to load dashboard stats: {1} || Nie udało się wczytać statystyk pulpitu: {1} || Impossible de charger les statistiques : {1} || Statistiken konnten nicht geladen werden: {1} || No se pudieron cargar las estadísticas: {1}
+Activity log requires administrator access. || Dziennik aktywności wymaga uprawnień administratora. || Le journal d'activité nécessite les droits d'administrateur. || Das Aktivitätsprotokoll erfordert Administratorrechte. || El registro de actividad requiere permisos de administrador.
+Failed to load activity: {1} || Nie udało się wczytać aktywności: {1} || Impossible de charger l'activité : {1} || Aktivität konnte nicht geladen werden: {1} || No se pudo cargar la actividad: {1}
+1 new device registered in the last 24 hours || 1 nowe urządzenie zarejestrowane w ciągu ostatnich 24 godzin || 1 nouvel appareil enregistré ces dernières 24 heures || 1 neues Gerät in den letzten 24 Stunden registriert || 1 dispositivo nuevo registrado en las últimas 24 horas
+{1} new devices registered in the last 24 hours || Nowe urządzenia zarejestrowane w ciągu ostatnich 24 godzin: {1} || {1} nouveaux appareils enregistrés ces dernières 24 heures || {1} neue Geräte in den letzten 24 Stunden registriert || {1} dispositivos nuevos registrados en las últimas 24 horas
+1 device runs an outdated RustDesk client || 1 urządzenie ma nieaktualnego klienta RustDesk || 1 appareil utilise un client RustDesk obsolète || 1 Gerät nutzt einen veralteten RustDesk-Client || 1 dispositivo usa un cliente de RustDesk desactualizado
+{1} devices run an outdated RustDesk client || Urządzenia z nieaktualnym klientem RustDesk: {1} || {1} appareils utilisent un client RustDesk obsolète || {1} Geräte nutzen einen veralteten RustDesk-Client || {1} dispositivos usan un cliente de RustDesk desactualizado
+1 device receives no strategy || 1 urządzenie nie otrzymuje żadnej strategii || 1 appareil ne reçoit aucune stratégie || 1 Gerät erhält keine Strategie || 1 dispositivo no recibe ninguna estrategia
+{1} devices receive no strategy || Urządzenia bez żadnej strategii: {1} || {1} appareils ne reçoivent aucune stratégie || {1} Geräte erhalten keine Strategie || {1} dispositivos no reciben ninguna estrategia
+1 archived device || 1 zarchiwizowane urządzenie || 1 appareil archivé || 1 archiviertes Gerät || 1 dispositivo archivado
+{1} archived devices || Zarchiwizowane urządzenia: {1} || {1} appareils archivés || {1} archivierte Geräte || {1} dispositivos archivados

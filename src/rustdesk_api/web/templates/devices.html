@@ -10,6 +10,7 @@
         <option value="">Any status</option>
         <option value="online">Online</option>
         <option value="offline">Offline</option>
+        <option value="archived">Archived</option>
       </select>
       <select id="group-filter" aria-label="Group" class="rounded-md border border-slate-300 px-2 py-2 text-sm">
         <option value="">All groups</option>
@@ -51,7 +52,7 @@
   </div>
 
   <div id="import-panel" class="card p-4 mb-4 hidden">
-    <p class="text-sm text-slate-500 mb-3">
+    <p class="text-sm text-slate-500 mb-3" data-i18n-html="devices.import">
       A CSV file with a header row (or a JSON list) using any of these columns: <code>rustdesk_id</code> (required),
       <code>alias</code>, <code>name</code>, <code>note</code>, <code>owner</code> (a username), <code>group</code>
       (an existing group's name) and <code>tags</code> (separated by <code>;</code>, created if missing). An empty cell

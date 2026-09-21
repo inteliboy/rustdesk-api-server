@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ lang }}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,11 +8,19 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/static/img/favicon-32.png" />
   <link rel="icon" type="image/png" sizes="16x16" href="/static/img/favicon-16.png" />
   <link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png" />
+  <style>html[data-i18n-pending] body { visibility: hidden; }</style>
   <script src="/static/js/theme.js"></script>
+  {% if lang != "en" %}<script src="/static/i18n/{{ lang }}.js"></script>{% endif %}
+  <script src="/static/js/i18n.js"></script>
   <link rel="stylesheet" href="/static/css/tailwind.css" />
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen">
   {% block body %}{% endblock %}
+  {% if not active %}
+  <div class="fixed bottom-3 left-3 z-30">
+    <select id="lang-select" aria-label="Language" class="rounded-md border border-slate-300 bg-surface px-2 py-1 text-xs text-slate-500"></select>
+  </div>
+  {% endif %}
   <div id="toast-root" class="toast flex flex-col gap-2"></div>
   <script src="/static/js/app.js"></script>
   {% block scripts %}{% endblock %}

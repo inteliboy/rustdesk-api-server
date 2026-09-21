@@ -33,6 +33,7 @@ class StrategyOut(BaseModel):
     description: str | None
     options: dict[str, str]
     modified_at: int
+    is_default: bool = False
     device_count: int = 0
     group_count: int = 0
     created_at: datetime.datetime
@@ -57,6 +58,7 @@ def _to_out(strategy: Strategy, counts: tuple[int, int] = (0, 0)) -> StrategyOut
         description=strategy.description,
         options=strategy.options,
         modified_at=strategy.modified_at,
+        is_default=strategy.is_default,
         device_count=counts[0],
         group_count=counts[1],
         created_at=strategy.created_at,
@@ -162,6 +164,37 @@ def delete_strategy(
         detail={"name": name},
     )
     db.commit()
+
+
+class DefaultStrategyRequest(BaseModel):
+    is_default: bool
+
+
+@router.put(
+    "/strategies/{strategy_id}/default", response_model=StrategyOut, dependencies=[Depends(verify_csrf)]
+)
+def set_default_strategy(
+    strategy_id: int,
+    payload: DefaultStrategyRequest,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin),
+) -> StrategyOut:
+    """The strategy for devices that have none of their own and none through their group."""
+    strategy = _get_or_404(db, strategy_id)
+    if payload.is_default:
+        strategy_service.set_default(db, strategy)
+    elif strategy.is_default:
+        strategy_service.set_default(db, None)
+    audit_service.record(
+        db,
+        action="strategy_default_set" if payload.is_default else "strategy_default_cleared",
+        actor_id=admin.id,
+        target_type="strategy",
+        target_id=strategy.id,
+        detail={"name": strategy.name},
+    )
+    db.commit()
+    return _to_out(strategy, strategy_service.usage_counts(db, [strategy.id])[strategy.id])
 
 
 def _strategy_or_none(db: Session, strategy_id: int | None) -> Strategy | None:

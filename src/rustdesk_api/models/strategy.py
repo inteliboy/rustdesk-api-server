@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 import json
 
-from sqlalchemy import BigInteger, DateTime, String, Text
+from sqlalchemy import BigInteger, Boolean, DateTime, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from rustdesk_api.db.database import Base
@@ -30,6 +30,10 @@ class Strategy(Base):
     # in every heartbeat; the strategy is re-sent only when it differs. Unix
     # microseconds of the last change, so it always moves forward.
     modified_at: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+    # The strategy of devices that have none of their own and whose group has none:
+    # a baseline for whatever registers next. At most one strategy is the default
+    # (services.strategies.set_default keeps it so).
+    is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
 
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime.datetime] = mapped_column(

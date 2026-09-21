@@ -1,0 +1,90 @@
+# ---- the activity feed (dashboard and Users). The name of who did it is a separate element, so
+# these are the words after it.
+logged in || zalogował(a) się || s'est connecté(e) || hat sich angemeldet || inició sesión
+logged in from || zalogował(a) się z || s'est connecté(e) depuis || hat sich angemeldet von || inició sesión desde
+Failed two-factor verification || Nieudana weryfikacja dwuskładnikowa || Échec de la vérification à deux facteurs || Fehlgeschlagene Zwei-Faktor-Bestätigung || Verificación de dos factores fallida
+Failed two-factor verification from || Nieudana weryfikacja dwuskładnikowa z || Échec de la vérification à deux facteurs depuis || Fehlgeschlagene Zwei-Faktor-Bestätigung von || Verificación de dos factores fallida desde
+Failed login attempt for "{1}" || Nieudana próba logowania dla „{1}" || Tentative de connexion échouée pour « {1} » || Fehlgeschlagener Anmeldeversuch für „{1}" || Intento de inicio de sesión fallido para «{1}»
+Failed login attempt for "{1}" from || Nieudana próba logowania dla „{1}" z || Tentative de connexion échouée pour « {1} » depuis || Fehlgeschlagener Anmeldeversuch für „{1}" von || Intento de inicio de sesión fallido para «{1}» desde
+unknown user || nieznany użytkownik || utilisateur inconnu || unbekannter Benutzer || usuario desconocido
+(two-factor) || (dwuskładnikowo) || (double authentification) || (Zwei-Faktor) || (dos factores)
+using || przez || avec || mit || usando
+!{1} on {2} || {1} na {2} || {1} sur {2} || {1} auf {2} || {1} en {2}
+RustDesk client {1} || Klient RustDesk {1} || Client RustDesk {1} || RustDesk-Client {1} || Cliente de RustDesk {1}
+RustDesk client || Klient RustDesk || Client RustDesk || RustDesk-Client || Cliente de RustDesk
+logged out || wylogował(a) się || s'est déconnecté(e) || hat sich abgemeldet || cerró sesión
+created user "{1}" || utworzył(a) użytkownika „{1}" || a créé l'utilisateur « {1} » || hat den Benutzer „{1}" erstellt || creó el usuario «{1}»
+created the first administrator account || utworzył(a) konto pierwszego administratora || a créé le premier compte administrateur || hat das erste Administratorkonto erstellt || creó la primera cuenta de administrador
+updated user "{1}" || zaktualizował(a) użytkownika „{1}" || a mis à jour l'utilisateur « {1} » || hat den Benutzer „{1}" aktualisiert || actualizó el usuario «{1}»
+reset the password for "{1}" || zresetował(a) hasło użytkownika „{1}" || a réinitialisé le mot de passe de « {1} » || hat das Passwort von „{1}" zurückgesetzt || restableció la contraseña de «{1}»
+deleted user "{1}" || usunął/usunęła użytkownika „{1}" || a supprimé l'utilisateur « {1} » || hat den Benutzer „{1}" gelöscht || eliminó al usuario «{1}»
+created group "{1}" || utworzył(a) grupę „{1}" || a créé le groupe « {1} » || hat die Gruppe „{1}" erstellt || creó el grupo «{1}»
+renamed/updated group "{1}" || zmienił(a) nazwę / zaktualizował(a) grupę „{1}" || a renommé/mis à jour le groupe « {1} » || hat die Gruppe „{1}" umbenannt/aktualisiert || renombró/actualizó el grupo «{1}»
+deleted group "{1}" || usunął/usunęła grupę „{1}" || a supprimé le groupe « {1} » || hat die Gruppe „{1}" gelöscht || eliminó el grupo «{1}»
+created tag "{1}" || utworzył(a) tag „{1}" || a créé l'étiquette « {1} » || hat das Tag „{1}" erstellt || creó la etiqueta «{1}»
+updated tag "{1}" || zaktualizował(a) tag „{1}" || a mis à jour l'étiquette « {1} » || hat das Tag „{1}" aktualisiert || actualizó la etiqueta «{1}»
+deleted tag "{1}" || usunął/usunęła tag „{1}" || a supprimé l'étiquette « {1} » || hat das Tag „{1}" gelöscht || eliminó la etiqueta «{1}»
+updated device || zaktualizował(a) urządzenie || a mis à jour l'appareil || hat das Gerät aktualisiert || actualizó el dispositivo
+deleted device || usunął/usunęła urządzenie || a supprimé l'appareil || hat das Gerät gelöscht || eliminó el dispositivo
+(bulk change) || (zmiana zbiorcza) || (modification groupée) || (Sammeländerung) || (cambio masivo)
+shared a device with "{1}" ({2}) || udostępnił(a) urządzenie użytkownikowi „{1}" ({2}) || a partagé un appareil avec « {1} » ({2}) || hat ein Gerät mit „{1}" geteilt ({2}) || compartió un dispositivo con «{1}» ({2})
+stopped sharing a device with "{1}" || przestał(a) udostępniać urządzenie użytkownikowi „{1}" || a cessé de partager un appareil avec « {1} » || hat die Freigabe eines Geräts für „{1}" beendet || dejó de compartir un dispositivo con «{1}»
+deleted a connection log ({1}) || usunął/usunęła dziennik połączeń ({1}) || a supprimé un journal de connexion ({1}) || hat ein Verbindungsprotokoll gelöscht ({1}) || eliminó un registro de conexión ({1})
+deleted a file transfer log ({1}) || usunął/usunęła dziennik transferu plików ({1}) || a supprimé un journal de transfert de fichiers ({1}) || hat ein Dateiübertragungsprotokoll gelöscht ({1}) || eliminó un registro de transferencia de archivos ({1})
+deleted an alarm log ({1}) || usunął/usunęła dziennik alarmów ({1}) || a supprimé un journal d'alarmes ({1}) || hat ein Alarmprotokoll gelöscht ({1}) || eliminó un registro de alarmas ({1})
+cleared {1} connection log || wyczyścił(a) {1} dziennik połączeń || a effacé {1} journal de connexion || hat {1} Verbindungsprotokoll geleert || borró {1} registro de conexión
+cleared {1} connection logs || wyczyścił(a) dzienniki połączeń: {1} || a effacé {1} journaux de connexion || hat {1} Verbindungsprotokolle geleert || borró {1} registros de conexión
+cleared {1} file transfer log || wyczyścił(a) {1} dziennik transferu plików || a effacé {1} journal de transfert de fichiers || hat {1} Dateiübertragungsprotokoll geleert || borró {1} registro de transferencia de archivos
+cleared {1} file transfer logs || wyczyścił(a) dzienniki transferu plików: {1} || a effacé {1} journaux de transfert de fichiers || hat {1} Dateiübertragungsprotokolle geleert || borró {1} registros de transferencia de archivos
+cleared {1} alarm log || wyczyścił(a) {1} dziennik alarmów || a effacé {1} journal d'alarmes || hat {1} Alarmprotokoll geleert || borró {1} registro de alarmas
+cleared {1} alarm logs || wyczyścił(a) dzienniki alarmów: {1} || a effacé {1} journaux d'alarmes || hat {1} Alarmprotokolle geleert || borró {1} registros de alarmas
+Retention policy removed {1} || Zasady przechowywania usunęły: {1} || La politique de conservation a supprimé {1} || Die Aufbewahrungsrichtlinie hat entfernt: {1} || La política de retención eliminó {1}
+created the shared address book "{1}" || utworzył(a) współdzieloną książkę adresową „{1}" || a créé le carnet d'adresses partagé « {1} » || hat das gemeinsame Adressbuch „{1}" erstellt || creó la libreta compartida «{1}»
+updated the shared address book "{1}" || zaktualizował(a) współdzieloną książkę adresową „{1}" || a mis à jour le carnet d'adresses partagé « {1} » || hat das gemeinsame Adressbuch „{1}" aktualisiert || actualizó la libreta compartida «{1}»
+deleted the shared address book "{1}" || usunął/usunęła współdzieloną książkę adresową „{1}" || a supprimé le carnet d'adresses partagé « {1} » || hat das gemeinsame Adressbuch „{1}" gelöscht || eliminó la libreta compartida «{1}»
+shared the address book "{1}" with "{2}" ({3}) || udostępnił(a) książkę adresową „{1}" użytkownikowi „{2}" ({3}) || a partagé le carnet d'adresses « {1} » avec « {2} » ({3}) || hat das Adressbuch „{1}" mit „{2}" geteilt ({3}) || compartió la libreta «{1}» con «{2}» ({3})
+stopped sharing the address book "{1}" with "{2}" || przestał(a) udostępniać książkę adresową „{1}" użytkownikowi „{2}" || a cessé de partager le carnet d'adresses « {1} » avec « {2} » || hat die Freigabe des Adressbuchs „{1}" für „{2}" beendet || dejó de compartir la libreta «{1}» con «{2}»
+added address book entry || dodał(a) wpis książki adresowej || a ajouté une entrée au carnet d'adresses || hat einen Adressbucheintrag hinzugefügt || añadió una entrada a la libreta
+updated address book entry || zaktualizował(a) wpis książki adresowej || a mis à jour une entrée du carnet d'adresses || hat einen Adressbucheintrag aktualisiert || actualizó una entrada de la libreta
+deleted address book entry || usunął/usunęła wpis książki adresowej || a supprimé une entrée du carnet d'adresses || hat einen Adressbucheintrag gelöscht || eliminó una entrada de la libreta
+created strategy "{1}" || utworzył(a) strategię „{1}" || a créé la stratégie « {1} » || hat die Strategie „{1}" erstellt || creó la estrategia «{1}»
+updated strategy "{1}" || zaktualizował(a) strategię „{1}" || a mis à jour la stratégie « {1} » || hat die Strategie „{1}" aktualisiert || actualizó la estrategia «{1}»
+deleted strategy "{1}" || usunął/usunęła strategię „{1}" || a supprimé la stratégie « {1} » || hat die Strategie „{1}" gelöscht || eliminó la estrategia «{1}»
+assigned strategy "{1}" to group "{2}" || przypisał(a) strategię „{1}" do grupy „{2}" || a attribué la stratégie « {1} » au groupe « {2} » || hat die Strategie „{1}" der Gruppe „{2}" zugewiesen || asignó la estrategia «{1}» al grupo «{2}»
+assigned strategy "{1}" to device {2} || przypisał(a) strategię „{1}" do urządzenia {2} || a attribué la stratégie « {1} » à l'appareil {2} || hat die Strategie „{1}" dem Gerät {2} zugewiesen || asignó la estrategia «{1}» al dispositivo {2}
+removed the strategy from group "{1}" || usunął/usunęła strategię z grupy „{1}" || a retiré la stratégie du groupe « {1} » || hat die Strategie von der Gruppe „{1}" entfernt || quitó la estrategia del grupo «{1}»
+removed the strategy from device {1} || usunął/usunęła strategię z urządzenia {1} || a retiré la stratégie de l'appareil {1} || hat die Strategie vom Gerät {1} entfernt || quitó la estrategia del dispositivo {1}
+ended {1} connection on device || zakończył(a) {1} połączenie na urządzeniu || a mis fin à {1} connexion sur l'appareil || hat {1} Verbindung auf dem Gerät beendet || finalizó {1} conexión en el dispositivo
+ended {1} connections on device || zakończył(a) połączenia ({1}) na urządzeniu || a mis fin à {1} connexions sur l'appareil || hat {1} Verbindungen auf dem Gerät beendet || finalizó {1} conexiones en el dispositivo
+assigned device || przypisał(a) urządzenie || a attribué l'appareil || hat das Gerät zugewiesen || asignó el dispositivo
+with || za pomocą || avec || mit || con
+was placed by its preset options || zostało umieszczone przez swoje opcje predefiniowane || a été placé par ses options prédéfinies || wurde durch seine voreingestellten Optionen platziert || fue ubicado por sus opciones predefinidas
+created the enrollment token "{1}" || utworzył(a) token rejestracji „{1}" || a créé le jeton d'enrôlement « {1} » || hat das Registrierungstoken „{1}" erstellt || creó el token de inscripción «{1}»
+revoked the enrollment token "{1}" || unieważnił(a) token rejestracji „{1}" || a révoqué le jeton d'enrôlement « {1} » || hat das Registrierungstoken „{1}" widerrufen || revocó el token de inscripción «{1}»
+turned on two-factor authentication || włączył(a) uwierzytelnianie dwuskładnikowe || a activé l'authentification à deux facteurs || hat die Zwei-Faktor-Authentifizierung eingeschaltet || activó la autenticación de dos factores
+turned off two-factor authentication || wyłączył(a) uwierzytelnianie dwuskładnikowe || a désactivé l'authentification à deux facteurs || hat die Zwei-Faktor-Authentifizierung ausgeschaltet || desactivó la autenticación de dos factores
+reset two-factor authentication for "{1}" || zresetował(a) uwierzytelnianie dwuskładnikowe użytkownika „{1}" || a réinitialisé l'authentification à deux facteurs de « {1} » || hat die Zwei-Faktor-Authentifizierung von „{1}" zurückgesetzt || restableció la autenticación de dos factores de «{1}»
+generated new recovery codes || wygenerował(a) nowe kody odzyskiwania || a généré de nouveaux codes de récupération || hat neue Wiederherstellungscodes erzeugt || generó nuevos códigos de recuperación
+confirmed a second factor || potwierdził(a) drugi składnik || a confirmé un second facteur || hat einen zweiten Faktor bestätigt || confirmó un segundo factor
+failed a password or code check for a security change || nie przeszedł/przeszła sprawdzenia hasła lub kodu przy zmianie zabezpieczeń || a échoué à une vérification de mot de passe ou de code pour un changement de sécurité || hat eine Passwort- oder Codeprüfung für eine Sicherheitsänderung nicht bestanden || falló una comprobación de contraseña o código para un cambio de seguridad
+Account "{1}" was locked after {2} failed sign-ins || Konto „{1}" zablokowano po {2} nieudanych logowaniach || Le compte « {1} » a été verrouillé après {2} échecs de connexion || Das Konto „{1}" wurde nach {2} fehlgeschlagenen Anmeldungen gesperrt || La cuenta «{1}» se bloqueó tras {2} inicios de sesión fallidos
+unlocked the account "{1}" || odblokował(a) konto „{1}" || a déverrouillé le compte « {1} » || hat das Konto „{1}" entsperrt || desbloqueó la cuenta «{1}»
+"{1}" registered and is waiting for approval || „{1}" zarejestrował(a) się i czeka na zatwierdzenie || « {1} » s'est inscrit(e) et attend une approbation || „{1}" hat sich registriert und wartet auf Freigabe || «{1}» se registró y espera aprobación
+"{1}" registered an account || „{1}" zarejestrował(a) konto || « {1} » a créé un compte || „{1}" hat ein Konto registriert || «{1}» registró una cuenta
+issued a password-reset link for "{1}" || wydał(a) link do resetu hasła dla „{1}" || a émis un lien de réinitialisation du mot de passe pour « {1} » || hat einen Link zum Zurücksetzen des Passworts für „{1}" ausgestellt || emitió un enlace de restablecimiento de contraseña para «{1}»
+set a new password with a reset link || ustawił(a) nowe hasło za pomocą linku resetu || a défini un nouveau mot de passe avec un lien de réinitialisation || hat mit einem Reset-Link ein neues Passwort festgelegt || estableció una contraseña nueva con un enlace de restablecimiento
+A password-reset link was refused (invalid, used or expired) || Link do resetu hasła został odrzucony (nieprawidłowy, użyty lub wygasły) || Un lien de réinitialisation a été refusé (invalide, utilisé ou expiré) || Ein Link zum Zurücksetzen des Passworts wurde abgelehnt (ungültig, benutzt oder abgelaufen) || Se rechazó un enlace de restablecimiento de contraseña (no válido, usado o caducado)
+signed out one of their sessions || wylogował(a) jedną ze swoich sesji || a déconnecté une de ses sessions || hat eine seiner/ihrer Sitzungen abgemeldet || cerró una de sus sesiones
+changed their password || zmienił(a) swoje hasło || a changé son mot de passe || hat sein/ihr Passwort geändert || cambió su contraseña
+entered a wrong current password while changing it || podał(a) błędne obecne hasło przy jego zmianie || a saisi un mauvais mot de passe actuel en le changeant || hat beim Ändern ein falsches aktuelles Passwort eingegeben || introdujo una contraseña actual errónea al cambiarla
+signed out {1} other session || wylogował(a) {1} inną sesję || a déconnecté {1} autre session || hat {1} andere Sitzung abgemeldet || cerró {1} otra sesión
+signed out {1} other sessions || wylogował(a) inne sesje: {1} || a déconnecté {1} autres sessions || hat {1} andere Sitzungen abgemeldet || cerró {1} otras sesiones
+created the API key "{1}" ({2}) || utworzył(a) klucz API „{1}" ({2}) || a créé la clé d'API « {1} » ({2}) || hat den API-Schlüssel „{1}" erstellt ({2}) || creó la clave de API «{1}» ({2})
+revoked the API key "{1}" || unieważnił(a) klucz API „{1}" || a révoqué la clé d'API « {1} » || hat den API-Schlüssel „{1}" widerrufen || revocó la clave de API «{1}»
+A different install tried to take over device || Inna instalacja próbowała przejąć urządzenie || Une autre installation a tenté de reprendre l'appareil || Eine andere Installation hat versucht, das Gerät zu übernehmen || Otra instalación intentó apropiarse del dispositivo
+(waiting for a decision) || (oczekuje na decyzję) || (en attente d'une décision) || (wartet auf Entscheidung) || (a la espera de una decisión)
+accepted the new install of device || zaakceptował(a) nową instalację urządzenia || a accepté la nouvelle installation de l'appareil || hat die neue Installation des Geräts akzeptiert || aceptó la instalación nueva del dispositivo
+rejected the new install of device || odrzucił(a) nową instalację urządzenia || a rejeté la nouvelle installation de l'appareil || hat die neue Installation des Geräts abgelehnt || rechazó la instalación nueva del dispositivo
+exported {1} {2} row || wyeksportował(a) {1} wiersz ({2}) || a exporté {1} ligne ({2}) || hat {1} Zeile exportiert ({2}) || exportó {1} fila ({2})
+exported {1} {2} rows || wyeksportował(a) wiersze: {1} ({2}) || a exporté {1} lignes ({2}) || hat {1} Zeilen exportiert ({2}) || exportó {1} filas ({2})
+imported devices ({1} created, {2} updated) || zaimportował(a) urządzenia (utworzono: {1}, zaktualizowano: {2}) || a importé des appareils ({1} créés, {2} mis à jour) || hat Geräte importiert ({1} erstellt, {2} aktualisiert) || importó dispositivos ({1} creados, {2} actualizados)

@@ -22,7 +22,7 @@ async function loadTags() {
 
   document.querySelectorAll(".delete-tag").forEach((btn) =>
     btn.addEventListener("click", async () => {
-      if (!confirm("Delete this tag? It will be removed from every device.")) return;
+      if (!confirm(t("Delete this tag? It will be removed from every device."))) return;
       try {
         await api(`/api/v1/tags/${btn.dataset.id}`, { method: "DELETE" });
         loadTags();

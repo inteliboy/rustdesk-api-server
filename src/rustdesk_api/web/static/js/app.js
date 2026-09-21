@@ -4,6 +4,12 @@
 // permissions beyond what the API actually returns (the API is the only
 // real authorization boundary - see CLAUDE.md section 66).
 
+// i18n.js (loaded before this file) provides t(); this keeps the helpers usable without it.
+if (typeof globalThis.t !== "function") {
+  globalThis.t = (key, values) =>
+    String(key).replace(/\{(\d+)\}/g, (whole, n) => (values && values[n - 1] !== undefined ? values[n - 1] : whole));
+}
+
 function getCookie(name) {
   const match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
   return match ? decodeURIComponent(match[2]) : null;
@@ -321,21 +327,22 @@ function parseServerDate(iso) {
 function fmtDate(iso) {
   if (!iso) return "Never";
   const d = parseServerDate(iso);
-  return Number.isNaN(d.getTime()) ? "Unknown" : d.toLocaleString();
+  return Number.isNaN(d.getTime()) ? "Unknown" : d.toLocaleString(window.rdLanguage || undefined);
 }
 
 // " from 10.0.0.5 using Chrome 130 on Windows" for login entries. Older
 // entries predate user-agent capture and simply show less. `safe` holds the
 // already-escaped detail values; the raw header is the hover text.
 function loginOrigin(item, safe) {
-  const ip = item.ip_address ? ipLabel(item.ip_address) : "";
+  // In an element of its own, so the words around it are text nodes that can be translated.
+  const ip = item.ip_address ? `<span class="whitespace-nowrap">${ipLabel(item.ip_address)}</span>` : "";
   let via = "";
   if (item.detail && item.detail.via === "rustdesk_client") {
     // The version is what that device last reported in sysinfo; absent until it has.
-    via = safe.client_version ? `RustDesk client ${safe.client_version}` : "RustDesk client";
+    via = safe.client_version ? t("RustDesk client {1}", [safe.client_version]) : t("RustDesk client");
   }
   let agent = safe.browser || via;
-  if (safe.os) agent = agent ? `${agent} on ${safe.os}` : safe.os;
+  if (safe.os) agent = agent ? t("{1} on {2}", [agent, safe.os]) : safe.os;
   let text = ip ? ` from ${ip}` : "";
   if (item.result === "success" && item.detail && item.detail.two_factor) text += " (two-factor)";
   if (agent) {
@@ -354,7 +361,7 @@ function loginOrigin(item, safe) {
 function describeActivity(item, { includeActor = true } = {}) {
   // Every value here is user/client-supplied, and the result is inserted as
   // HTML by the callers, so it is escaped up front.
-  const who = item.actor_username ? userLink(item.actor_id, item.actor_username) : "Someone";
+  const who = item.actor_username ? userLink(item.actor_id, item.actor_username) : `<span class="whitespace-nowrap">Someone</span>`;
   const prefix = includeActor ? `${who} ` : "";
   const safe = Object.fromEntries(Object.entries(item.detail || {}).map(([k, v]) => [k, escapeHtml(v)]));
   switch (item.action) {
@@ -621,6 +628,8 @@ function renderNav(active, user) {
     items.push({ key: "strategies", href: "/strategies", label: "Strategies" });
     items.push({ key: "users", href: "/users", label: "Users" });
   }
+  items.push({ key: "connect", href: "/connect", label: "Connect" });
+  if (user && user.is_admin) items.push({ key: "settings", href: "/settings", label: "Settings" });
   items.push({ key: "security", href: "/security", label: "Security" });
   nav.innerHTML = items
     .map(

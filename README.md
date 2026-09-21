@@ -47,9 +47,11 @@ RustDesk Client
 - **Security first**: Argon2id passwords, optional **two-factor** login (also in the RustDesk client) and
   **single sign-on** with OpenID Connect, account lockout, revocable sessions and API keys, CSRF protection, strict Content-Security-Policy,
   IDOR-safe authorization on every endpoint, protection against device take-over by ID guessing
-- **Operations**: SQLite with Alembic migrations, online backup command, log retention, server CPU/memory
-  charts, Prometheus `/metrics`, `/health` and `/ready`, optional network allow-list for the WebUI
-- **Self-contained WebUI**: light/dark themes, accent colours, no third-party requests, no Node.js at runtime
+- **Operations**: SQLite with Alembic migrations, scheduled and pre-upgrade **backups**, **notifications**
+  (webhook, ntfy, e-mail), log retention, server CPU/memory charts, Prometheus `/metrics`, `/health` and `/ready`,
+  optional network allow-list for the WebUI
+- **Self-contained WebUI**: light/dark themes, accent colours, no third-party requests, no Node.js at runtime,
+  in English, Polish, French, German and Spanish
 
 See [Features](#features) for the complete list.
 
@@ -165,7 +167,10 @@ Treat it as a young project: run it against a test client first, and please repo
 [Two-factor authentication](#two-factor-authentication) · [Single sign-on](#single-sign-on-openid-connect) ·
 [Accounts and access](#accounts-and-access) ·
 [Working with many devices](#working-with-many-devices) · [Device identity](#device-identity) ·
-[Monitoring](#monitoring-and-network-access) · [Log retention](#log-retention) · [Database](#database) ·
+[Monitoring](#monitoring-and-network-access) · [Log retention](#log-retention) ·
+[Notifications](#notifications) · [Database backups](#database-backups) ·
+[Connecting clients](#connecting-many-clients) · [Default strategy](#default-strategy-and-fleet-hygiene) ·
+[Languages](#languages) · [Database](#database) ·
 [First-run setup](#first-run-setup) · [Client configuration](#rustdesk-client-configuration) ·
 [Older API servers](#moving-clients-from-an-older-api-server) · [Reverse proxy](#reverse-proxy-setup) · [Security](#security-recommendations) ·
 [Backup and restore](#backup--restore) · [API docs](#api-documentation) · [Development](#development) ·
@@ -239,6 +244,12 @@ Phase 3. LDAP sign-in and webhook notifications are not implemented.
   pages load nothing from third-party origins and work on an isolated network
 - Strict Content-Security-Policy (`script-src 'self'`): the WebUI runs no inline script, so an
   HTML injection cannot execute JavaScript
+- **Notifications** to a webhook, ntfy or e-mail (offline devices, new devices, take-over attempts, client alarms,
+  locked accounts, failed backups), **scheduled and pre-upgrade database backups**, a **default strategy** for new
+  devices, **archiving** of devices that are gone and a flag for **outdated clients** - see Notifications, Database
+  backups and Default strategy and fleet hygiene below
+- A **Connect** page with the client's config string, a QR code and setup commands - see Connecting many clients
+- WebUI in English, Polish, French, German and Spanish - see Languages below
 - Runs natively on Windows/Linux/macOS, or via Docker
 - Alembic database migrations
 
@@ -347,7 +358,9 @@ two-factor authentication and saved address-book passwords, `DATA_ENCRYPTION_KEY
 `ALLOW_REGISTRATION`, `REGISTRATION_REQUIRES_APPROVAL`, `PASSWORD_RESET_LIFETIME_MINUTES`,
 `LOGIN_LOCKOUT_THRESHOLD`, `LOGIN_LOCKOUT_MINUTES`, `WEBUI_ALLOWED_NETWORKS` and `METRICS_TOKEN`;
 device identity adds `DEVICE_UUID_REBIND`. Each is described in `.env.example`; the `OIDC_*` settings are
-explained under [Single sign-on](#single-sign-on-openid-connect).
+explained under [Single sign-on](#single-sign-on-openid-connect). The `NOTIFY_*`, `BACKUP_*`,
+`DEVICE_STALE_DAYS` and `MIN_CLIENT_VERSION` settings are explained under [Notifications](#notifications),
+[Database backups](#database-backups) and [Default strategy and fleet hygiene](#default-strategy-and-fleet-hygiene).
 
 The Dashboard shows which build is running: the version, the git commit (linked to GitHub) and the RustDesk
 client release whose source the protocol code was written against. The Docker images get the commit from CI and
@@ -623,6 +636,87 @@ rustdesk-api purge-logs             # delete it now
 
 Several server processes running the task at once is harmless (every run is idempotent).
 
+## Notifications
+
+The server can tell you when something needs attention, through any of three channels. All of them are
+set with environment variables (a webhook URL, an ntfy topic and an SMTP password are credentials, so they
+never go into the database and the WebUI shows only the host name): `NOTIFY_WEBHOOK_URL` (a JSON `POST`;
+`NOTIFY_WEBHOOK_SECRET` signs the body with HMAC-SHA256 in `X-RustDesk-API-Signature`, and the body also has
+`text` and `content` fields so Slack, Mattermost and Discord accept it as it is), `NOTIFY_NTFY_URL` with an
+optional `NOTIFY_NTFY_TOKEN` (phone notifications through [ntfy](https://ntfy.sh)), and `NOTIFY_SMTP_HOST`,
+`NOTIFY_SMTP_PORT`, `NOTIFY_SMTP_USER`, `NOTIFY_SMTP_PASSWORD`, `NOTIFY_SMTP_SECURITY` (`starttls`, `ssl` or
+`none`), `NOTIFY_EMAIL_FROM` and `NOTIFY_EMAIL_TO` (e-mail). Every channel that is set gets every enabled event.
+
+`NOTIFY_EVENTS` chooses the events (default: all but `device_back_online`): `device_offline`,
+`device_back_online`, `new_device`, `device_takeover_attempt`, `client_alarm`, `account_locked` and
+`backup_failed`. A device is reported offline only if an administrator flagged it (**Notify me when this device
+goes offline** on its page, or the bulk action on the device list, so a laptop that sleeps does not page
+you), after `NOTIFY_OFFLINE_AFTER_MINUTES` (default 10) without a heartbeat, once per outage. The same alarm from
+the same device, and the same locked account, are sent at most once every five minutes, and
+`NOTIFY_MAX_PER_MINUTE` (default 20) caps the rest; the next message says how many were dropped.
+
+Sending happens in a background thread, so a dead channel never slows a heartbeat or a login. A redirect from
+the webhook or ntfy URL is not followed (it could carry a token to another host), and a failure is reported
+without the URL or any credential. **Settings** in the WebUI shows which channels are set and sends a test
+message; nothing here has been tried against a real Slack, ntfy or mail server, only against fakes in the tests.
+
+## Database backups
+
+The server backs up its SQLite database by itself, with the same `VACUUM INTO` snapshot as `rustdesk-api backup`:
+
+- **Before a migration.** When a newer version finds the database behind (an upgrade that changes the schema) it
+  first writes `rustdesk-premigrate-<time>.db` and only then migrates, so a bad upgrade can be undone. If the copy
+  cannot be written the migration does not run (`BACKUP_BEFORE_MIGRATION=false` skips this). The newest five are kept.
+- **On a schedule.** Every `BACKUP_INTERVAL_HOURS` (default 24; `0` turns it off) a `rustdesk-auto-<time>.db`, of
+  which the newest `BACKUP_KEEP` (default 7) are kept. A restart does not add one; a failed one raises `backup_failed`.
+- **By hand.** `rustdesk-api backup`, or **Back up now** under **Settings**; these are never deleted automatically.
+
+They go to `BACKUP_DIR` (default: a `backups` folder next to the database, which in Docker is inside the data
+volume). A backup is a full copy of the database with the password hashes in it: keep the folder as private as the
+database. Restore by stopping the server, replacing `rustdesk.db` with the backup and starting it again.
+
+## Connecting many clients
+
+**Connect** in the WebUI (any signed-in user) shows what a RustDesk client needs to know about this server: the
+ID server, relay, API server and the public key, as a **config string**, a **QR code**, a **file name** for a
+renamed Windows executable and ready-to-run commands (`rustdesk --config ...`, optionally `--assign`). The fields
+start from `RUSTDESK_ID_SERVER`, `RUSTDESK_RELAY_SERVER`, `RUSTDESK_KEY` and `EXTERNAL_URL` and can be edited on the
+page. It warns about the two mistakes that silently break a client (`https://...:21114` and an API address with no
+`http://`). No enrollment token is ever shown there; it is a placeholder, created on **Security**.
+
+The formats come from the client's source (`ServerConfig` in `common.dart`, `custom_server.rs`): the string is
+`{"host","relay","api","key"}` as URL-safe base64, reversed. `--config` needs the installed client and administrator
+or root rights. This was checked against the source and the string's round trip in the tests, **not** by running a
+client against the generated commands: try them on one machine first (the macOS one is the least certain).
+
+## Default strategy and fleet hygiene
+
+- **Default strategy.** Mark one strategy as the default (**Strategies**, *Make default*): every device that has no
+  strategy of its own and none through its group receives it with its next heartbeat, so a new machine starts with your
+  baseline instead of the client's defaults. A device's own strategy, then its group's, win over it. The dashboard
+  counts the devices that would get no strategy at all.
+- **Archived devices.** With `DEVICE_STALE_DAYS` set (default `0`, off) a device unseen for that long is archived:
+  it leaves the default list and the counts, stays under the *Archived* status filter (and in search), and comes back
+  by itself when it reports. Devices flagged for offline notifications are never archived. Devices can also be archived
+  and restored by hand and in bulk.
+- **Outdated clients.** With `MIN_CLIENT_VERSION` set (for example `1.4.0`) devices reporting an older client get an
+  *Outdated* badge and are counted on the dashboard. A device that reports no readable version is not flagged.
+- **New devices** in the last 24 hours, outdated clients, devices without a strategy and archived devices are listed
+  on the dashboard with a link to where to act on them.
+
+## Languages
+
+The WebUI comes in English, Polish, French, German and Spanish. It starts in the first of those your browser asks for
+and remembers a choice made with the language menu (a cookie, per browser, like the theme). English is the source
+text; the other languages are catalogs (`frontend/i18n/*.txt`, one line per phrase) that `scripts/build_i18n.py`
+turns into `static/i18n/<lang>.js`, and a small script (`static/js/i18n.js`) translates what is on the page, including
+what the other scripts add later. Anything without a translation stays English, so a page may be partly translated:
+the strategy option names and their help, server error messages and text a client or a person supplied are not (a
+phrase someone types that is *exactly* a UI phrase would be translated too). Notifications and e-mails are English.
+The translations were written for this project and have not been reviewed by native speakers; corrections are welcome
+as pull requests to the catalog files. To add a phrase, add its line to a catalog file and run
+`python scripts/build_i18n.py`; `pytest` fails if the generated files are out of date.
+
 ## Database
 
 SQLite is the default and first-class database (`DATABASE_URL=sqlite:///./data/rustdesk.db`).
@@ -830,8 +924,8 @@ rustdesk-api backup
 rustdesk-api backup --output D:\backups\rustdesk-2026-09-18.db
 ```
 
-With no `--output`, the backup lands in `<database directory>/backups/rustdesk-<UTC
-timestamp>.db`. The command refuses to overwrite an existing file at the destination.
+With no `--output`, the backup lands in `BACKUP_DIR` (default `<database directory>/backups`) as
+`rustdesk-<UTC timestamp>.db`. The server also makes backups by itself, see Database backups above. The command refuses to overwrite an existing file at the destination.
 
 A backup of the database holds the shared-book passwords only in encrypted form; keep
 `DATA_ENCRYPTION_KEY` somewhere else, and remember a restore needs the same key.
@@ -872,6 +966,15 @@ ruff format --check .
 pytest
 python -m rustdesk_api
 ```
+
+### Changing the WebUI text
+
+The WebUI is written in English; the other languages are the catalogs in `frontend/i18n/*.txt` (one line per phrase,
+`English || Polish || French || German || Spanish`, `{1}` for a value put in at run time, `@id` for a paragraph with
+markup that a template marks with `data-i18n-html="id"`). After changing them run `python scripts/build_i18n.py`
+(standard library only, no Node) and commit the generated `src/rustdesk_api/web/static/i18n/*.js`; `pytest` checks the
+catalogs are well formed, the generated files are current and every `t("...")` in the scripts has an entry. A text a
+script assembles from pieces should go through `t("... {1} ...", [value])` as a whole sentence.
 
 ### Changing the WebUI styles
 

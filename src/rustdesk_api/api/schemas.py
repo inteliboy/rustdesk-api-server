@@ -115,6 +115,12 @@ class DeviceOut(BaseModel):
     created_at: datetime.datetime
     updated_at: datetime.datetime
     online: bool = False
+    # An administrator asked to be notified when this device goes offline.
+    watch_offline: bool = False
+    # Silent for DEVICE_STALE_DAYS: hidden from the default list until it reports again.
+    archived: bool = False
+    # Older than MIN_CLIENT_VERSION.
+    outdated: bool = False
 
 
 class DeviceListResponse(BaseModel):
@@ -140,6 +146,14 @@ class DashboardStats(BaseModel):
     total_users: int
     total_groups: int
     total_tags: int
+    # Registered in the last 24 hours (archived devices excluded like everywhere here).
+    new_devices_24h: int = 0
+    # Client older than MIN_CLIENT_VERSION (0 when that is not set).
+    outdated_devices: int = 0
+    archived_devices: int = 0
+    # Devices that would receive no strategy at all: nothing of their own, none through
+    # their group, no default. Worth a look once strategies are in use.
+    devices_without_strategy: int = 0
 
 
 class GroupOut(BaseModel):

@@ -57,7 +57,7 @@ async function loadGroups() {
 
   document.querySelectorAll(".delete-group").forEach((btn) =>
     btn.addEventListener("click", async () => {
-      if (!confirm("Delete this group? Devices in it will become ungrouped.")) return;
+      if (!confirm(t("Delete this group? Devices in it will become ungrouped."))) return;
       try {
         await api(`/api/v1/groups/${btn.dataset.id}`, { method: "DELETE" });
         loadGroups();

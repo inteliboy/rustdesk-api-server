@@ -88,7 +88,7 @@ async function loadUsers() {
   );
   document.querySelectorAll(".reset-2fa").forEach((btn) =>
     btn.addEventListener("click", async () => {
-      if (!confirm("Turn off two-factor authentication for this user and sign them out everywhere? Use this when they have lost their authenticator and recovery codes.")) return;
+      if (!confirm(t("Turn off two-factor authentication for this user and sign them out everywhere? Use this when they have lost their authenticator and recovery codes."))) return;
       try {
         await api(`/api/v1/users/${btn.dataset.id}/two-factor`, { method: "DELETE" });
         toast("Two-factor authentication was reset.", "success");
@@ -110,7 +110,7 @@ async function loadUsers() {
   );
   document.querySelectorAll(".delete-user").forEach((btn) =>
     btn.addEventListener("click", async () => {
-      if (!confirm("Delete this user?")) return;
+      if (!confirm(t("Delete this user?"))) return;
       await api(`/api/v1/users/${btn.dataset.id}`, { method: "DELETE" });
       loadUsers();
     })

@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 
 from rustdesk_api.api.deps import get_current_user, get_settings_dep, verify_csrf
 from rustdesk_api.api.schemas import DeviceListResponse, DeviceOut, TagOut, UpdateDeviceRequest
+from rustdesk_api.clientversion import is_older
 from rustdesk_api.config import Settings
 from rustdesk_api.db.database import get_db
 from rustdesk_api.errors import ApiError
@@ -32,20 +33,22 @@ from rustdesk_api.services import audit as audit_service
 from rustdesk_api.services import connections as connection_service
 from rustdesk_api.services import devices as device_service
 from rustdesk_api.services import groups as group_service
+from rustdesk_api.services import strategies as strategy_service
 from rustdesk_api.services import tags as tag_service
 
 router = APIRouter(prefix="/api/v1/devices", tags=["devices"])
 
 
-def _effective_strategy_name(device: Device) -> str | None:
+def _effective_strategy_name(device: Device, default_name: str | None) -> str | None:
     if device.strategy_id is not None:
         return device.strategy.name if device.strategy else None
     if device.group is not None and device.group.strategy_id is not None:
         return device.group.strategy.name if device.group.strategy else None
-    return None
+    return default_name
 
 
-def _to_out(device: Device, timeout: int) -> DeviceOut:
+def _to_out(device: Device, settings: Settings, default_strategy_name: str | None = None) -> DeviceOut:
+    timeout = settings.device_online_timeout
     return DeviceOut(
         id=device.id,
         rustdesk_id=device.rustdesk_id,
@@ -68,7 +71,7 @@ def _to_out(device: Device, timeout: int) -> DeviceOut:
         group_name=device.group.name if device.group else None,
         strategy_id=device.strategy_id,
         strategy_name=device.strategy.name if device.strategy is not None else None,
-        effective_strategy_name=_effective_strategy_name(device),
+        effective_strategy_name=_effective_strategy_name(device, default_strategy_name),
         connection_count=len(device.connection_ids),
         uuid_change_pending=device.pending_uuid is not None,
         uuid_change_at=device.pending_uuid_at,
@@ -77,7 +80,15 @@ def _to_out(device: Device, timeout: int) -> DeviceOut:
         created_at=device.created_at,
         updated_at=device.updated_at,
         online=device.is_online(timeout),
+        watch_offline=device.watch_offline,
+        archived=device.archived_at is not None,
+        outdated=is_older(device.client_version, settings.min_client_version),
     )
+
+
+def _default_strategy_name(db: Session) -> str | None:
+    default = strategy_service.get_default(db)
+    return default.name if default is not None else None
 
 
 def _get_visible_or_404(db: Session, device_id: int, user: User) -> Device:
@@ -94,7 +105,7 @@ def list_devices(
     search: str | None = Query(default=None),
     group_id: int | None = Query(default=None),
     tag_id: int | None = Query(default=None),
-    status: Literal["online", "offline"] | None = Query(default=None),
+    status: Literal["online", "offline", "archived"] | None = Query(default=None),
     sort: Literal["last_seen", "created", "name", "id"] = Query(default="last_seen"),
     order: Literal["asc", "desc"] | None = Query(default=None),
     owner_id: int | None = Query(
@@ -125,8 +136,9 @@ def list_devices(
         page=page,
         page_size=page_size,
     )
+    default_name = _default_strategy_name(db)
     return DeviceListResponse(
-        items=[_to_out(d, settings.device_online_timeout) for d in items],
+        items=[_to_out(d, settings, default_name) for d in items],
         page=page,
         page_size=page_size,
         total=total,
@@ -141,7 +153,7 @@ def get_device(
     settings: Settings = Depends(get_settings_dep),
 ) -> DeviceOut:
     device = _get_visible_or_404(db, device_id, user)
-    return _to_out(device, settings.device_online_timeout)
+    return _to_out(device, settings, _default_strategy_name(db))
 
 
 @router.patch("/{device_id}", response_model=DeviceOut, dependencies=[Depends(verify_csrf)])
@@ -186,7 +198,7 @@ def update_device(
         detail={"rustdesk_id": device.rustdesk_id, "alias": device.alias},
     )
     db.commit()
-    return _to_out(device, settings.device_online_timeout)
+    return _to_out(device, settings, _default_strategy_name(db))
 
 
 @router.delete("/{device_id}", status_code=204, dependencies=[Depends(verify_csrf)])

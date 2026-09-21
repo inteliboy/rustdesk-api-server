@@ -4,7 +4,7 @@ import datetime
 import json
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from rustdesk_api.db.database import Base
@@ -94,6 +94,19 @@ class Device(Base):
     # When we last put the strategy into a heartbeat response; limits how often a
     # strategy the client already has is sent again (see services.strategies).
     strategy_sent_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # An administrator asked to be told when this device stops reporting (see
+    # services.notifications). `offline_notified_at` remembers that it was, so one
+    # outage is one notification; it is cleared when the device is back.
+    watch_offline: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
+    offline_notified_at: Mapped[datetime.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    # Set when the device has been silent for DEVICE_STALE_DAYS: it drops out of the
+    # default device list and the counts, and comes back by itself when it reports.
+    archived_at: Mapped[datetime.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
 
     owner_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True

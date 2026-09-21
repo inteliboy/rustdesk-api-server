@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from rustdesk_api.api.deps import get_current_user, verify_csrf
+from rustdesk_api.api.deps import get_current_admin, get_current_user, verify_csrf
 from rustdesk_api.db.database import get_db
 from rustdesk_api.errors import ApiError
 from rustdesk_api.models.audit import AuditLog
@@ -34,6 +34,7 @@ from rustdesk_api.security.permissions import (
 from rustdesk_api.services import audit as audit_service
 from rustdesk_api.services import client_audit
 from rustdesk_api.services import devices as device_service
+from rustdesk_api.services import fleet as fleet_service
 from rustdesk_api.services import groups as group_service
 from rustdesk_api.services import strategies as strategy_service
 from rustdesk_api.services import tags as tag_service
@@ -57,7 +58,18 @@ def _get_visible_or_404(db: Session, device_id: int, user: User) -> Device:
 
 class BulkRequest(BaseModel):
     ids: list[int] = Field(min_length=1, max_length=MAX_BULK)
-    action: Literal["add_tag", "remove_tag", "set_group", "set_owner", "set_strategy", "delete"]
+    action: Literal[
+        "add_tag",
+        "remove_tag",
+        "set_group",
+        "set_owner",
+        "set_strategy",
+        "watch",
+        "unwatch",
+        "archive",
+        "unarchive",
+        "delete",
+    ]
     tag_id: int | None = None
     # For the three "set_" actions an explicit null clears the value.
     group_id: int | None = None
@@ -110,6 +122,10 @@ def bulk_update(
             if db.get(User, payload.owner_id) is None:
                 raise ApiError("USER_NOT_FOUND", "The requested user does not exist.", 404)
             owner_id = payload.owner_id
+    elif action in ("watch", "unwatch") and not user.is_admin:
+        # The alerts go to the channels the administrator configured, so a user
+        # cannot choose what they are about.
+        raise ApiError("FORBIDDEN", "Only administrators may change offline alerts.", 403)
     elif action == "set_strategy":
         if not user.is_admin:
             raise ApiError("FORBIDDEN", "Only administrators may assign strategies.", 403)
@@ -126,7 +142,7 @@ def bulk_update(
             skipped.append(Skipped(id=device_id, reason="not_found"))
             continue
         allowed = can_delete_device(user, device) if action == "delete" else can_edit_device(user, device)
-        if action in ("set_owner", "set_strategy"):
+        if action in ("set_owner", "set_strategy", "watch", "unwatch"):
             allowed = user.is_admin
         if not allowed:
             skipped.append(Skipped(id=device_id, reason="forbidden"))
@@ -151,6 +167,12 @@ def bulk_update(
             device.strategy_id = strategy.id if strategy else None
             audit_action = "strategy_assigned"
             detail["strategy"] = strategy.name if strategy else None
+        elif action in ("watch", "unwatch"):
+            fleet_service.set_watch(device, action == "watch")
+            detail["watch_offline"] = action == "watch"
+        elif action in ("archive", "unarchive"):
+            fleet_service.set_archived(db, device, action == "archive")
+            detail["archived"] = action == "archive"
         elif action == "delete":
             audit_action = "device_deleted"
             device_service.delete_device(db, device)
@@ -166,6 +188,62 @@ def bulk_update(
         updated.append(device_id)
     db.commit()
     return BulkResult(updated=updated, skipped=skipped)
+
+
+class WatchRequest(BaseModel):
+    watch: bool
+
+
+@router.put("/{device_id}/watch", dependencies=[Depends(verify_csrf)])
+def set_watch(
+    device_id: int,
+    payload: WatchRequest,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin),
+) -> dict:
+    """Notify (see Settings) when this device stops reporting. Administrators only."""
+    device = device_service.get_by_id(db, device_id)
+    if device is None:
+        raise ApiError("DEVICE_NOT_FOUND", "The requested device does not exist.", 404)
+    fleet_service.set_watch(device, payload.watch)
+    audit_service.record(
+        db,
+        action="device_updated",
+        actor_id=admin.id,
+        target_type="device",
+        target_id=device.id,
+        detail={"rustdesk_id": device.rustdesk_id, "watch_offline": payload.watch},
+    )
+    db.commit()
+    return {"watch_offline": device.watch_offline}
+
+
+class ArchiveRequest(BaseModel):
+    archived: bool
+
+
+@router.put("/{device_id}/archive", dependencies=[Depends(verify_csrf)])
+def set_archived(
+    device_id: int,
+    payload: ArchiveRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> dict:
+    """Hide the device from the default list (or bring it back)."""
+    device = _get_visible_or_404(db, device_id, user)
+    if not can_edit_device(user, device):
+        raise ApiError("DEVICE_NOT_FOUND", "The requested device does not exist.", 404)
+    fleet_service.set_archived(db, device, payload.archived)
+    audit_service.record(
+        db,
+        action="device_updated",
+        actor_id=user.id,
+        target_type="device",
+        target_id=device.id,
+        detail={"rustdesk_id": device.rustdesk_id, "archived": payload.archived},
+    )
+    db.commit()
+    return {"archived": device.archived_at is not None}
 
 
 # ---------------------------------------------------------------------------

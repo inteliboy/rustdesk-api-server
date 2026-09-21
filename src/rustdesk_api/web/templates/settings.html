@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Settings - RustDesk API Server{% endblock %}
+{% block body %}
+{% include "_app_shell.html" %}
+<main class="max-w-4xl mx-auto px-4 py-8">
+  <h1 class="text-lg font-semibold mb-2">Settings</h1>
+  <p class="text-sm text-slate-500 mb-6">
+    What the server does on its own: tell you when something needs attention, keep copies of its database, and tidy
+    the device list. These are set with environment variables (they can hold secrets), so this page shows them and
+    lets you test them; it does not change them.
+  </p>
+  <div id="error" class="hidden card p-4 mb-4 text-sm text-red-600 dark:text-red-400"></div>
+
+  <section class="mb-10" aria-labelledby="notifications-title">
+    <div class="flex items-center justify-between mb-3 gap-2 flex-wrap">
+      <h2 id="notifications-title" class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Notifications</h2>
+      <button id="test-notification" type="button" class="hidden px-3 py-1.5 rounded-md border border-slate-300 text-sm hover:bg-slate-100">Send a test notification</button>
+    </div>
+    <div id="channels" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4"></div>
+    <div id="test-result" class="text-sm mb-4" aria-live="polite"></div>
+    <div class="card overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-slate-500 text-left">
+          <tr>
+            <th class="px-4 py-2 font-medium">Event</th>
+            <th class="px-4 py-2 font-medium">When</th>
+            <th class="px-4 py-2 font-medium">Sent</th>
+          </tr>
+        </thead>
+        <tbody id="events" class="divide-y divide-slate-100"></tbody>
+      </table>
+    </div>
+    <p id="notification-notes" class="text-xs text-slate-500 mt-3"></p>
+  </section>
+
+  <section class="mb-10" aria-labelledby="backups-title">
+    <div class="flex items-center justify-between mb-3 gap-2 flex-wrap">
+      <h2 id="backups-title" class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Database backups</h2>
+      <button id="backup-now" type="button" class="hidden px-3 py-1.5 rounded-md border border-slate-300 text-sm hover:bg-slate-100">Back up now</button>
+    </div>
+    <p id="backup-summary" class="text-sm text-slate-500 mb-3"></p>
+    <div class="card overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-slate-500 text-left">
+          <tr>
+            <th class="px-4 py-2 font-medium">Backup</th>
+            <th class="px-4 py-2 font-medium">Kind</th>
+            <th class="px-4 py-2 font-medium">Size</th>
+            <th class="px-4 py-2 font-medium">Made</th>
+          </tr>
+        </thead>
+        <tbody id="backups" class="divide-y divide-slate-100"></tbody>
+      </table>
+      <div id="backups-empty" class="hidden p-6 text-center text-sm text-slate-500">No backups yet.</div>
+    </div>
+    <p class="text-xs text-slate-500 mt-3">
+      A backup is a complete copy of the database, password hashes included: keep the folder as private as the
+      database. To restore one, stop the server, replace the database file with it and start the server again.
+    </p>
+  </section>
+
+  <section class="mb-10" aria-labelledby="fleet-title">
+    <h2 id="fleet-title" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Device list</h2>
+    <div id="fleet" class="card divide-y divide-slate-100 text-sm"></div>
+  </section>
+</main>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/pages/settings.js"></script>
+{% endblock %}

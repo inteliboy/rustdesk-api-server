@@ -157,11 +157,11 @@ async function renderConnections(canManage) {
   };
   container.querySelectorAll(".end-connection").forEach((btn) =>
     btn.addEventListener("click", () => {
-      if (confirm("Disconnect this connection?")) end([parseInt(btn.dataset.conn, 10)]);
+      if (confirm(t("Disconnect this connection?"))) end([parseInt(btn.dataset.conn, 10)]);
     })
   );
   const allBtn = document.getElementById("end-all-connections");
-  if (allBtn) allBtn.addEventListener("click", () => confirm("Disconnect everyone?") && end(null));
+  if (allBtn) allBtn.addEventListener("click", () => confirm(t("Disconnect everyone?")) && end(null));
 }
 
 // What happened to this device: it came online, connections, edits and other
@@ -289,7 +289,7 @@ async function render() {
   // Only an administrator can set a strategy; everyone else just sees which
   // one applies (its own, else the group's).
   const strategyOptions =
-    `<option value="">None (use the group's)</option>` +
+    `<option value="">None (use the group's, else the default)</option>` +
     strategies.map((st) => `<option value="${st.id}" ${st.id === d.strategy_id ? "selected" : ""}>${escapeHtml(st.name)}</option>`).join("");
   const strategyCell =
     currentUser && currentUser.is_admin
@@ -321,7 +321,7 @@ async function render() {
       ${row("Hostname", `<span class="whitespace-nowrap">${escapeHtml(d.hostname ?? "-")}</span>`)}
       ${row("Platform", escapeHtml(d.platform ? fmtPlatform(d.platform) : "-"))}
       ${row("OS version", escapeHtml(d.os_version ?? "-"))}
-      ${row("Client version", escapeHtml(d.client_version ?? "-"))}
+      ${row("Client version", escapeHtml(d.client_version ?? "-") + (d.outdated ? ` <span class="badge" title="Older than the minimum client version" style="background:#d9770622;color:#d97706"><span class="badge-dot" style="background:#d97706"></span>Outdated</span>` : ""))}
       ${row("IP address", d.ip_address ? ipLabel(d.ip_address) : "-")}
       ${row("API connection", apiSchemeBadge(d.api_scheme))}
       ${row("CPU", `<span class="whitespace-nowrap">${escapeHtml(d.cpu ? fmtCpu(d.cpu) : "-")}</span>`)}
@@ -329,9 +329,30 @@ async function render() {
       ${row("Owner", d.owner_username ? userLink(d.owner_id, d.owner_username) : "-")}
       ${row("Group", `<select id="group-select" class="border border-slate-300 rounded px-2 py-1 text-sm">${groupOptions}</select>`)}
       ${row("Strategy", strategyCell)}
+      ${
+        currentUser && currentUser.is_admin
+          ? row(
+              "Offline alerts",
+              `<label class="inline-flex items-center gap-2 text-sm" title="Sends a notification (see Settings) when this device stops reporting">
+                 <input type="checkbox" id="watch-toggle" ${d.watch_offline ? "checked" : ""} /> Notify me when this device goes offline
+               </label>`
+            )
+          : ""
+      }
       ${row("Note", `<input id="note-input" value="${escapeHtml(d.note)}" maxlength="500" class="border border-slate-300 rounded px-2 py-1 text-sm w-64 max-w-full" />`)}
       ${row("Last seen", `<span class="whitespace-nowrap">${fmtDate(d.last_seen)}</span>`)}
       ${row("Registered", `<span class="whitespace-nowrap">${fmtDate(d.created_at)}</span>`)}
+      ${
+        canManage
+          ? row(
+              "Archive",
+              d.archived
+                ? `<span class="inline-flex items-center gap-2"><span class="badge badge-offline"><span class="badge-dot"></span>Archived</span>
+                     <button id="archive-toggle" type="button" class="px-2 py-1 rounded-md border border-slate-300 text-sm hover:bg-slate-100">Restore to the list</button></span>`
+                : `<button id="archive-toggle" type="button" class="px-2 py-1 rounded-md border border-slate-300 text-sm hover:bg-slate-100" title="Hide it from the default device list; it returns when it reports again">Archive</button>`
+            )
+          : ""
+      }
       ${row("Logs", `<a href="/logs?device_id=${d.id}" class="text-link underline">Connections</a> &middot; <a href="/logs?tab=file&device_id=${d.id}" class="text-link underline">File transfers</a>`)}
     </div>
     <div class="card p-4">
@@ -352,10 +373,36 @@ async function render() {
     const button = document.getElementById(id);
     if (!button) continue;
     button.addEventListener("click", async () => {
-      if (verb === "accept" && !confirm("Accept the new install? Only do this if you reinstalled or replaced this machine.")) return;
+      if (verb === "accept" && !confirm(t("Accept the new install? Only do this if you reinstalled or replaced this machine."))) return;
       try {
         await api(`/api/v1/devices/${deviceId}/uuid/${verb}`, { method: "POST" });
         toast(verb === "accept" ? "The new install was accepted." : "The new install was rejected.", "success");
+        render();
+      } catch (err) {
+        toast(err.message, "error");
+      }
+    });
+  }
+
+  const watchToggle = document.getElementById("watch-toggle");
+  if (watchToggle) {
+    watchToggle.addEventListener("change", async () => {
+      try {
+        await api(`/api/v1/devices/${deviceId}/watch`, { method: "PUT", body: JSON.stringify({ watch: watchToggle.checked }) });
+        toast(watchToggle.checked ? "You will be notified when this device goes offline." : "Offline notifications are off for this device.", "success");
+      } catch (err) {
+        watchToggle.checked = !watchToggle.checked;
+        toast(err.message, "error");
+      }
+    });
+  }
+
+  const archiveToggle = document.getElementById("archive-toggle");
+  if (archiveToggle) {
+    archiveToggle.addEventListener("click", async () => {
+      try {
+        await api(`/api/v1/devices/${deviceId}/archive`, { method: "PUT", body: JSON.stringify({ archived: !d.archived }) });
+        toast(d.archived ? "The device is back in the list." : "The device was archived.", "success");
         render();
       } catch (err) {
         toast(err.message, "error");
@@ -389,7 +436,7 @@ async function render() {
   });
 
   document.getElementById("delete-btn").addEventListener("click", async () => {
-    if (!confirm("Delete this device? This cannot be undone.")) return;
+    if (!confirm(t("Delete this device? This cannot be undone."))) return;
     try {
       await api(`/api/v1/devices/${deviceId}`, { method: "DELETE" });
       window.location.href = "/devices";

@@ -1,0 +1,16 @@
+# Labels and sentences added after the first pass (settings sentences are built by script and go through t()).
+!Choose the events with NOTIFY_EVENTS. A device is reported offline after {1} minute(s) without a heartbeat (NOTIFY_OFFLINE_AFTER_MINUTES), and only if you turned on "Notify me when this device goes offline" on its page ({2} device(s) now). At most {3} notifications are sent per minute. || Zdarzenia wybierasz zmienną NOTIFY_EVENTS. Urządzenie jest zgłaszane jako offline po {1} min bez sygnału życia (NOTIFY_OFFLINE_AFTER_MINUTES) i tylko wtedy, gdy na jego stronie włączono „Powiadom mnie, gdy to urządzenie straci łączność" (obecnie urządzeń: {2}). Wysyłanych jest najwyżej {3} powiadomień na minutę. || Choisissez les événements avec NOTIFY_EVENTS. Un appareil est signalé hors ligne après {1} minute(s) sans signal (NOTIFY_OFFLINE_AFTER_MINUTES), et seulement si vous avez activé « Me notifier quand cet appareil passe hors ligne » sur sa page ({2} appareil(s) actuellement). Au plus {3} notifications sont envoyées par minute. || Die Ereignisse wählen Sie mit NOTIFY_EVENTS. Ein Gerät wird nach {1} Minute(n) ohne Heartbeat als offline gemeldet (NOTIFY_OFFLINE_AFTER_MINUTES) und nur, wenn Sie auf seiner Seite „Mich benachrichtigen, wenn dieses Gerät offline geht" eingeschaltet haben (derzeit {2} Gerät(e)). Es werden höchstens {3} Benachrichtigungen pro Minute gesendet. || Los eventos se eligen con NOTIFY_EVENTS. Un dispositivo se notifica como desconectado tras {1} minuto(s) sin latido (NOTIFY_OFFLINE_AFTER_MINUTES), y solo si activó «Avisarme cuando este dispositivo se quede sin conexión» en su página (ahora {2} dispositivo(s)). Se envían como máximo {3} notificaciones por minuto.
+!Scheduled backups: {1}. Backup before an upgrade: {2}. Folder: {3} || Kopie zaplanowane: {1}. Kopia przed aktualizacją: {2}. Folder: {3} || Sauvegardes planifiées : {1}. Sauvegarde avant une mise à niveau : {2}. Dossier : {3} || Geplante Sicherungen: {1}. Sicherung vor einem Upgrade: {2}. Ordner: {3} || Copias programadas: {1}. Copia antes de una actualización: {2}. Carpeta: {3}
+!every {1} hour(s), keeping the newest {2} || co {1} godz., przechowywane najnowsze: {2} || toutes les {1} heure(s), en gardant les {2} plus récentes || alle {1} Stunde(n), die neuesten {2} werden behalten || cada {1} hora(s), conservando las {2} más recientes
+!{1} day(s) (DEVICE_STALE_DAYS) || {1} dni (DEVICE_STALE_DAYS) || {1} jour(s) (DEVICE_STALE_DAYS) || {1} Tag(en) (DEVICE_STALE_DAYS) || {1} día(s) (DEVICE_STALE_DAYS)
+on || włączona || activée || ein || activada
+off || wyłączona || désactivée || aus || desactivada
+
+# server status charts
+API server || Serwer API || Serveur API || API-Server || Servidor API
+Whole system || Cały system || Système entier || Gesamtes System || Sistema completo
+Resident memory || Pamięć rezydentna || Mémoire résidente || Resident-Speicher || Memoria residente
+In use || Używane || Utilisée || In Benutzung || En uso
+latest || najnowszy || dernier || neuester || último
+of {1} GB || z {1} GB || sur {1} GB || von {1} GB || de {1} GB
+of {1} MB || z {1} MB || sur {1} MB || von {1} MB || de {1} MB

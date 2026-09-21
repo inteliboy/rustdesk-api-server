@@ -1,0 +1,174 @@
+# ---- security page
+Change password || Zmień hasło || Changer le mot de passe || Passwort ändern || Cambiar contraseña
+Current password || Obecne hasło || Mot de passe actuel || Aktuelles Passwort || Contraseña actual
+Repeat the new password || Powtórz nowe hasło || Répétez le nouveau mot de passe || Neues Passwort wiederholen || Repita la contraseña nueva
+This session stays signed in. Every other session, API key and enrollment token of yours is ended. || Ta sesja pozostaje zalogowana. Wszystkie inne Twoje sesje, klucze API i tokeny rejestracji zostaną zakończone. || Cette session reste connectée. Toutes vos autres sessions, clés d'API et jetons d'enrôlement sont terminés. || Diese Sitzung bleibt angemeldet. Alle anderen Ihrer Sitzungen, API-Schlüssel und Registrierungstoken werden beendet. || Esta sesión permanece iniciada. Todas sus otras sesiones, claves de API y tokens de inscripción se terminan.
+The two new passwords are not the same. || Nowe hasła nie są takie same. || Les deux nouveaux mots de passe ne sont pas identiques. || Die beiden neuen Passwörter stimmen nicht überein. || Las dos contraseñas nuevas no coinciden.
+Password changed. Your other sessions were signed out. || Hasło zmienione. Pozostałe sesje zostały wylogowane. || Mot de passe modifié. Vos autres sessions ont été déconnectées. || Passwort geändert. Ihre anderen Sitzungen wurden abgemeldet. || Contraseña cambiada. Se cerraron sus otras sesiones.
+Two-factor authentication || Uwierzytelnianie dwuskładnikowe || Authentification à deux facteurs || Zwei-Faktor-Authentifizierung || Autenticación de dos factores
+Single sign-on || Logowanie jednokrotne || Authentification unique || Single Sign-on || Inicio de sesión único
+Signed-in sessions || Zalogowane sesje || Sessions ouvertes || Angemeldete Sitzungen || Sesiones iniciadas
+Browsers and RustDesk clients currently signed in to your account. Sign out any you do not recognise. || Przeglądarki i klienty RustDesk aktualnie zalogowane na Twoje konto. Wyloguj te, których nie rozpoznajesz. || Navigateurs et clients RustDesk actuellement connectés à votre compte. Déconnectez ceux que vous ne reconnaissez pas. || Browser und RustDesk-Clients, die derzeit bei Ihrem Konto angemeldet sind. Melden Sie unbekannte ab. || Navegadores y clientes de RustDesk con sesión iniciada en su cuenta. Cierre los que no reconozca.
+API keys || Klucze API || Clés d'API || API-Schlüssel || Claves de API
+Enrollment tokens || Tokeny rejestracji || Jetons d'enrôlement || Registrierungstoken || Tokens de inscripción
+@security.api_keys || Klucz pozwala skryptowi wywoływać API tego serwera <code>/api/v1</code> jako Ty, z nagłówkiem <code>Authorization: Bearer &hellip;</code>. Klucz <em>tylko do odczytu</em> może jedynie pobierać dane. Klucz nie może zarządzać Twoim kontem (kluczami, sesjami, uwierzytelnianiem dwuskładnikowym) i jest pokazywany tylko raz. || Une clé permet à un script d'appeler l'API <code>/api/v1</code> de ce serveur en votre nom, avec <code>Authorization: Bearer &hellip;</code>. Une clé <em>en lecture seule</em> ne peut que récupérer des données. Une clé ne peut pas gérer votre compte (clés, sessions, double authentification) et n'est affichée qu'une fois. || Ein Schlüssel erlaubt einem Skript, die <code>/api/v1</code>-API dieses Servers als Sie aufzurufen, mit <code>Authorization: Bearer &hellip;</code>. Ein <em>Lese</em>-Schlüssel kann nur Daten abrufen. Ein Schlüssel kann Ihr Konto nicht verwalten (Schlüssel, Sitzungen, Zwei-Faktor) und wird nur einmal angezeigt. || Una clave permite a un script llamar a la API <code>/api/v1</code> de este servidor como usted, con <code>Authorization: Bearer &hellip;</code>. Una clave de <em>solo lectura</em> solo puede obtener datos. Una clave no puede gestionar su cuenta (claves, sesiones, dos factores) y se muestra una sola vez.
+@security.enrollment || Token dla <code>rustdesk --assign --token &hellip;</code>: pozwala skryptowi umieścić urządzenie w Twojej książce adresowej lub grupie (a administratorowi - przypisać je dowolnemu użytkownikowi). Nie można go użyć do niczego innego i jest pokazywany tylko raz. || Un jeton pour <code>rustdesk --assign --token &hellip;</code> : il permet à un script de placer un appareil dans votre carnet d'adresses ou groupe (ou, pour un administrateur, de l'attribuer à n'importe quel utilisateur). Il ne sert à rien d'autre et n'est affiché qu'une fois. || Ein Token für <code>rustdesk --assign --token &hellip;</code>: Es erlaubt einem Skript, ein Gerät in Ihr Adressbuch oder Ihre Gruppe zu legen (oder, für Administratoren, es einem beliebigen Benutzer zuzuweisen). Es kann für nichts anderes verwendet werden und wird nur einmal angezeigt. || Un token para <code>rustdesk --assign --token &hellip;</code>: permite a un script poner un dispositivo en su libreta de direcciones o grupo (o, si es administrador, asignarlo a cualquier usuario). No sirve para nada más y se muestra una sola vez.
+{1} copied. || Skopiowano: {1}. || {1} copié. || {1} kopiert. || {1} copiado.
+Could not copy - select the text and copy it by hand. || Nie udało się skopiować - zaznacz tekst i skopiuj go ręcznie. || Copie impossible - sélectionnez le texte et copiez-le à la main. || Kopieren nicht möglich - markieren Sie den Text und kopieren Sie ihn von Hand. || No se pudo copiar: seleccione el texto y cópielo a mano.
+Two-factor authentication is not available: the server administrator has to set || Uwierzytelnianie dwuskładnikowe jest niedostępne: administrator serwera musi najpierw ustawić || L'authentification à deux facteurs n'est pas disponible : l'administrateur du serveur doit d'abord définir || Die Zwei-Faktor-Authentifizierung ist nicht verfügbar: Der Serveradministrator muss zuerst || La autenticación de dos factores no está disponible: el administrador del servidor debe definir primero
+first (see the README). || (zob. README). || (voir le README). || festlegen (siehe README). || (vea el README).
+Off. With it on, signing in also needs a 6-digit code from an authenticator app (the RustDesk client asks for it too). || Wyłączone. Po włączeniu logowanie wymaga też 6-cyfrowego kodu z aplikacji uwierzytelniającej (klient RustDesk również o niego poprosi). || Désactivée. Une fois activée, la connexion demande aussi un code à 6 chiffres d'une application d'authentification (le client RustDesk le demande aussi). || Aus. Eingeschaltet, braucht die Anmeldung zusätzlich einen 6-stelligen Code aus einer Authenticator-App (der RustDesk-Client fragt ihn ebenfalls ab). || Desactivada. Al activarla, iniciar sesión requiere además un código de 6 dígitos de una app de autenticación (el cliente de RustDesk también lo pide).
+Set up || Skonfiguruj || Configurer || Einrichten || Configurar
+Code || Kod || Code || Code || Código
+{1} unused recovery code{2} left. || Pozostało nieużytych kodów odzyskiwania: {1}. || Il reste {1} code(s) de récupération inutilisé(s). || Noch {1} unbenutzte(r) Wiederherstellungscode(s). || Quedan {1} código(s) de recuperación sin usar.
+New recovery codes || Nowe kody odzyskiwania || Nouveaux codes de récupération || Neue Wiederherstellungscodes || Nuevos códigos de recuperación
+Replaces every existing code. Needs your password and a current code. || Zastępuje wszystkie dotychczasowe kody. Wymaga hasła i aktualnego kodu. || Remplace tous les codes existants. Nécessite votre mot de passe et un code actuel. || Ersetzt alle vorhandenen Codes. Erfordert Ihr Passwort und einen aktuellen Code. || Reemplaza todos los códigos existentes. Requiere su contraseña y un código actual.
+Generate || Generuj || Générer || Erzeugen || Generar
+Turn off || Wyłącz || Désactiver || Ausschalten || Desactivar
+Needs your password and a current code. || Wymaga hasła i aktualnego kodu. || Nécessite votre mot de passe et un code actuel. || Erfordert Ihr Passwort und einen aktuellen Code. || Requiere su contraseña y un código actual.
+Turn off two-factor authentication? || Wyłączyć uwierzytelnianie dwuskładnikowe? || Désactiver l'authentification à deux facteurs ? || Zwei-Faktor-Authentifizierung ausschalten? || ¿Desactivar la autenticación de dos factores?
+Two-factor authentication is off. || Uwierzytelnianie dwuskładnikowe jest wyłączone. || L'authentification à deux facteurs est désactivée. || Die Zwei-Faktor-Authentifizierung ist ausgeschaltet. || La autenticación de dos factores está desactivada.
+Save these recovery codes now. || Zapisz teraz te kody odzyskiwania. || Enregistrez ces codes de récupération maintenant. || Speichern Sie diese Wiederherstellungscodes jetzt. || Guarde ahora estos códigos de recuperación.
+Each works once, in place of an authenticator code, when you sign in to this page. They are not shown again. || Każdy działa raz, zamiast kodu z aplikacji, przy logowaniu na tej stronie. Nie będą pokazane ponownie. || Chacun ne fonctionne qu'une fois, à la place d'un code d'authentification, lorsque vous vous connectez à cette page. Ils ne sont plus affichés ensuite. || Jeder funktioniert einmal anstelle eines Authenticator-Codes, wenn Sie sich auf dieser Seite anmelden. Sie werden nicht erneut angezeigt. || Cada uno funciona una vez, en lugar de un código de la app, al iniciar sesión en esta página. No se vuelven a mostrar.
+Copy all || Kopiuj wszystkie || Tout copier || Alle kopieren || Copiar todos
+Recovery codes || Kody odzyskiwania || Codes de récupération || Wiederherstellungscodes || Códigos de recuperación
+QR code to add this account to an authenticator app || Kod QR do dodania tego konta w aplikacji uwierzytelniającej || Code QR pour ajouter ce compte à une application d'authentification || QR-Code zum Hinzufügen dieses Kontos zu einer Authenticator-App || Código QR para añadir esta cuenta a una app de autenticación
+Scan this QR code with your authenticator app: || Zeskanuj ten kod QR aplikacją uwierzytelniającą: || Scannez ce code QR avec votre application d'authentification : || Scannen Sie diesen QR-Code mit Ihrer Authenticator-App: || Escanee este código QR con su app de autenticación:
+I have saved them || Zapisałem je || Je les ai enregistrés || Ich habe sie gespeichert || Ya los guardé
+Turn on || Włącz || Activer || Einschalten || Activar
+Enter the 6-digit code the app shows: || Wpisz 6-cyfrowy kod z aplikacji: || Saisissez le code à 6 chiffres affiché par l'application : || Geben Sie den 6-stelligen Code aus der App ein: || Introduzca el código de 6 dígitos que muestra la app:
+, last used {1} || , ostatnio użyty {1} || , dernière utilisation {1} || , zuletzt verwendet {1} || , último uso {1}
+Linked to {1}{2} || Powiązano z {1}{2} || Lié à {1}{2} || Verknüpft mit {1}{2} || Vinculada a {1}{2}
+Unlink || Odłącz || Dissocier || Trennen || Desvincular
+Link your {1} account to sign in with it, in the browser and in the RustDesk client. || Powiąż swoje konto {1}, aby logować się nim w przeglądarce i w kliencie RustDesk. || Liez votre compte {1} pour vous connecter avec, dans le navigateur et dans le client RustDesk. || Verknüpfen Sie Ihr {1}-Konto, um sich damit im Browser und im RustDesk-Client anzumelden. || Vincule su cuenta de {1} para iniciar sesión con ella, en el navegador y en el cliente de RustDesk.
+This account has no password; single sign-on is its only way in. || To konto nie ma hasła; logowanie jednokrotne to jedyny sposób wejścia. || Ce compte n'a pas de mot de passe ; l'authentification unique est son seul accès. || Dieses Konto hat kein Passwort; Single Sign-on ist der einzige Zugang. || Esta cuenta no tiene contraseña; el inicio de sesión único es su única vía de acceso.
+Unlink this account? You will no longer be able to sign in with it. || Odłączyć to konto? Nie będzie już można się nim logować. || Dissocier ce compte ? Vous ne pourrez plus vous connecter avec. || Dieses Konto trennen? Sie können sich dann nicht mehr damit anmelden. || ¿Desvincular esta cuenta? Ya no podrá iniciar sesión con ella.
+Unlinked. || Odłączono. || Dissocié. || Getrennt. || Desvinculada.
+Account linked. || Konto powiązane. || Compte lié. || Konto verknüpft. || Cuenta vinculada.
+Browser || Przeglądarka || Navigateur || Browser || Navegador
+This session || Ta sesja || Cette session || Diese Sitzung || Esta sesión
+Sign out || Wyloguj || Déconnecter || Abmelden || Cerrar sesión
+Sign out everywhere else ({1}) || Wyloguj wszędzie indziej ({1}) || Déconnecter partout ailleurs ({1}) || Überall sonst abmelden ({1}) || Cerrar sesión en todos los demás sitios ({1})
+No other sessions. || Brak innych sesji. || Aucune autre session. || Keine anderen Sitzungen. || No hay otras sesiones.
+Where || Skąd || Où || Wo || Dónde
+Signed in || Zalogowano || Connecté || Angemeldet || Sesión iniciada
+Last used || Ostatnio użyto || Dernière utilisation || Zuletzt verwendet || Último uso
+Sign out of every other browser and RustDesk client? || Wylogować z każdej innej przeglądarki i klienta RustDesk? || Déconnecter tous les autres navigateurs et clients RustDesk ? || Von jedem anderen Browser und RustDesk-Client abmelden? || ¿Cerrar la sesión en todos los demás navegadores y clientes de RustDesk?
+Signed out {1} session{2}. || Wylogowano sesje: {1}. || {1} session(s) déconnectée(s). || {1} Sitzung(en) abgemeldet. || Se cerró {1} sesión(es).
+Full access || Pełny dostęp || Accès complet || Vollzugriff || Acceso completo
+Copy this key now &mdash; it is not shown again. || Skopiuj ten klucz teraz - nie będzie pokazany ponownie. || Copiez cette clé maintenant - elle n'est plus affichée ensuite. || Kopieren Sie diesen Schlüssel jetzt - er wird nicht erneut angezeigt. || Copie esta clave ahora: no se vuelve a mostrar.
+Copy key || Kopiuj klucz || Copier la clé || Schlüssel kopieren || Copiar clave
+No API keys yet. || Brak kluczy API. || Aucune clé d'API pour l'instant. || Noch keine API-Schlüssel. || Aún no hay claves de API.
+e.g. nightly report || np. raport nocny || p. ex. rapport nocturne || z. B. nächtlicher Bericht || p. ej. informe nocturno
+Full access (as you) || Pełny dostęp (jako Ty) || Accès complet (en votre nom) || Vollzugriff (als Sie) || Acceso completo (como usted)
+Valid for || Ważny przez || Valable pendant || Gültig für || Válida durante
+30 days || 30 dni || 30 jours || 30 Tage || 30 días
+90 days || 90 dni || 90 jours || 90 Tage || 90 días
+180 days || 180 dni || 180 jours || 180 Tage || 180 días
+1 year || 1 rok || 1 an || 1 Jahr || 1 año
+Create key || Utwórz klucz || Créer la clé || Schlüssel erstellen || Crear clave
+Key || Klucz || Clé || Schlüssel || Clave
+Revoke this key? Scripts using it stop working. || Unieważnić ten klucz? Skrypty, które go używają, przestaną działać. || Révoquer cette clé ? Les scripts qui l'utilisent cesseront de fonctionner. || Diesen Schlüssel widerrufen? Skripte, die ihn verwenden, funktionieren dann nicht mehr. || ¿Revocar esta clave? Los scripts que la usan dejarán de funcionar.
+Give the key a label. || Nadaj kluczowi etykietę. || Donnez un libellé à la clé. || Geben Sie dem Schlüssel eine Bezeichnung. || Ponga una etiqueta a la clave.
+Copy this token now &mdash; it is not shown again. || Skopiuj ten token teraz - nie będzie pokazany ponownie. || Copiez ce jeton maintenant - il n'est plus affiché ensuite. || Kopieren Sie dieses Token jetzt - es wird nicht erneut angezeigt. || Copie este token ahora: no se vuelve a mostrar.
+On the device (as administrator/root): || Na urządzeniu (jako administrator/root): || Sur l'appareil (en administrateur/root) : || Auf dem Gerät (als Administrator/root): || En el dispositivo (como administrador/root):
+Copy token || Kopiuj token || Copier le jeton || Token kopieren || Copiar token
+No tokens yet. || Brak tokenów. || Aucun jeton pour l'instant. || Noch keine Token. || Aún no hay tokens.
+e.g. installer script || np. skrypt instalacyjny || p. ex. script d'installation || z. B. Installationsskript || p. ej. script de instalación
+Create token || Utwórz token || Créer le jeton || Token erstellen || Crear token
+Token || Token || Jeton || Token || Token
+Revoke this token? Scripts using it stop working. || Unieważnić ten token? Skrypty, które go używają, przestaną działać. || Révoquer ce jeton ? Les scripts qui l'utilisent cesseront de fonctionner. || Dieses Token widerrufen? Skripte, die es verwenden, funktionieren dann nicht mehr. || ¿Revocar este token? Los scripts que lo usan dejarán de funcionar.
+Give the token a label. || Nadaj tokenowi etykietę. || Donnez un libellé au jeton. || Geben Sie dem Token eine Bezeichnung. || Ponga una etiqueta al token.
+
+# ---- logs
+Connections || Połączenia || Connexions || Verbindungen || Conexiones
+File transfers || Transfery plików || Transferts de fichiers || Dateiübertragungen || Transferencias de archivos
+Alarms || Alarmy || Alarmes || Alarme || Alarmas
+@logs.intro || Zgłaszane przez klienta RustDesk na urządzeniu <em>sterowanym</em>, dla urządzeń, które posiadasz lub które są Ci udostępnione. Wymaga, aby <span class="font-mono">serwer API</span> tego klienta wskazywał na ten serwer. || Signalé par le client RustDesk de l'appareil <em>contrôlé</em>, pour les appareils que vous possédez ou qui sont partagés avec vous. Nécessite que le <span class="font-mono">serveur API</span> de ce client pointe vers ce serveur. || Vom RustDesk-Client auf dem <em>gesteuerten</em> Gerät gemeldet, für Geräte, die Ihnen gehören oder für Sie freigegeben sind. Setzt voraus, dass der <span class="font-mono">API-Server</span> dieses Clients auf diesen Server zeigt. || Informado por el cliente de RustDesk en el dispositivo <em>controlado</em>, para dispositivos que posee o que se comparten con usted. Requiere que el <span class="font-mono">servidor API</span> de ese cliente apunte a este servidor.
+Direction is from the controlled device's point of view. The client reports only the path on the controlled device; the controlling side's own path is not sent. Files copied and pasted through the clipboard are reported by name only, with no path. || Kierunek jest z punktu widzenia urządzenia sterowanego. Klient zgłasza tylko ścieżkę na urządzeniu sterowanym; ścieżka po stronie sterującej nie jest wysyłana. Pliki kopiowane i wklejane przez schowek są zgłaszane tylko z nazwy, bez ścieżki. || Le sens est celui du point de vue de l'appareil contrôlé. Le client ne signale que le chemin sur l'appareil contrôlé ; celui du côté contrôlant n'est pas envoyé. Les fichiers copiés-collés via le presse-papiers ne sont signalés que par leur nom, sans chemin. || Die Richtung ist aus Sicht des gesteuerten Geräts. Der Client meldet nur den Pfad auf dem gesteuerten Gerät; der Pfad der steuernden Seite wird nicht gesendet. Über die Zwischenablage kopierte und eingefügte Dateien werden nur mit Namen gemeldet, ohne Pfad. || La dirección es desde el punto de vista del dispositivo controlado. El cliente solo informa de la ruta en el dispositivo controlado; la ruta del lado controlador no se envía. Los archivos copiados y pegados con el portapapeles se informan solo por nombre, sin ruta.
+@logs.alarm || Alarmy bezpieczeństwa zgłaszane przez urządzenie sterowane, gdy <em>odrzuciło</em> próbę połączenia: zablokowany adres IP lub ID (lista dozwolonych), zbyt wiele błędnych haseł albo żądanie spoza zakresu sesji. Klient wysyła je tylko do własnego serwera API. To, kto jest wymieniony jako odrzucony, wynika z tego, co podała łącząca się strona, więc traktuj to jako wskazówkę, a nie dowód. || Alarmes de sécurité levées par l'appareil contrôlé lorsqu'il a <em>refusé</em> une tentative de connexion : IP ou ID bloqué (liste blanche), trop de mots de passe erronés, ou requête hors du périmètre de la session. Le client ne les envoie qu'à un serveur API auto-hébergé. Qui est indiqué comme refusé est ce que la partie connectante a déclaré : voyez-y une piste plutôt qu'une preuve. || Sicherheitsalarme, die das gesteuerte Gerät ausgelöst hat, als es einen Verbindungsversuch <em>abgelehnt</em> hat: eine gesperrte IP oder ID (Whitelist), zu viele falsche Passwörter oder eine Anfrage außerhalb des Sitzungsumfangs. Der Client sendet diese nur an einen selbst gehosteten API-Server. Wer als abgelehnt aufgeführt ist, entspricht den Angaben der verbindenden Seite - werten Sie es als Hinweis, nicht als Beweis. || Alarmas de seguridad que lanza el dispositivo controlado cuando <em>rechazó</em> un intento de conexión: una IP o ID bloqueado (lista blanca), demasiadas contraseñas erróneas o una petición fuera del alcance de la sesión. El cliente solo las envía a un servidor API autoalojado. Quién figura como rechazado es lo que afirmó el lado que se conecta, así que tómelo como una pista y no como una prueba.
+Remote control || Zdalne sterowanie || Contrôle à distance || Fernsteuerung || Control remoto
+File transfer || Transfer plików || Transfert de fichiers || Dateiübertragung || Transferencia de archivos
+Port forward || Przekierowanie portu || Redirection de port || Portweiterleitung || Reenvío de puertos
+View camera || Podgląd kamery || Voir la caméra || Kamera ansehen || Ver cámara
+Terminal || Terminal || Terminal || Terminal || Terminal
+Click (accepted) || Kliknięcie (zaakceptowane) || Clic (accepté) || Klick (akzeptiert) || Clic (aceptado)
+Temporary password || Hasło tymczasowe || Mot de passe temporaire || Temporäres Passwort || Contraseña temporal
+Permanent password || Hasło stałe || Mot de passe permanent || Permanentes Passwort || Contraseña permanente
+Switch sides || Zamiana stron || Changement de côté || Seitenwechsel || Cambio de lados
++ 2FA (TOTP) || + 2FA (TOTP) || + 2FA (TOTP) || + 2FA (TOTP) || + 2FA (TOTP)
++ trusted device || + zaufane urządzenie || + appareil de confiance || + vertrauenswürdiges Gerät || + dispositivo de confianza
+Sent to peer || Wysłano do drugiej strony || Envoyé au pair || An die Gegenstelle gesendet || Enviado al par
+Received from peer || Odebrano od drugiej strony || Reçu du pair || Von der Gegenstelle empfangen || Recibido del par
+IP not on whitelist || Adres IP spoza listy dozwolonych || IP absente de la liste blanche || IP nicht auf der Whitelist || IP fuera de la lista blanca
+Too many failed attempts (over 30) || Zbyt wiele nieudanych prób (ponad 30) || Trop de tentatives échouées (plus de 30) || Zu viele Fehlversuche (über 30) || Demasiados intentos fallidos (más de 30)
+Too many failed attempts (over 6 in a minute) || Zbyt wiele nieudanych prób (ponad 6 na minutę) || Trop de tentatives échouées (plus de 6 par minute) || Zu viele Fehlversuche (über 6 pro Minute) || Demasiados intentos fallidos (más de 6 por minuto)
+Too many failed attempts from an IPv6 prefix || Zbyt wiele nieudanych prób z jednego prefiksu IPv6 || Trop de tentatives échouées depuis un préfixe IPv6 || Zu viele Fehlversuche aus einem IPv6-Präfix || Demasiados intentos fallidos desde un prefijo IPv6
+Terminal OS login backoff || Odczekanie po nieudanym logowaniu terminala do systemu || Temporisation de connexion du terminal à l'OS || Wartezeit bei Terminal-OS-Anmeldung || Espera tras inicio de sesión del terminal en el SO
+Terminal OS login concurrency limit || Limit równoczesnych logowań terminala do systemu || Limite de connexions simultanées du terminal à l'OS || Limit gleichzeitiger Terminal-OS-Anmeldungen || Límite de inicios de sesión simultáneos del terminal en el SO
+Session scope violation || Naruszenie zakresu sesji || Violation du périmètre de la session || Verletzung des Sitzungsumfangs || Violación del alcance de la sesión
+ID not on whitelist || ID spoza listy dozwolonych || ID absent de la liste blanche || ID nicht auf der Whitelist || ID fuera de la lista blanca
+Type {1} || Typ {1} || Type {1} || Typ {1} || Tipo {1}
+Auth {1} || Uwierzytelnienie {1} || Auth {1} || Auth {1} || Auth {1}
+no close recorded || nie zapisano zamknięcia || aucune fermeture enregistrée || kein Ende aufgezeichnet || sin cierre registrado
+(folder) || (folder) || (dossier) || (Ordner) || (carpeta)
+(single file) || (pojedynczy plik) || (fichier unique) || (einzelne Datei) || (archivo único)
+no path reported (clipboard copy/paste) || nie zgłoszono ścieżki (kopiuj/wklej przez schowek) || aucun chemin signalé (copier/coller par presse-papiers) || kein Pfad gemeldet (Kopieren/Einfügen per Zwischenablage) || no se informó ruta (copiar/pegar con portapapeles)
+unknown direction || nieznany kierunek || sens inconnu || unbekannte Richtung || dirección desconocida
+No connections recorded yet. || Nie zapisano jeszcze połączeń. || Aucune connexion enregistrée pour l'instant. || Noch keine Verbindungen aufgezeichnet. || Aún no hay conexiones registradas.
+No file transfers recorded yet. || Nie zapisano jeszcze transferów plików. || Aucun transfert de fichier enregistré pour l'instant. || Noch keine Dateiübertragungen aufgezeichnet. || Aún no hay transferencias de archivos registradas.
+No alarms recorded yet. || Nie zapisano jeszcze alarmów. || Aucune alarme enregistrée pour l'instant. || Noch keine Alarme aufgezeichnet. || Aún no hay alarmas registradas.
+Device (controlled) || Urządzenie (sterowane) || Appareil (contrôlé) || Gerät (gesteuert) || Dispositivo (controlado)
+Controlled by || Sterowane przez || Contrôlé par || Gesteuert von || Controlado por
+Authorization || Autoryzacja || Autorisation || Autorisierung || Autorización
+From IP || Z adresu IP || Depuis l'IP || Von IP || Desde IP
+Duration || Czas trwania || Durée || Dauer || Duración
+Direction || Kierunek || Sens || Richtung || Dirección
+From || Z || De || Von || Desde
+To || Do || Vers || Nach || Hasta
+Files || Pliki || Fichiers || Dateien || Archivos
+IP || IP || IP || IP || IP
+Alarm || Alarm || Alarme || Alarm || Alarma
+Refused peer || Odrzucony partner || Pair refusé || Abgelehnte Gegenstelle || Par rechazado
+Clear this device's logs || Wyczyść dzienniki tego urządzenia || Effacer les journaux de cet appareil || Protokolle dieses Geräts leeren || Borrar los registros de este dispositivo
+Clear all || Wyczyść wszystko || Tout effacer || Alle leeren || Borrar todo
+Delete this log entry? This cannot be undone. || Usunąć ten wpis dziennika? Tej operacji nie można cofnąć. || Supprimer cette entrée de journal ? Cette action est irréversible. || Diesen Protokolleintrag löschen? Das kann nicht rückgängig gemacht werden. || ¿Eliminar esta entrada del registro? Esta acción no se puede deshacer.
+Log entry deleted. || Wpis dziennika usunięty. || Entrée de journal supprimée. || Protokolleintrag gelöscht. || Entrada del registro eliminada.
+Filtered to one device. || Filtrowanie do jednego urządzenia. || Filtré sur un seul appareil. || Auf ein Gerät gefiltert. || Filtrado a un dispositivo.
+Show all || Pokaż wszystkie || Tout afficher || Alle anzeigen || Mostrar todo
+Deleted {1} log{2}. || Usunięto wpisy dziennika: {1}. || {1} entrée(s) de journal supprimée(s). || {1} Protokolleintrag/-einträge gelöscht. || Se eliminaron {1} entrada(s) del registro.
+
+# ---- address book
+Address book || Książka adresowa || Carnet d'adresses || Adressbuch || Libreta de direcciones
+New shared book || Nowa książka współdzielona || Nouveau carnet partagé || Neues gemeinsames Adressbuch || Nueva libreta compartida
+Manage sharing || Zarządzaj udostępnianiem || Gérer le partage || Freigabe verwalten || Gestionar el uso compartido
+Add entry || Dodaj wpis || Ajouter une entrée || Eintrag hinzufügen || Añadir entrada
+Book name || Nazwa książki || Nom du carnet || Name des Adressbuchs || Nombre de la libreta
+Delete book || Usuń książkę || Supprimer le carnet || Adressbuch löschen || Eliminar libreta
+Shared with || Udostępniono || Partagé avec || Geteilt mit || Compartida con
+Full control is stored, but the RustDesk client makes no distinction between it and read / write. || Pełna kontrola jest zapisywana, ale klient RustDesk nie odróżnia jej od odczytu i zapisu. || Le contrôle total est enregistré, mais le client RustDesk ne le distingue pas de lecture / écriture. || Vollzugriff wird gespeichert, aber der RustDesk-Client unterscheidet ihn nicht von Lesen / Schreiben. || El control total se guarda, pero el cliente de RustDesk no lo distingue de lectura / escritura.
+Hostname (optional) || Nazwa hosta (opcjonalnie) || Nom d'hôte (facultatif) || Hostname (optional) || Nombre de host (opcional)
+Platform (optional) || Platforma (opcjonalnie) || Plateforme (facultative) || Plattform (optional) || Plataforma (opcional)
+Tags, comma separated (optional) || Tagi, oddzielone przecinkami (opcjonalnie) || Étiquettes, séparées par des virgules (facultatif) || Tags, durch Komma getrennt (optional) || Etiquetas, separadas por comas (opcional)
+Last synced || Ostatnia synchronizacja || Dernière synchronisation || Zuletzt synchronisiert || Última sincronización
+No entries yet. Add one here, or add a peer in your RustDesk client's address book and refresh. || Brak wpisów. Dodaj tutaj albo dodaj urządzenie w książce adresowej klienta RustDesk i odśwież. || Aucune entrée pour l'instant. Ajoutez-en ici, ou ajoutez un pair dans le carnet d'adresses de votre client RustDesk puis actualisez. || Noch keine Einträge. Fügen Sie hier einen hinzu oder fügen Sie im Adressbuch Ihres RustDesk-Clients einen Peer hinzu und aktualisieren Sie. || Aún no hay entradas. Añada una aquí, o añada un par en la libreta de su cliente de RustDesk y actualice.
+Your personal address book: what your RustDesk client has synced to this server, plus entries you add here. || Twoja osobista książka adresowa: to, co klient RustDesk zsynchronizował z tym serwerem, oraz wpisy dodane tutaj. || Votre carnet d'adresses personnel : ce que votre client RustDesk a synchronisé avec ce serveur, plus les entrées que vous ajoutez ici. || Ihr persönliches Adressbuch: was Ihr RustDesk-Client mit diesem Server synchronisiert hat, plus Einträge, die Sie hier hinzufügen. || Su libreta personal: lo que su cliente de RustDesk ha sincronizado con este servidor, más las entradas que añada aquí.
+A shared address book you own. It is shared with {1} user{2}. || Współdzielona książka adresowa, którą posiadasz. Udostępniona użytkownikom: {1}. || Un carnet d'adresses partagé que vous possédez. Il est partagé avec {1} utilisateur(s). || Ein gemeinsames Adressbuch, das Ihnen gehört. Es ist mit {1} Benutzer(n) geteilt. || Una libreta compartida de su propiedad. Se comparte con {1} usuario(s).
+Shared with you by || Udostępnione Ci przez || Partagé avec vous par || Mit Ihnen geteilt von || Compartida con usted por
+access. || dostęp. || accès. || Zugriff. || acceso.
+Not shared with anyone yet. || Nie udostępniono jeszcze nikomu. || Pas encore partagé. || Noch mit niemandem geteilt. || Aún no se comparte con nadie.
+Access removed. || Dostęp usunięty. || Accès retiré. || Zugriff entfernt. || Acceso quitado.
+View device || Zobacz urządzenie || Voir l'appareil || Gerät ansehen || Ver dispositivo
+Open in Devices || Otwórz w Urządzeniach || Ouvrir dans Appareils || In Geräten öffnen || Abrir en Dispositivos
+Saved || Zapisano || Enregistré || Gespeichert || Guardado
+Delete this address book entry? || Usunąć ten wpis książki adresowej? || Supprimer cette entrée du carnet d'adresses ? || Diesen Adressbucheintrag löschen? || ¿Eliminar esta entrada de la libreta?
+Entry deleted. || Wpis usunięty. || Entrée supprimée. || Eintrag gelöscht. || Entrada eliminada.
+Shared address book created. || Współdzielona książka adresowa utworzona. || Carnet d'adresses partagé créé. || Gemeinsames Adressbuch erstellt. || Libreta compartida creada.
+Address book updated. || Książka adresowa zaktualizowana. || Carnet d'adresses mis à jour. || Adressbuch aktualisiert. || Libreta actualizada.
+Delete the shared address book "{1}" and all its entries? This cannot be undone. || Usunąć współdzieloną książkę adresową „{1}" i wszystkie jej wpisy? Tej operacji nie można cofnąć. || Supprimer le carnet d'adresses partagé « {1} » et toutes ses entrées ? Cette action est irréversible. || Das gemeinsame Adressbuch „{1}" und alle seine Einträge löschen? Das kann nicht rückgängig gemacht werden. || ¿Eliminar la libreta compartida «{1}» y todas sus entradas? Esta acción no se puede deshacer.
+Address book deleted. || Książka adresowa usunięta. || Carnet d'adresses supprimé. || Adressbuch gelöscht. || Libreta eliminada.
+Enter a username to share with. || Podaj nazwę użytkownika, któremu udostępnić. || Saisissez le nom d'utilisateur avec qui partager. || Geben Sie den Benutzernamen für die Freigabe ein. || Introduzca el nombre de usuario con quien compartir.
+Address book shared. || Książka adresowa udostępniona. || Carnet d'adresses partagé. || Adressbuch freigegeben. || Libreta compartida.
+Entry updated. || Wpis zaktualizowany. || Entrée mise à jour. || Eintrag aktualisiert. || Entrada actualizada.
+RustDesk ID is required. || ID RustDesk jest wymagane. || L'ID RustDesk est obligatoire. || Die RustDesk-ID ist erforderlich. || El ID de RustDesk es obligatorio.
+Entry added. || Wpis dodany. || Entrée ajoutée. || Eintrag hinzugefügt. || Entrada añadida.

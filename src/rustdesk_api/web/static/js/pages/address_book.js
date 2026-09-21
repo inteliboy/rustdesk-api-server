@@ -151,7 +151,7 @@ async function loadEntries() {
   );
   document.querySelectorAll(".delete-entry").forEach((btn) =>
     btn.addEventListener("click", async () => {
-      if (!confirm("Delete this address book entry?")) return;
+      if (!confirm(t("Delete this address book entry?"))) return;
       try {
         await api(`/api/v1/address-book/${encodeURIComponent(btn.dataset.id)}`, { method: "DELETE" });
         toast("Entry deleted.", "success");
@@ -236,7 +236,7 @@ $("mb-save").addEventListener("click", async () => {
 });
 $("mb-delete").addEventListener("click", async () => {
   const book = currentBook();
-  if (!confirm('Delete the shared address book "' + book.name + '" and all its entries? This cannot be undone.')) return;
+  if (!confirm(t('Delete the shared address book "{1}" and all its entries? This cannot be undone.', [book.name]))) return;
   try {
     await api(`/api/v1/address-books/${encodeURIComponent(book.guid)}`, { method: "DELETE" });
     toast("Address book deleted.", "success");

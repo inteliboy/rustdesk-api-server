@@ -86,7 +86,7 @@ async function renderTwoFactor() {
     }
   });
   document.getElementById("off-go").addEventListener("click", async () => {
-    if (!confirm("Turn off two-factor authentication?")) return;
+    if (!confirm(t("Turn off two-factor authentication?"))) return;
     try {
       await api("/api/v1/auth/2fa/disable", {
         method: "POST",
@@ -206,7 +206,7 @@ async function renderSso() {
   }
   document.querySelectorAll(".sso-unlink").forEach((btn) =>
     btn.addEventListener("click", async () => {
-      if (!confirm("Unlink this account? You will no longer be able to sign in with it.")) return;
+      if (!confirm(t("Unlink this account? You will no longer be able to sign in with it."))) return;
       try {
         await api(`/api/v1/auth/oidc/identities/${btn.dataset.id}`, { method: "DELETE" });
         toast("Unlinked.", "success");
@@ -263,7 +263,7 @@ async function renderSessions() {
   const all = document.getElementById("revoke-others");
   if (all) {
     all.addEventListener("click", async () => {
-      if (!confirm("Sign out of every other browser and RustDesk client?")) return;
+      if (!confirm(t("Sign out of every other browser and RustDesk client?"))) return;
       try {
         const result = await api("/api/v1/auth/sessions/revoke-others", { method: "POST" });
         toast(`Signed out ${result.revoked} session${result.revoked === 1 ? "" : "s"}.`, "success");
@@ -335,7 +335,7 @@ async function renderApiKeys(fresh) {
   if (fresh) document.getElementById("key-copy").addEventListener("click", () => copyText(fresh.token, "Key"));
   document.querySelectorAll(".revoke-key").forEach((btn) =>
     btn.addEventListener("click", async () => {
-      if (!confirm("Revoke this key? Scripts using it stop working.")) return;
+      if (!confirm(t("Revoke this key? Scripts using it stop working."))) return;
       try {
         await api(`/api/v1/api-keys/${btn.dataset.id}`, { method: "DELETE" });
         renderApiKeys();
@@ -425,7 +425,7 @@ async function renderEnrollment(fresh) {
   }
   document.querySelectorAll(".revoke-token").forEach((btn) =>
     btn.addEventListener("click", async () => {
-      if (!confirm("Revoke this token? Scripts using it stop working.")) return;
+      if (!confirm(t("Revoke this token? Scripts using it stop working."))) return;
       try {
         await api(`/api/v1/enrollment-tokens/${btn.dataset.id}`, { method: "DELETE" });
         renderEnrollment();

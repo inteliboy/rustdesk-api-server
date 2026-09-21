@@ -203,6 +203,9 @@ def test_the_device_page_gets_its_id_from_a_data_attribute_not_inline_script(cli
 def test_every_page_script_the_templates_reference_is_served(client):
     for path in (WEB_DIR / "templates").glob("*.html"):
         for src in re.findall(r'<script src="(/static/[^"]+)"', path.read_text(encoding="utf-8")):
+            # The language catalog is chosen per request ({{ lang }}); tests/integration/test_web_language.py
+            # fetches each one.
+            src = src.replace("{{ lang }}", "pl")
             r = client.get(src)
             assert r.status_code == 200 and "javascript" in r.headers["content-type"], src
 

@@ -14,8 +14,8 @@
     </div>
   </div>
   <p class="text-sm text-slate-500 mb-2">
-    Reported by the RustDesk client on the <em>controlled</em> device, for devices you own or that are
-    shared with you. Requires that client's <span class="font-mono">API Server</span> to point at this server.
+    <span data-i18n-html="logs.intro">Reported by the RustDesk client on the <em>controlled</em> device, for devices you own or that are
+    shared with you. Requires that client's <span class="font-mono">API Server</span> to point at this server.</span>
     <span id="device-filter-note"></span>
   </p>
   <p id="file-note" class="hidden text-sm text-slate-500 mb-4">
@@ -24,7 +24,7 @@
     clipboard are reported by name only, with no path.
   </p>
 
-  <p id="alarm-note" class="hidden text-sm text-slate-500 mb-4">
+  <p id="alarm-note" class="hidden text-sm text-slate-500 mb-4" data-i18n-html="logs.alarm">
     Security alarms raised by the controlled device when it <em>refused</em> a connection attempt:
     a blocked IP or ID (whitelist), too many wrong passwords, or a request outside the session's
     scope. The client only sends these to a self-hosted API server. Who is listed as refused is

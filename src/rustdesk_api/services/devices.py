@@ -13,6 +13,7 @@ from rustdesk_api.models.share import DeviceShare
 from rustdesk_api.models.tag import Tag
 from rustdesk_api.models.user import User
 from rustdesk_api.services import audit as audit_service
+from rustdesk_api.services import notifications
 
 
 def _utcnow() -> datetime.datetime:
@@ -37,7 +38,11 @@ def same_uuid(known: str | None, reported: str | None) -> bool:
 def _note_seen(db: Session, device: Device, online_timeout: int | None, now: datetime.datetime) -> None:
     """The device just reported in. If it had been silent for longer than the
     online timeout, that is a "came back online" moment worth remembering (the
-    offline part is only known now, so it is recorded with the return)."""
+    offline part is only known now, so it is recorded with the return). A device
+    that had been archived for staying silent is back in the list."""
+    if device.archived_at is not None:
+        device.archived_at = None
+        record_event(db, device, "unarchived")
     if online_timeout is None or device.last_seen is None:
         return
     silent_since = _aware(device.last_seen)
@@ -148,7 +153,21 @@ def register_or_update(
     db.flush()
     if created:
         record_event(db, device, "registered", {"ip": ip_address} if ip_address else None)
+        _announce_new_device(device, ip_address)
     return device
+
+
+def _announce_new_device(device: Device, ip_address: str | None) -> None:
+    name = device.hostname or device.alias
+    notifications.dispatch(
+        "new_device",
+        "New device registered",
+        f"Device {device.rustdesk_id}"
+        + (f" ({name})" if name else "")
+        + " registered"
+        + (f" from {ip_address}." if ip_address else "."),
+        data={"rustdesk_id": device.rustdesk_id, "hostname": device.hostname, "ip": ip_address},
+    )
 
 
 def _clear_pending(device: Device) -> None:
@@ -166,6 +185,14 @@ def _park_uuid(db: Session, device: Device, uuid: str, ip_address: str | None) -
         # One entry per request that opens a decision, not one per retry: the
         # client repeats its upload every couple of minutes.
         record_event(db, device, "uuid_change_requested", {"ip": ip_address})
+        notifications.dispatch(
+            "device_takeover_attempt",
+            "Device ID takeover attempt",
+            f"Another install tried to register as device {device.rustdesk_id}"
+            + (f" from {ip_address}" if ip_address else "")
+            + ". It is waiting for you to accept or reject it.",
+            data={"rustdesk_id": device.rustdesk_id, "ip": ip_address},
+        )
         audit_service.record(
             db,
             action="device_uuid_change_requested",
@@ -274,6 +301,15 @@ def list_devices(
     if tag_id is not None:
         stmt = stmt.where(Device.tags.any(Tag.id == tag_id))
         count_stmt = count_stmt.where(Device.tags.any(Tag.id == tag_id))
+
+    # Archived devices (silent for DEVICE_STALE_DAYS) are left out unless asked for, or
+    # unless the user is searching: looking up an id must find it wherever it is.
+    if status == "archived":
+        stmt = stmt.where(Device.archived_at.is_not(None))
+        count_stmt = count_stmt.where(Device.archived_at.is_not(None))
+    elif not search:
+        stmt = stmt.where(Device.archived_at.is_(None))
+        count_stmt = count_stmt.where(Device.archived_at.is_(None))
 
     if status in ("online", "offline"):
         cutoff = _utcnow() - datetime.timedelta(seconds=online_timeout)

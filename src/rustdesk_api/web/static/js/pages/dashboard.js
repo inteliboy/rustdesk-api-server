@@ -18,6 +18,46 @@ function statCard(label, value, tone) {
 // describeActivity() is defined in app.js, shared with the per-user
 // activity panel on the Users page.
 
+// Things worth a look, from the same stats: each is a sentence with a link to where to act on it.
+function attentionItems(stats) {
+  const items = [];
+  if (stats.new_devices_24h > 0) {
+    items.push({
+      href: "/devices?sort=created",
+      text: stats.new_devices_24h === 1 ? "1 new device registered in the last 24 hours" : `${stats.new_devices_24h} new devices registered in the last 24 hours`,
+    });
+  }
+  if (stats.outdated_devices > 0) {
+    items.push({
+      href: "/devices",
+      text: stats.outdated_devices === 1 ? "1 device runs an outdated RustDesk client" : `${stats.outdated_devices} devices run an outdated RustDesk client`,
+    });
+  }
+  if (stats.devices_without_strategy > 0 && stats.total_devices > 0) {
+    items.push({
+      href: "/strategies",
+      text: stats.devices_without_strategy === 1 ? "1 device receives no strategy" : `${stats.devices_without_strategy} devices receive no strategy`,
+    });
+  }
+  if (stats.archived_devices > 0) {
+    items.push({
+      href: "/devices?status=archived",
+      text: stats.archived_devices === 1 ? "1 archived device" : `${stats.archived_devices} archived devices`,
+    });
+  }
+  return items;
+}
+
+function renderAttention(stats) {
+  const host = document.getElementById("attention");
+  if (!host) return;
+  const items = attentionItems(stats);
+  host.classList.toggle("hidden", items.length === 0);
+  host.innerHTML = items
+    .map((i) => `<a href="${i.href}" class="flex items-center justify-between px-4 py-3 text-sm hover:bg-slate-50"><span>${i.text}</span><span class="text-slate-400" aria-hidden="true">&rarr;</span></a>`)
+    .join("");
+}
+
 (async () => {
   const user = await requireAuth();
   if (!user) return;
@@ -32,6 +72,7 @@ function statCard(label, value, tone) {
       statCard("Users", stats.total_users, "violet") +
       statCard("Groups", stats.total_groups, "amber") +
       statCard("Tags", stats.total_tags, "rose");
+    renderAttention(stats);
     initServerPanel(); // the stats call above succeeded, so this is an administrator
   } catch (err) {
     document.getElementById("stats").innerHTML =

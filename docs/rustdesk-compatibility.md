@@ -858,6 +858,29 @@ locked for `LOGIN_LOCKOUT_MINUTES`; a locked account answers even a correct pass
 "Invalid username or password."). A wrong second-factor code counts as well (`type: "email_code"`), and finishing a
 login resets the count. Not yet seen on a live client; the client treats any `error` string as a failed login.
 
+## Client setup: the config string, `--config` and the file name (source-verified 2026-09-21, NOT run against a client)
+
+The WebUI's **Connect** page builds these from the server settings. Formats, from the client source:
+
+- **Config string** (`ServerConfig.encode`/`decode` in `flutter/lib/common.dart`): the JSON object
+  `{"host": <ID server>, "relay": ..., "api": ..., "key": ...}` as URL-safe base64, **reversed**. The Flutter decoder
+  tries plain JSON first, then reverses the text and base64-decodes it after `base64.normalize` (so padding is optional);
+  the desktop decoder in `src/custom_server.rs` tries URL-safe base64 without padding, then with. The server writes it
+  without padding. The `host` may not be empty (`importConfig` shows "Invalid server configuration" otherwise).
+- **`rustdesk --config <string>`** (`src/core_main.rs`): needs the client to be **installed** and the caller to be
+  root/administrator ("Installation and administrative privileges required!" otherwise); it sets the options `key`,
+  `custom-rendezvous-server`, `api-server` and `relay-server`. A running client should be restarted.
+- **File name**: an executable named `rustdesk-host=<id>,key=<key>,api=<api>,relay=<relay>.exe` configures itself (the
+  parts are found by their `host=`, `key=`, `api=`, `relay=` prefixes; a trailing comma protects against Windows adding
+  " (1)"). The Connect page writes only the parts that are set.
+- **`rustdesk://config/<string>`** exists on Android and iOS only, and is ignored unless the build option
+  `allow-deep-link-server-settings` is on, so the page does not offer it.
+- The QR code is the config string; the mobile apps' "import server config" reads it.
+
+What was **not** done: running any of these against a real client. The tests check the string round-trips through the
+decoder rules above and that the API returns it; whether a given client version accepts every command as written
+(particularly on macOS) needs one try on one machine.
+
 ## Not implemented (explicitly out of scope)
 
 - **`/api/sysinfo_ver` - deliberately not implemented, and no client asks for

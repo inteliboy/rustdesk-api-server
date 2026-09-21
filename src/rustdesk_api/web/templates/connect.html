@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Connect clients - RustDesk API Server{% endblock %}
+{% block body %}
+{% include "_app_shell.html" %}
+<main class="max-w-4xl mx-auto px-4 py-8">
+  <h1 class="text-lg font-semibold mb-2">Connect clients</h1>
+  <p class="text-sm text-slate-500 mb-6" data-i18n-html="connect.intro">
+    Everything a RustDesk client needs to know about this server, as one string, a QR code and ready-to-run commands.
+    Nothing here is a password: the key is the <em>public</em> key of your ID server.
+  </p>
+
+  <section class="card p-5 mb-6" aria-labelledby="servers-title">
+    <h2 id="servers-title" class="text-sm font-semibold mb-3">Your servers</h2>
+    <div class="grid sm:grid-cols-2 gap-3">
+      <label class="text-sm">
+        <span class="block text-xs text-slate-500 mb-1">ID server (hbbs)</span>
+        <input id="cfg-id" type="text" maxlength="255" spellcheck="false" autocomplete="off" placeholder="id.example.com"
+               class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm font-mono" />
+      </label>
+      <label class="text-sm">
+        <span class="block text-xs text-slate-500 mb-1">Relay server (hbbr), if it is a different host</span>
+        <input id="cfg-relay" type="text" maxlength="255" spellcheck="false" autocomplete="off" placeholder="same as the ID server"
+               class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm font-mono" />
+      </label>
+      <label class="text-sm">
+        <span class="block text-xs text-slate-500 mb-1">API server (this server, with http:// or https://)</span>
+        <input id="cfg-api" type="text" maxlength="255" spellcheck="false" autocomplete="off" placeholder="https://rustdesk.example.com"
+               class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm font-mono" />
+      </label>
+      <label class="text-sm">
+        <span class="block text-xs text-slate-500 mb-1">Key (the public key of hbbs)</span>
+        <input id="cfg-key" type="text" maxlength="255" spellcheck="false" autocomplete="off"
+               class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm font-mono" />
+      </label>
+    </div>
+    <p class="text-xs text-slate-500 mt-3" data-i18n-html="connect.fields_help">
+      The fields start with what the server is configured with (RUSTDESK_ID_SERVER, RUSTDESK_RELAY_SERVER, RUSTDESK_KEY
+      and EXTERNAL_URL). Changing them here changes only what is shown on this page.
+    </p>
+    <ul id="warnings" class="hidden mt-3 space-y-1 text-sm text-amber-700 dark:text-amber-400 list-disc ml-5"></ul>
+  </section>
+
+  <div id="output" class="hidden">
+    <section class="grid md:grid-cols-[1fr_auto] gap-6 mb-6">
+      <div class="card p-5">
+        <h2 class="text-sm font-semibold mb-1">Config string</h2>
+        <p class="text-xs text-slate-500 mb-2" data-i18n-html="connect.config_help">
+          Paste it in a client&rsquo;s <em>Settings &rarr; Network &rarr; ID/Relay server</em> (&ldquo;Import server config&rdquo;), or use it with
+          <code>--config</code> below.
+        </p>
+        <textarea id="config-string" readonly rows="4" class="w-full border border-slate-300 rounded px-2 py-1.5 text-xs font-mono" aria-label="Config string"></textarea>
+        <button type="button" data-copy="config-string" class="mt-2 px-3 py-1.5 rounded-md border border-slate-300 text-sm hover:bg-slate-100">Copy</button>
+      </div>
+      <div class="card p-5 text-center">
+        <h2 class="text-sm font-semibold mb-2">QR code</h2>
+        <img id="config-qr" alt="QR code of the config string, to scan with the RustDesk app" width="180" height="180" class="mx-auto" />
+        <p class="text-xs text-slate-500 mt-2">For the mobile apps&rsquo; scan button.</p>
+      </div>
+    </section>
+
+    <section class="card p-5 mb-6">
+      <h2 class="text-sm font-semibold mb-1">Set up a computer</h2>
+      <p class="text-xs text-slate-500 mb-3" data-i18n-html="connect.setup_help">
+        Run these on the machine, as administrator (Windows) or root (Linux and macOS), after installing RustDesk.
+        <strong>Try them on one machine first.</strong> The <code>--config</code> option needs the installed client;
+        restart RustDesk afterwards if it is running.
+      </p>
+      <div class="flex gap-1 mb-3" role="tablist" aria-label="Operating system">
+        <button type="button" role="tab" data-os="windows" class="os-tab px-3 py-1.5 rounded-md text-sm">Windows</button>
+        <button type="button" role="tab" data-os="linux" class="os-tab px-3 py-1.5 rounded-md text-sm">Linux</button>
+        <button type="button" role="tab" data-os="macos" class="os-tab px-3 py-1.5 rounded-md text-sm">macOS</button>
+      </div>
+      <textarea id="script" readonly rows="8" class="w-full border border-slate-300 rounded px-2 py-1.5 text-xs font-mono" aria-label="Commands"></textarea>
+      <div class="flex items-center gap-3 mt-2 flex-wrap">
+        <button type="button" data-copy="script" class="px-3 py-1.5 rounded-md border border-slate-300 text-sm hover:bg-slate-100">Copy</button>
+        <p class="text-xs text-slate-500" data-i18n-html="connect.assign_help">
+          For <code>--assign</code> create an <a class="text-link underline" href="/security">enrollment token</a> first and put it where
+          <code>&lt;TOKEN&gt;</code> stands. The token is not shown here on purpose.
+        </p>
+      </div>
+    </section>
+
+    <section class="card p-5 mb-6">
+      <h2 class="text-sm font-semibold mb-1">Or rename the Windows installer</h2>
+      <p class="text-xs text-slate-500 mb-2">
+        A RustDesk executable named like this configures itself when it starts, with no command to run.
+      </p>
+      <textarea id="exe-name" readonly rows="2" class="w-full border border-slate-300 rounded px-2 py-1.5 text-xs font-mono" aria-label="File name"></textarea>
+      <button type="button" data-copy="exe-name" class="mt-2 px-3 py-1.5 rounded-md border border-slate-300 text-sm hover:bg-slate-100">Copy</button>
+    </section>
+  </div>
+</main>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/pages/connect.js"></script>
+{% endblock %}

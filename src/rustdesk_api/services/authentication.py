@@ -10,6 +10,7 @@ from rustdesk_api.config import Settings
 from rustdesk_api.models.user import User
 from rustdesk_api.security.passwords import hash_password, verify_password
 from rustdesk_api.services import audit as audit_service
+from rustdesk_api.services import notifications
 
 
 class InvalidCredentials(Exception):
@@ -76,6 +77,16 @@ def register_failure(
         result="failure",
         ip_address=ip_address,
         detail={"username": user.username, "failed_logins": user.failed_logins, "minutes": policy.minutes},
+    )
+    notifications.dispatch(
+        "account_locked",
+        "Account locked",
+        f'The account "{user.username}" was locked for {policy.minutes} minute(s) after '
+        f"{user.failed_logins} wrong passwords"
+        + (f" (last attempt from {ip_address})." if ip_address else "."),
+        data={"username": user.username, "failed_logins": user.failed_logins, "ip": ip_address},
+        dedupe_key=user.username,
+        throttle_seconds=300,
     )
     return True
 

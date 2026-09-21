@@ -1,0 +1,190 @@
+# ---- users
+New user || Nowy użytkownik || Nouvel utilisateur || Neuer Benutzer || Nuevo usuario
+User || Użytkownik || Utilisateur || Benutzer || Usuario
+Role || Rola || Rôle || Rolle || Rol
+Last login || Ostatnie logowanie || Dernière connexion || Letzte Anmeldung || Último acceso
+Owned devices || Posiadane urządzenia || Appareils possédés || Zugeordnete Geräte || Dispositivos propios
+Password-reset link for || Link do resetu hasła dla || Lien de réinitialisation du mot de passe pour || Link zum Zurücksetzen des Passworts für || Enlace para restablecer la contraseña de
+Give it to them yourself - nothing is emailed. It works once, expires || Przekaż go osobiście - nic nie jest wysyłane e-mailem. Działa raz, wygasa || Transmettez-le vous-même - rien n'est envoyé par e-mail. Il ne fonctionne qu'une fois, expire || Geben Sie ihn selbst weiter - es wird nichts per E-Mail versendet. Er funktioniert einmal, läuft ab || Entrégueselo usted mismo: no se envía nada por correo. Funciona una vez, caduca
+, and is not shown again. || i nie będzie już pokazany. || et n'est plus affiché ensuite. || und wird nicht erneut angezeigt. || y no se vuelve a mostrar.
+Copy link || Kopiuj link || Copier le lien || Link kopieren || Copiar enlace
+Link copied. || Link skopiowany. || Lien copié. || Link kopiert. || Enlace copiado.
+Could not copy - select the link and copy it by hand. || Nie udało się skopiować - zaznacz link i skopiuj go ręcznie. || Copie impossible - sélectionnez le lien et copiez-le à la main. || Kopieren nicht möglich - markieren Sie den Link und kopieren Sie ihn von Hand. || No se pudo copiar: seleccione el enlace y cópielo a mano.
+Signs in with a second factor || Loguje się z drugim składnikiem || Se connecte avec un second facteur || Meldet sich mit einem zweiten Faktor an || Inicia sesión con un segundo factor
+2FA || 2FA || 2FA || 2FA || 2FA
+Locked after too many wrong passwords until {1} || Zablokowane po zbyt wielu błędnych hasłach do {1} || Verrouillé après trop de mots de passe erronés jusqu'à {1} || Nach zu vielen falschen Passwörtern gesperrt bis {1} || Bloqueada tras demasiadas contraseñas erróneas hasta {1}
+Locked || Zablokowane || Verrouillé || Gesperrt || Bloqueada
+Unlock || Odblokuj || Déverrouiller || Entsperren || Desbloquear
+Reset link || Link resetu || Lien de réinitialisation || Reset-Link || Enlace de restablecimiento
+Reset 2FA || Zresetuj 2FA || Réinitialiser la 2FA || 2FA zurücksetzen || Restablecer 2FA
+Disable || Wyłącz || Désactiver || Deaktivieren || Desactivar
+Enable || Włącz || Activer || Aktivieren || Activar
+You || Ty || Vous || Sie || Usted
+The account is unlocked. || Konto zostało odblokowane. || Le compte est déverrouillé. || Das Konto ist entsperrt. || La cuenta está desbloqueada.
+Turn off two-factor authentication for this user and sign them out everywhere? Use this when they have lost their authenticator and recovery codes. || Wyłączyć uwierzytelnianie dwuskładnikowe dla tego użytkownika i wylogować go wszędzie? Użyj tego, gdy utracił aplikację uwierzytelniającą i kody odzyskiwania. || Désactiver l'authentification à deux facteurs pour cet utilisateur et le déconnecter partout ? À utiliser s'il a perdu son application d'authentification et ses codes de récupération. || Zwei-Faktor-Authentifizierung für diesen Benutzer ausschalten und ihn überall abmelden? Verwenden Sie das, wenn er seine Authenticator-App und die Wiederherstellungscodes verloren hat. || ¿Desactivar la autenticación de dos factores de este usuario y cerrar su sesión en todas partes? Úselo cuando haya perdido su aplicación de autenticación y los códigos de recuperación.
+Two-factor authentication was reset. || Uwierzytelnianie dwuskładnikowe zostało zresetowane. || L'authentification à deux facteurs a été réinitialisée. || Die Zwei-Faktor-Authentifizierung wurde zurückgesetzt. || Se restableció la autenticación de dos factores.
+Delete this user? || Usunąć tego użytkownika? || Supprimer cet utilisateur ? || Diesen Benutzer löschen? || ¿Eliminar este usuario?
+Two-factor || Dwuskładnikowe || Deux facteurs || Zwei-Faktor || Dos factores
+No devices owned. || Brak przypisanych urządzeń. || Aucun appareil possédé. || Keine Geräte zugeordnet. || Sin dispositivos propios.
+No recorded activity. || Brak zapisanej aktywności. || Aucune activité enregistrée. || Keine aufgezeichnete Aktivität. || Sin actividad registrada.
+User not found || Nie znaleziono użytkownika || Utilisateur introuvable || Benutzer nicht gefunden || Usuario no encontrado
+User created. || Użytkownik utworzony. || Utilisateur créé. || Benutzer erstellt. || Usuario creado.
++{1} more || +{1} więcej || +{1} de plus || +{1} weitere || +{1} más
+
+# ---- strategies
+New strategy || Nowa strategia || Nouvelle stratégie || Neue Strategie || Nueva estrategia
+No strategies yet. || Nie ma jeszcze strategii. || Aucune stratégie pour l'instant. || Noch keine Strategien. || Aún no hay estrategias.
+Edit strategy || Edytuj strategię || Modifier la stratégie || Strategie bearbeiten || Editar estrategia
+Settings || Ustawienia || Paramètres || Einstellungen || Ajustes
+not set || nie ustawiono || non défini || nicht gesetzt || sin definir
+Devices with no strategy of their own and none through their group get this one || Urządzenia bez własnej strategii i bez strategii grupy otrzymują tę || Les appareils sans stratégie propre ni via leur groupe reçoivent celle-ci || Geräte ohne eigene Strategie und ohne Strategie über ihre Gruppe erhalten diese || Los dispositivos sin estrategia propia ni por su grupo reciben esta
+Stop being the default || Przestań być domyślną || Ne plus être celle par défaut || Nicht mehr Standard sein || Dejar de ser la predeterminada
+Make default || Ustaw jako domyślną || Définir par défaut || Als Standard festlegen || Hacer predeterminada
+Make "{1}" the default? Every device that has no strategy of its own and none through its group receives it at its next heartbeat. || Ustawić „{1}" jako domyślną? Każde urządzenie bez własnej strategii i bez strategii grupy otrzyma ją przy następnym sygnale życia. || Définir « {1} » par défaut ? Tout appareil sans stratégie propre ni via son groupe la recevra à son prochain signal. || „{1}" als Standard festlegen? Jedes Gerät ohne eigene Strategie und ohne Strategie über seine Gruppe erhält sie bei seinem nächsten Heartbeat. || ¿Hacer «{1}» la predeterminada? Todo dispositivo sin estrategia propia ni por su grupo la recibirá en su próximo latido.
+There is no default strategy now. || Nie ma teraz strategii domyślnej. || Il n'y a plus de stratégie par défaut. || Es gibt jetzt keine Standardstrategie. || Ya no hay estrategia predeterminada.
+Default strategy set. || Strategia domyślna ustawiona. || Stratégie par défaut définie. || Standardstrategie festgelegt. || Estrategia predeterminada establecida.
+It is assigned to {1} device(s) and {2} group(s); their clients are reset to their own defaults. || Jest przypisana do urządzeń: {1} i grup: {2}; ich klienty wrócą do własnych ustawień domyślnych. || Elle est attribuée à {1} appareil(s) et {2} groupe(s) ; leurs clients reviennent à leurs propres valeurs par défaut. || Sie ist {1} Gerät(en) und {2} Gruppe(n) zugewiesen; deren Clients werden auf ihre eigenen Standardwerte zurückgesetzt. || Está asignada a {1} dispositivo(s) y {2} grupo(s); sus clientes vuelven a sus valores predeterminados.
+Delete this strategy? || Usunąć tę strategię? || Supprimer cette stratégie ? || Diese Strategie löschen? || ¿Eliminar esta estrategia?
+Strategy deleted. || Strategia usunięta. || Stratégie supprimée. || Strategie gelöscht. || Estrategia eliminada.
+A strategy needs a name. || Strategia potrzebuje nazwy. || Une stratégie a besoin d'un nom. || Eine Strategie braucht einen Namen. || Una estrategia necesita un nombre.
+Strategy saved. || Strategia zapisana. || Stratégie enregistrée. || Strategie gespeichert. || Estrategia guardada.
+@strategies.intro || Strategia to zestaw ustawień klienta RustDesk wysyłany do urządzeń: przypisuje się ją do urządzenia (na jego stronie) lub do grupy i trafia do klienta przy następnym sygnale życia. Ustawienia, których strategia nie określa, wracają do domyślnych wartości klienta. <strong>Strategia domyślna</strong> trafia do urządzeń, które nie mają własnej ani grupowej strategii &mdash; to punkt wyjścia dla każdego nowego urządzenia. || Une stratégie est un ensemble de réglages du client RustDesk envoyés aux appareils : elle est attribuée à un appareil (sur sa page) ou à un groupe, et parvient au client à son prochain signal. Les réglages qu'une stratégie laisse vides reviennent aux valeurs par défaut du client. La stratégie <strong>par défaut</strong> est celle que reçoit un appareil qui n'en a pas en propre ni via son groupe &mdash; une base pour chaque nouvel appareil. || Eine Strategie ist ein Satz von RustDesk-Client-Einstellungen, der an Geräte gesendet wird: Sie wird einem Gerät (auf dessen Seite) oder einer Gruppe zugewiesen und erreicht den Client mit seinem nächsten Heartbeat. Einstellungen, die eine Strategie offen lässt, werden auf den Standardwert des Clients zurückgesetzt. Die <strong>Standardstrategie</strong> erhalten Geräte, die weder eine eigene noch eine über ihre Gruppe haben &mdash; eine Grundlage für jedes neue Gerät. || Una estrategia es un conjunto de ajustes del cliente de RustDesk que se envía a los dispositivos: se asigna a un dispositivo (en su página) o a un grupo y llega al cliente en su próximo latido. Los ajustes que una estrategia deja sin definir vuelven al valor predeterminado del cliente. La estrategia <strong>predeterminada</strong> es la que recibe un dispositivo que no tiene una propia ni por su grupo &mdash; una base para cada dispositivo nuevo.
+
+# ---- settings page
+What the server does on its own: tell you when something needs attention, keep copies of its database, and tidy the device list. These are set with environment variables (they can hold secrets), so this page shows them and lets you test them; it does not change them. || Co serwer robi samodzielnie: informuje, gdy coś wymaga uwagi, tworzy kopie swojej bazy danych i porządkuje listę urządzeń. Ustawia się to zmiennymi środowiskowymi (mogą zawierać sekrety), więc ta strona je pokazuje i pozwala je wypróbować, ale ich nie zmienia. || Ce que le serveur fait de lui-même : vous prévenir quand quelque chose demande votre attention, garder des copies de sa base de données et ranger la liste des appareils. Ces réglages passent par des variables d'environnement (elles peuvent contenir des secrets) : cette page les affiche et permet de les tester, mais ne les modifie pas. || Was der Server von selbst tut: Sie benachrichtigen, wenn etwas Aufmerksamkeit braucht, Kopien seiner Datenbank anlegen und die Geräteliste aufräumen. Das wird über Umgebungsvariablen eingestellt (sie können Geheimnisse enthalten); diese Seite zeigt sie an und lässt Sie sie testen, ändert sie aber nicht. || Lo que el servidor hace por sí solo: avisarle cuando algo requiere atención, guardar copias de su base de datos y ordenar la lista de dispositivos. Se configura con variables de entorno (pueden contener secretos), así que esta página las muestra y permite probarlas, pero no las cambia.
+Notifications || Powiadomienia || Notifications || Benachrichtigungen || Notificaciones
+Send a test notification || Wyślij powiadomienie testowe || Envoyer une notification de test || Testbenachrichtigung senden || Enviar una notificación de prueba
+Event || Zdarzenie || Événement || Ereignis || Evento
+When || Kiedy || Quand || Wann || Cuándo
+Sent || Wysyłane || Envoyé || Gesendet || Enviado
+Webhook || Webhook || Webhook || Webhook || Webhook
+E-mail || E-mail || E-mail || E-Mail || Correo electrónico
+Configured || Skonfigurowany || Configuré || Konfiguriert || Configurado
+Not configured || Nieskonfigurowany || Non configuré || Nicht konfiguriert || Sin configurar
+Sends to {1} || Wysyła do {1} || Envoie à {1} || Sendet an {1} || Envía a {1}
+NOTIFY_WEBHOOK_URL: a JSON POST that Slack, Mattermost, Discord and most automation tools accept. || NOTIFY_WEBHOOK_URL: żądanie POST z JSON-em, które przyjmują Slack, Mattermost, Discord i większość narzędzi automatyzacji. || NOTIFY_WEBHOOK_URL : une requête POST JSON acceptée par Slack, Mattermost, Discord et la plupart des outils d'automatisation. || NOTIFY_WEBHOOK_URL: ein JSON-POST, den Slack, Mattermost, Discord und die meisten Automatisierungswerkzeuge annehmen. || NOTIFY_WEBHOOK_URL: un POST JSON que aceptan Slack, Mattermost, Discord y la mayoría de herramientas de automatización.
+NOTIFY_NTFY_URL: a topic on ntfy.sh or your own ntfy server, for phone notifications. || NOTIFY_NTFY_URL: temat na ntfy.sh lub własnym serwerze ntfy, do powiadomień na telefonie. || NOTIFY_NTFY_URL : un sujet sur ntfy.sh ou sur votre propre serveur ntfy, pour des notifications sur téléphone. || NOTIFY_NTFY_URL: ein Topic auf ntfy.sh oder Ihrem eigenen ntfy-Server für Benachrichtigungen aufs Handy. || NOTIFY_NTFY_URL: un tema en ntfy.sh o en su propio servidor ntfy, para notificaciones en el teléfono.
+NOTIFY_SMTP_HOST, NOTIFY_EMAIL_FROM and NOTIFY_EMAIL_TO: mail through your own SMTP server. || NOTIFY_SMTP_HOST, NOTIFY_EMAIL_FROM i NOTIFY_EMAIL_TO: poczta przez własny serwer SMTP. || NOTIFY_SMTP_HOST, NOTIFY_EMAIL_FROM et NOTIFY_EMAIL_TO : e-mail via votre propre serveur SMTP. || NOTIFY_SMTP_HOST, NOTIFY_EMAIL_FROM und NOTIFY_EMAIL_TO: E-Mail über Ihren eigenen SMTP-Server. || NOTIFY_SMTP_HOST, NOTIFY_EMAIL_FROM y NOTIFY_EMAIL_TO: correo mediante su propio servidor SMTP.
+A device flagged for offline alerts stopped reporting || Urządzenie z alertami o braku łączności przestało się zgłaszać || Un appareil suivi pour les alertes de déconnexion ne se manifeste plus || Ein für Offline-Warnungen markiertes Gerät meldet sich nicht mehr || Un dispositivo con alertas de desconexión dejó de reportar
+A device that was reported offline is reporting again || Urządzenie zgłoszone jako offline znów się zgłasza || Un appareil signalé hors ligne se manifeste de nouveau || Ein als offline gemeldetes Gerät meldet sich wieder || Un dispositivo notificado como desconectado vuelve a reportar
+A device registered for the first time || Urządzenie zarejestrowało się po raz pierwszy || Un appareil s'est enregistré pour la première fois || Ein Gerät hat sich zum ersten Mal registriert || Un dispositivo se registró por primera vez
+Another install tried to take over a device's ID || Inna instalacja próbowała przejąć ID urządzenia || Une autre installation a tenté de reprendre l'ID d'un appareil || Eine andere Installation hat versucht, die ID eines Geräts zu übernehmen || Otra instalación intentó apropiarse del ID de un dispositivo
+A RustDesk client reported a security alarm || Klient RustDesk zgłosił alarm bezpieczeństwa || Un client RustDesk a signalé une alarme de sécurité || Ein RustDesk-Client hat einen Sicherheitsalarm gemeldet || Un cliente de RustDesk informó de una alarma de seguridad
+An account was locked after too many wrong passwords || Konto zablokowano po zbyt wielu błędnych hasłach || Un compte a été verrouillé après trop de mots de passe erronés || Ein Konto wurde nach zu vielen falschen Passwörtern gesperrt || Se bloqueó una cuenta tras demasiadas contraseñas erróneas
+A scheduled database backup failed || Zaplanowana kopia bazy danych nie powiodła się || Une sauvegarde planifiée de la base a échoué || Eine geplante Datenbanksicherung ist fehlgeschlagen || Falló una copia de seguridad programada de la base de datos
+Database backups || Kopie zapasowe bazy danych || Sauvegardes de la base de données || Datenbanksicherungen || Copias de seguridad de la base de datos
+Back up now || Utwórz kopię teraz || Sauvegarder maintenant || Jetzt sichern || Hacer copia ahora
+Backup || Kopia zapasowa || Sauvegarde || Sicherung || Copia de seguridad
+Kind || Rodzaj || Genre || Art || Tipo
+Size || Rozmiar || Taille || Größe || Tamaño
+Made || Utworzona || Créée || Erstellt || Realizada
+Manual || Ręczna || Manuelle || Manuell || Manual
+Scheduled || Zaplanowana || Planifiée || Geplant || Programada
+Before an upgrade || Przed aktualizacją || Avant une mise à niveau || Vor einem Upgrade || Antes de una actualización
+No backups yet. || Nie ma jeszcze kopii zapasowych. || Aucune sauvegarde pour l'instant. || Noch keine Sicherungen. || Aún no hay copias de seguridad.
+A backup is a complete copy of the database, password hashes included: keep the folder as private as the database. To restore one, stop the server, replace the database file with it and start the server again. || Kopia zapasowa to pełna kopia bazy danych, wraz ze skrótami haseł: chroń ten folder tak samo jak bazę. Aby ją przywrócić, zatrzymaj serwer, zastąp plik bazy danych kopią i uruchom serwer ponownie. || Une sauvegarde est une copie complète de la base, empreintes de mots de passe comprises : gardez le dossier aussi privé que la base. Pour en restaurer une, arrêtez le serveur, remplacez le fichier de la base par elle et redémarrez le serveur. || Eine Sicherung ist eine vollständige Kopie der Datenbank, einschließlich der Passwort-Hashes: Halten Sie den Ordner so privat wie die Datenbank. Zum Wiederherstellen stoppen Sie den Server, ersetzen die Datenbankdatei durch die Sicherung und starten den Server neu. || Una copia de seguridad es una copia completa de la base de datos, con los hashes de contraseñas incluidos: mantenga la carpeta tan privada como la base de datos. Para restaurar una, detenga el servidor, sustituya el archivo de la base de datos por ella e inicie el servidor de nuevo.
+Device list || Lista urządzeń || Liste des appareils || Geräteliste || Lista de dispositivos
+Backups need SQLite, the default database; this server uses another one. || Kopie zapasowe wymagają SQLite, domyślnej bazy danych; ten serwer używa innej. || Les sauvegardes nécessitent SQLite, la base par défaut ; ce serveur en utilise une autre. || Sicherungen benötigen SQLite, die Standarddatenbank; dieser Server verwendet eine andere. || Las copias de seguridad requieren SQLite, la base de datos predeterminada; este servidor usa otra.
+off (BACKUP_INTERVAL_HOURS=0) || wyłączone (BACKUP_INTERVAL_HOURS=0) || désactivé (BACKUP_INTERVAL_HOURS=0) || aus (BACKUP_INTERVAL_HOURS=0) || desactivado (BACKUP_INTERVAL_HOURS=0)
+Archive devices that have not reported for || Archiwizuj urządzenia, które nie zgłosiły się od || Archiver les appareils silencieux depuis || Geräte archivieren, die sich nicht gemeldet haben seit || Archivar dispositivos que no han reportado en
+never (DEVICE_STALE_DAYS=0) || nigdy (DEVICE_STALE_DAYS=0) || jamais (DEVICE_STALE_DAYS=0) || nie (DEVICE_STALE_DAYS=0) || nunca (DEVICE_STALE_DAYS=0)
+Flag clients older than || Oznaczaj klientów starszych niż || Signaler les clients plus anciens que || Clients markieren, die älter sind als || Marcar clientes anteriores a
+{1} (MIN_CLIENT_VERSION) || {1} (MIN_CLIENT_VERSION) || {1} (MIN_CLIENT_VERSION) || {1} (MIN_CLIENT_VERSION) || {1} (MIN_CLIENT_VERSION)
+not set (MIN_CLIENT_VERSION) || nie ustawiono (MIN_CLIENT_VERSION) || non défini (MIN_CLIENT_VERSION) || nicht gesetzt (MIN_CLIENT_VERSION) || sin definir (MIN_CLIENT_VERSION)
+Sending... || Wysyłanie... || Envoi... || Wird gesendet... || Enviando...
+{1}: sent. || {1}: wysłano. || {1} : envoyé. || {1}: gesendet. || {1}: enviado.
+unknown error || nieznany błąd || erreur inconnue || unbekannter Fehler || error desconocido
+{1}: failed ({2}). || {1}: niepowodzenie ({2}). || {1} : échec ({2}). || {1}: fehlgeschlagen ({2}). || {1}: falló ({2}).
+Backup written. || Kopia zapisana. || Sauvegarde écrite. || Sicherung geschrieben. || Copia de seguridad guardada.
+
+# ---- connect page
+Connect clients || Podłączanie klientów || Connecter des clients || Clients verbinden || Conectar clientes
+Your servers || Twoje serwery || Vos serveurs || Ihre Server || Sus servidores
+ID server (hbbs) || Serwer ID (hbbs) || Serveur d'ID (hbbs) || ID-Server (hbbs) || Servidor de ID (hbbs)
+Relay server (hbbr), if it is a different host || Serwer przekaźnikowy (hbbr), jeśli to inny host || Serveur relais (hbbr), si c'est un autre hôte || Relay-Server (hbbr), falls es ein anderer Host ist || Servidor de retransmisión (hbbr), si es otro host
+same as the ID server || taki sam jak serwer ID || identique au serveur d'ID || wie der ID-Server || igual que el servidor de ID
+API server (this server, with http:// or https://) || Serwer API (ten serwer, z http:// lub https://) || Serveur API (ce serveur, avec http:// ou https://) || API-Server (dieser Server, mit http:// oder https://) || Servidor API (este servidor, con http:// o https://)
+Key (the public key of hbbs) || Klucz (klucz publiczny hbbs) || Clé (la clé publique de hbbs) || Schlüssel (der öffentliche Schlüssel von hbbs) || Clave (la clave pública de hbbs)
+Config string || Ciąg konfiguracyjny || Chaîne de configuration || Konfigurationszeichenfolge || Cadena de configuración
+QR code || Kod QR || Code QR || QR-Code || Código QR
+QR code of the config string, to scan with the RustDesk app || Kod QR ciągu konfiguracyjnego do zeskanowania w aplikacji RustDesk || Code QR de la chaîne de configuration, à scanner avec l'application RustDesk || QR-Code der Konfigurationszeichenfolge zum Scannen mit der RustDesk-App || Código QR de la cadena de configuración, para escanear con la app de RustDesk
+For the mobile apps’ scan button. || Dla przycisku skanowania w aplikacjach mobilnych. || Pour le bouton de scan des applications mobiles. || Für die Scan-Schaltfläche der mobilen Apps. || Para el botón de escaneo de las apps móviles.
+Set up a computer || Skonfiguruj komputer || Configurer un ordinateur || Einen Computer einrichten || Configurar un equipo
+Operating system || System operacyjny || Système d'exploitation || Betriebssystem || Sistema operativo
+Windows || Windows || Windows || Windows || Windows
+Linux || Linux || Linux || Linux || Linux
+macOS || macOS || macOS || macOS || macOS
+Commands || Polecenia || Commandes || Befehle || Comandos
+Or rename the Windows installer || Albo zmień nazwę instalatora Windows || Ou renommez le programme d'installation Windows || Oder benennen Sie das Windows-Installationsprogramm um || O cambie el nombre del instalador de Windows
+A RustDesk executable named like this configures itself when it starts, with no command to run. || Plik wykonywalny RustDesk o takiej nazwie konfiguruje się sam po uruchomieniu, bez żadnego polecenia. || Un exécutable RustDesk nommé ainsi se configure tout seul au démarrage, sans commande à lancer. || Eine so benannte RustDesk-Programmdatei konfiguriert sich beim Start selbst, ohne Befehl. || Un ejecutable de RustDesk con este nombre se configura solo al iniciarse, sin ejecutar ningún comando.
+File name || Nazwa pliku || Nom du fichier || Dateiname || Nombre de archivo
+Copied. || Skopiowano. || Copié. || Kopiert. || Copiado.
+Press Ctrl+C to copy the selected text. || Naciśnij Ctrl+C, aby skopiować zaznaczony tekst. || Appuyez sur Ctrl+C pour copier le texte sélectionné. || Drücken Sie Strg+C, um den markierten Text zu kopieren. || Pulse Ctrl+C para copiar el texto seleccionado.
+The client silently drops :21114 from an https:// API server address, so it would talk to port 443 instead. Use a host name on 443 (or another port), or plain http://host:21114. || Klient po cichu usuwa :21114 z adresu serwera API zaczynającego się od https://, więc łączyłby się z portem 443. Użyj nazwy hosta na porcie 443 (lub innym porcie) albo zwykłego http://host:21114. || Le client supprime silencieusement :21114 d'une adresse de serveur API en https://, et parlerait donc au port 443. Utilisez un nom d'hôte sur le port 443 (ou un autre port), ou http://hôte:21114 simple. || Der Client entfernt :21114 stillschweigend aus einer https://-API-Server-Adresse und würde daher Port 443 ansprechen. Verwenden Sie einen Hostnamen auf Port 443 (oder einen anderen Port) oder schlichtes http://host:21114. || El cliente elimina en silencio :21114 de una dirección de servidor API https://, así que hablaría con el puerto 443. Use un nombre de host en el 443 (u otro puerto), o http://host:21114 sin cifrar.
+The API server needs http:// or https:// in front, or the client cannot use it. || Serwer API wymaga na początku http:// lub https://, inaczej klient nie może go użyć. || Le serveur API doit être précédé de http:// ou https://, sinon le client ne peut pas l'utiliser. || Dem API-Server muss http:// oder https:// vorangestellt sein, sonst kann der Client ihn nicht verwenden. || El servidor API necesita http:// o https:// delante, o el cliente no puede usarlo.
+No key is set: clients will connect without checking the ID server's key. || Nie ustawiono klucza: klienty połączą się bez sprawdzania klucza serwera ID. || Aucune clé n'est définie : les clients se connecteront sans vérifier la clé du serveur d'ID. || Es ist kein Schlüssel gesetzt: Clients verbinden sich, ohne den Schlüssel des ID-Servers zu prüfen. || No hay clave definida: los clientes se conectarán sin comprobar la clave del servidor de ID.
+@connect.intro || Wszystko, co klient RustDesk musi wiedzieć o tym serwerze: jako jeden ciąg, kod QR i gotowe polecenia. To nie jest hasło: klucz to <em>publiczny</em> klucz Twojego serwera ID. || Tout ce qu'un client RustDesk doit savoir sur ce serveur, sous forme d'une chaîne, d'un code QR et de commandes prêtes à l'emploi. Rien ici n'est un mot de passe : la clé est la clé <em>publique</em> de votre serveur d'ID. || Alles, was ein RustDesk-Client über diesen Server wissen muss: als eine Zeichenfolge, als QR-Code und als fertige Befehle. Nichts davon ist ein Passwort: Der Schlüssel ist der <em>öffentliche</em> Schlüssel Ihres ID-Servers. || Todo lo que un cliente de RustDesk necesita saber de este servidor, como una cadena, un código QR y comandos listos para ejecutar. Nada de esto es una contraseña: la clave es la clave <em>pública</em> de su servidor de ID.
+@connect.fields_help || Pola zaczynają się od wartości skonfigurowanych na serwerze (RUSTDESK_ID_SERVER, RUSTDESK_RELAY_SERVER, RUSTDESK_KEY i EXTERNAL_URL). Zmiana ich tutaj zmienia tylko to, co widać na tej stronie. || Les champs partent des valeurs configurées sur le serveur (RUSTDESK_ID_SERVER, RUSTDESK_RELAY_SERVER, RUSTDESK_KEY et EXTERNAL_URL). Les modifier ici ne change que ce qui est affiché sur cette page. || Die Felder beginnen mit den auf dem Server konfigurierten Werten (RUSTDESK_ID_SERVER, RUSTDESK_RELAY_SERVER, RUSTDESK_KEY und EXTERNAL_URL). Änderungen hier ändern nur, was auf dieser Seite angezeigt wird. || Los campos empiezan con lo configurado en el servidor (RUSTDESK_ID_SERVER, RUSTDESK_RELAY_SERVER, RUSTDESK_KEY y EXTERNAL_URL). Cambiarlos aquí solo cambia lo que se muestra en esta página.
+@connect.config_help || Wklej go w ustawieniach klienta: <em>Ustawienia &rarr; Sieć &rarr; Serwer ID/przekaźnika</em> (&bdquo;Importuj konfigurację serwera&rdquo;) albo użyj go z opcją <code>--config</code> poniżej. || Collez-la dans les réglages du client : <em>Paramètres &rarr; Réseau &rarr; Serveur ID/Relais</em> (&laquo; Importer la config du serveur &raquo;), ou utilisez-la avec <code>--config</code> ci-dessous. || Fügen Sie sie in den Einstellungen des Clients ein: <em>Einstellungen &rarr; Netzwerk &rarr; ID/Relay-Server</em> („Server-Konfiguration importieren"), oder verwenden Sie sie unten mit <code>--config</code>. || Péguela en los ajustes del cliente: <em>Ajustes &rarr; Red &rarr; Servidor de ID/retransmisión</em> («Importar configuración del servidor»), o úsela con <code>--config</code> más abajo.
+@connect.setup_help || Uruchom to na komputerze jako administrator (Windows) lub root (Linux i macOS), po zainstalowaniu RustDesk. <strong>Wypróbuj najpierw na jednym komputerze.</strong> Opcja <code>--config</code> wymaga zainstalowanego klienta; jeśli RustDesk działa, uruchom go ponownie. || Exécutez ceci sur la machine, en administrateur (Windows) ou root (Linux et macOS), après avoir installé RustDesk. <strong>Essayez d'abord sur une seule machine.</strong> L'option <code>--config</code> nécessite le client installé ; redémarrez RustDesk ensuite s'il tourne. || Führen Sie das auf dem Rechner als Administrator (Windows) oder root (Linux und macOS) aus, nachdem RustDesk installiert ist. <strong>Probieren Sie es zuerst an einem Rechner aus.</strong> Die Option <code>--config</code> benötigt den installierten Client; starten Sie RustDesk danach neu, falls es läuft. || Ejecute esto en el equipo, como administrador (Windows) o root (Linux y macOS), después de instalar RustDesk. <strong>Pruébelo primero en un solo equipo.</strong> La opción <code>--config</code> necesita el cliente instalado; reinicie RustDesk después si está en ejecución.
+@connect.assign_help || Dla <code>--assign</code> najpierw utwórz <a class="text-link underline" href="/security">token rejestracji</a> i wstaw go w miejscu <code>&lt;TOKEN&gt;</code>. Token celowo nie jest tu pokazywany. || Pour <code>--assign</code>, créez d'abord un <a class="text-link underline" href="/security">jeton d'enrôlement</a> et mettez-le à la place de <code>&lt;TOKEN&gt;</code>. Le jeton n'est volontairement pas affiché ici. || Für <code>--assign</code> erstellen Sie zuerst ein <a class="text-link underline" href="/security">Registrierungstoken</a> und setzen es anstelle von <code>&lt;TOKEN&gt;</code> ein. Das Token wird hier absichtlich nicht angezeigt. || Para <code>--assign</code>, cree primero un <a class="text-link underline" href="/security">token de inscripción</a> y póngalo donde dice <code>&lt;TOKEN&gt;</code>. El token no se muestra aquí a propósito.
+
+# ---- server status on the dashboard
+Server || Serwer || Serveur || Server || Servidor
+CPU usage || Użycie procesora || Utilisation du processeur || CPU-Auslastung || Uso de CPU
+Share of the whole machine (all cores). || Udział w całej maszynie (wszystkie rdzenie). || Part de la machine entière (tous les cœurs). || Anteil an der gesamten Maschine (alle Kerne). || Proporción de toda la máquina (todos los núcleos).
+API server memory || Pamięć serwera API || Mémoire du serveur API || Speicher des API-Servers || Memoria del servidor API
+Resident memory of the API server process. || Pamięć rezydentna procesu serwera API. || Mémoire résidente du processus du serveur API. || Resident-Speicher des API-Server-Prozesses. || Memoria residente del proceso del servidor API.
+System memory in use || Używana pamięć systemu || Mémoire système utilisée || Belegter Systemspeicher || Memoria del sistema en uso
+Everything running on this machine, not just the API server. || Wszystko, co działa na tej maszynie, nie tylko serwer API. || Tout ce qui tourne sur cette machine, pas seulement le serveur API. || Alles, was auf diesem Rechner läuft, nicht nur der API-Server. || Todo lo que se ejecuta en esta máquina, no solo el servidor API.
+Readings are kept in memory only: they start empty after a restart and are not shared between worker processes. Inside a container this shows the host's hardware. || Odczyty są przechowywane tylko w pamięci: po restarcie zaczynają od zera i nie są współdzielone między procesami roboczymi. W kontenerze pokazywany jest sprzęt hosta. || Les mesures ne sont gardées qu'en mémoire : elles repartent de zéro après un redémarrage et ne sont pas partagées entre processus. Dans un conteneur, c'est le matériel de l'hôte qui est affiché. || Die Messwerte werden nur im Arbeitsspeicher gehalten: Nach einem Neustart beginnen sie leer und werden nicht zwischen Worker-Prozessen geteilt. In einem Container wird die Hardware des Hosts angezeigt. || Las lecturas solo se guardan en memoria: empiezan vacías tras un reinicio y no se comparten entre procesos de trabajo. Dentro de un contenedor se muestra el hardware del host.
+{1} cores / {2} threads || {1} rdzeni / {2} wątków || {1} cœurs / {2} threads || {1} Kerne / {2} Threads || {1} núcleos / {2} hilos
+{1} threads || {1} wątków || {1} threads || {1} Threads || {1} hilos
+Looking up {1}... || Sprawdzanie {1}... || Recherche de {1}... || {1} wird nachgeschlagen... || Consultando {1}...
+Network || Sieć || Réseau || Netzwerk || Red
+Organization || Organizacja || Organisation || Organisation || Organización
+Country || Kraj || Pays || Land || País
+Range || Zakres || Plage || Bereich || Rango
+Registry || Rejestr || Registre || Registrierung || Registro
+IP lookup is disabled on this server. || Sprawdzanie adresów IP jest wyłączone na tym serwerze. || La recherche d'adresses IP est désactivée sur ce serveur. || Die IP-Abfrage ist auf diesem Server deaktiviert. || La consulta de IP está desactivada en este servidor.
+No registry details available right now. || Brak danych rejestru w tej chwili. || Aucun détail de registre disponible pour le moment. || Derzeit sind keine Registrierungsdetails verfügbar. || No hay detalles del registro disponibles ahora.
+API server CPU || Procesor serwera API || CPU du serveur API || CPU des API-Servers || CPU del servidor API
+of the whole machine || całej maszyny || de la machine entière || der gesamten Maschine || de toda la máquina
+{1}% of RAM || {1}% pamięci RAM || {1} % de la RAM || {1} % des RAM || {1} % de la RAM
+System CPU || Procesor systemu || CPU système || System-CPU || CPU del sistema
+System memory || Pamięć systemu || Mémoire système || Systemspeicher || Memoria del sistema
+API server uptime || Czas pracy serwera API || Disponibilité du serveur API || Laufzeit des API-Servers || Tiempo activo del servidor API
+Threads || Wątki || Threads || Threads || Hilos
+{1} free of {2} || wolne: {1} z {2} || {1} libres sur {2} || {1} frei von {2} || {1} libres de {2}
+Hardware || Sprzęt || Matériel || Hardware || Hardware
+Processor || Procesor || Processeur || Prozessor || Procesador
+Cores || Rdzenie || Cœurs || Kerne || Núcleos
+Max clock || Maks. taktowanie || Fréquence max. || Max. Takt || Reloj máx.
+Architecture || Architektura || Architecture || Architektur || Arquitectura
+Swap / page file || Swap / plik stronicowania || Swap / fichier d'échange || Auslagerungsdatei || Swap / archivo de paginación
+Disk holding the data || Dysk z danymi || Disque contenant les données || Datenträger mit den Daten || Disco con los datos
+System || System || Système || System || Sistema
+Kernel || Jądro || Noyau || Kernel || Kernel
+Host name || Nazwa hosta || Nom d'hôte || Hostname || Nombre de host
+Running in a container || Działa w kontenerze || Exécuté dans un conteneur || Läuft in einem Container || Se ejecuta en un contenedor
+Machine up since || Maszyna działa od || Machine active depuis || Rechner läuft seit || Equipo activo desde
+Time zone || Strefa czasowa || Fuseau horaire || Zeitzone || Zona horaria
+Commit || Commit || Commit || Commit || Commit
+(uncommitted changes) || (niezatwierdzone zmiany) || (modifications non validées) || (nicht committete Änderungen) || (cambios sin confirmar)
+Written against RustDesk client || Napisano pod klienta RustDesk || Écrit pour le client RustDesk || Geschrieben für den RustDesk-Client || Escrito para el cliente de RustDesk
+{1} source || źródło: {1} || source {1} || Quelle {1} || fuente {1}
+Your connection || Twoje połączenie || Votre connexion || Ihre Verbindung || Su conexión
+Encrypted (HTTPS, {1}) || Szyfrowane (HTTPS, {1}) || Chiffrée (HTTPS, {1}) || Verschlüsselt (HTTPS, {1}) || Cifrada (HTTPS, {1})
+Not encrypted (HTTP) || Nieszyfrowane (HTTP) || Non chiffrée (HTTP) || Nicht verschlüsselt (HTTP) || Sin cifrar (HTTP)
+TLS inside the API server || TLS wewnątrz serwera API || TLS dans le serveur API || TLS im API-Server || TLS dentro del servidor API
+No (plain HTTP) || Nie (zwykły HTTP) || Non (HTTP simple) || Nein (reines HTTP) || No (HTTP sin cifrar)
+Process ID || ID procesu || ID du processus || Prozess-ID || ID de proceso
+Started || Uruchomiono || Démarré || Gestartet || Iniciado
+Uptime || Czas pracy || Disponibilité || Laufzeit || Tiempo activo
+Database and libraries || Baza danych i biblioteki || Base de données et bibliothèques || Datenbank und Bibliotheken || Base de datos y bibliotecas
+Engine || Silnik || Moteur || Engine || Motor
+Database size || Rozmiar bazy danych || Taille de la base de données || Datenbankgröße || Tamaño de la base de datos
+Write-ahead log || Dziennik WAL || Journal WAL || Write-Ahead-Log || Registro WAL
+Failed to load server status: || Nie udało się wczytać stanu serwera: || Impossible de charger l'état du serveur : || Serverstatus konnte nicht geladen werden: || No se pudo cargar el estado del servidor:
+Collecting data - the first reading arrives within {1} s || Zbieranie danych - pierwszy odczyt pojawi się w ciągu {1} s || Collecte des données - la première mesure arrive dans {1} s || Daten werden gesammelt - der erste Messwert kommt innerhalb von {1} s || Recopilando datos: la primera lectura llega en {1} s
+One reading every {1} s, last {2} min kept. Updated {3}. || Jeden odczyt co {1} s, przechowywane ostatnie {2} min. Zaktualizowano {3}. || Une mesure toutes les {1} s, {2} dernières minutes conservées. Mis à jour {3}. || Ein Messwert alle {1} s, die letzten {2} Min. werden behalten. Aktualisiert {3}. || Una lectura cada {1} s, se conservan los últimos {2} min. Actualizado {3}.

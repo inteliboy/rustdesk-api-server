@@ -86,12 +86,17 @@ async function loadStrategies() {
   rows.innerHTML = strategies
     .map(
       (s) => `<tr>
-        <td class="px-4 py-3 font-medium">${escapeHtml(s.name)}</td>
+        <td class="px-4 py-3 font-medium">${escapeHtml(s.name)}${
+          s.is_default
+            ? ` <span class="badge badge-online" title="Devices with no strategy of their own and none through their group get this one"><span class="badge-dot"></span>Default</span>`
+            : ""
+        }</td>
         <td class="px-4 py-3 text-slate-500">${escapeHtml(s.description || "-")}</td>
         <td class="px-4 py-3 text-slate-500">${Object.keys(s.options).length}</td>
         <td class="px-4 py-3 text-slate-500">${s.device_count}</td>
         <td class="px-4 py-3 text-slate-500">${s.group_count}</td>
         <td class="px-4 py-3 text-right space-x-3 whitespace-nowrap">
+          <button data-id="${s.id}" class="toggle-default text-slate-500 hover:text-slate-900">${s.is_default ? "Stop being the default" : "Make default"}</button>
           <button data-id="${s.id}" class="edit-strategy text-slate-500 hover:text-slate-900">Edit</button>
           <button data-id="${s.id}" class="delete-strategy text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300">Delete</button>
         </td>
@@ -99,6 +104,26 @@ async function loadStrategies() {
     )
     .join("");
 
+  document.querySelectorAll(".toggle-default").forEach((btn) =>
+    btn.addEventListener("click", async () => {
+      const strategy = strategies.find((s) => s.id === parseInt(btn.dataset.id, 10));
+      if (
+        !strategy.is_default &&
+        !confirm(t('Make "{1}" the default? Every device that has no strategy of its own and none through its group receives it at its next heartbeat.', [strategy.name]))
+      )
+        return;
+      try {
+        await api(`/api/v1/strategies/${strategy.id}/default`, {
+          method: "PUT",
+          body: JSON.stringify({ is_default: !strategy.is_default }),
+        });
+        toast(strategy.is_default ? "There is no default strategy now." : "Default strategy set.", "success");
+        loadStrategies();
+      } catch (err) {
+        toast(err.message, "error");
+      }
+    })
+  );
   document.querySelectorAll(".edit-strategy").forEach((btn) =>
     btn.addEventListener("click", () => openEditor(strategies.find((s) => s.id === parseInt(btn.dataset.id, 10))))
   );
@@ -109,7 +134,7 @@ async function loadStrategies() {
       const warning = used
         ? ` It is assigned to ${strategy.device_count} device(s) and ${strategy.group_count} group(s); their clients are reset to their own defaults.`
         : "";
-      if (!confirm("Delete this strategy?" + warning)) return;
+      if (!confirm(t("Delete this strategy?") + warning)) return;
       try {
         await api(`/api/v1/strategies/${strategy.id}`, { method: "DELETE" });
         toast("Strategy deleted.", "success");

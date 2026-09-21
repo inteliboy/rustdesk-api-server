@@ -9,6 +9,7 @@ from rustdesk_api.api import (
     api_keys,
     auth,
     client_audit,
+    connect,
     data_transfer,
     device_tools,
     devices,
@@ -22,6 +23,7 @@ from rustdesk_api.api import (
     session_logs,
     shares,
     strategies,
+    system,
     tags,
     two_factor,
     users,
@@ -56,6 +58,8 @@ api_router.include_router(tags.router)
 api_router.include_router(address_book_management.router)
 api_router.include_router(address_book_management.books_router)
 api_router.include_router(admin.router)
+api_router.include_router(system.router)
+api_router.include_router(connect.router)
 api_router.include_router(session_logs.router)
 api_router.include_router(ip_info.router)
 api_router.include_router(ws.router)

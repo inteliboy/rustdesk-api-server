@@ -199,7 +199,7 @@ function switchTab(tab) {
 }
 
 async function deleteOne(id) {
-  if (!confirm("Delete this log entry? This cannot be undone.")) return;
+  if (!confirm(t("Delete this log entry? This cannot be undone."))) return;
   try {
     await api(`/api/v1/${resource()}/${encodeURIComponent(id)}`, { method: "DELETE" });
     toast("Log entry deleted.", "success");

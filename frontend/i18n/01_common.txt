@@ -1,0 +1,138 @@
+# English || Polish || French || German || Spanish
+# One entry per line, fields separated by " || ". {1}, {2}... stand for values put in at run time.
+# Keys are the English text exactly as it appears on the page (whitespace collapsed).
+
+# ---- shell and navigation
+Log out || Wyloguj || Se déconnecter || Abmelden || Cerrar sesión
+Dashboard || Pulpit || Tableau de bord || Übersicht || Panel
+Devices || Urządzenia || Appareils || Geräte || Dispositivos
+Groups || Grupy || Groupes || Gruppen || Grupos
+Tags || Tagi || Étiquettes || Tags || Etiquetas
+Address Book || Książka adresowa || Carnet d'adresses || Adressbuch || Libreta de direcciones
+Logs || Dzienniki || Journaux || Protokolle || Registros
+Strategies || Strategie || Stratégies || Strategien || Estrategias
+Users || Użytkownicy || Utilisateurs || Benutzer || Usuarios
+Connect || Podłączanie || Connexion || Verbinden || Conectar
+Settings || Ustawienia || Paramètres || Einstellungen || Ajustes
+Security || Bezpieczeństwo || Sécurité || Sicherheit || Seguridad
+Language || Język || Langue || Sprache || Idioma
+Appearance || Wygląd || Apparence || Darstellung || Apariencia
+Theme || Motyw || Thème || Design || Tema
+Accent color || Kolor akcentu || Couleur d'accent || Akzentfarbe || Color de énfasis
+{1} accent || akcent: {1} || accent {1} || Akzent {1} || énfasis {1}
+(admin) || (administrator) || (administrateur) || (Administrator) || (administrador)
+Open your user record || Otwórz swój rekord użytkownika || Ouvrir votre fiche utilisateur || Ihren Benutzereintrag öffnen || Abrir su registro de usuario
+Your account and password || Twoje konto i hasło || Votre compte et mot de passe || Ihr Konto und Passwort || Su cuenta y contraseña
+Loading... || Ładowanie... || Chargement... || Wird geladen... || Cargando...
+
+# ---- generic buttons and words
+Save || Zapisz || Enregistrer || Speichern || Guardar
+Cancel || Anuluj || Annuler || Abbrechen || Cancelar
+Create || Utwórz || Créer || Erstellen || Crear
+Delete || Usuń || Supprimer || Löschen || Eliminar
+Edit || Edytuj || Modifier || Bearbeiten || Editar
+Close || Zamknij || Fermer || Schließen || Cerrar
+Copy || Kopiuj || Copier || Kopieren || Copiar
+Refresh || Odśwież || Actualiser || Aktualisieren || Actualizar
+Apply || Zastosuj || Appliquer || Anwenden || Aplicar
+Remove || Usuń || Retirer || Entfernen || Quitar
+Revoke || Unieważnij || Révoquer || Widerrufen || Revocar
+Share || Udostępnij || Partager || Teilen || Compartir
+Back || Wstecz || Retour || Zurück || Atrás
+Previous || Poprzednia || Précédent || Zurück || Anterior
+Next || Następna || Suivant || Weiter || Siguiente
+Import || Importuj || Importer || Importieren || Importar
+Import… || Importuj… || Importer… || Importieren… || Importar…
+Export CSV || Eksportuj CSV || Exporter en CSV || CSV exportieren || Exportar CSV
+Export JSON || Eksportuj JSON || Exporter en JSON || JSON exportieren || Exportar JSON
+Name || Nazwa || Nom || Name || Nombre
+Description || Opis || Description || Beschreibung || Descripción
+Description (optional) || Opis (opcjonalnie) || Description (facultative) || Beschreibung (optional) || Descripción (opcional)
+Email || E-mail || E-mail || E-Mail || Correo electrónico
+Email (optional) || E-mail (opcjonalnie) || E-mail (facultatif) || E-Mail (optional) || Correo electrónico (opcional)
+Username || Nazwa użytkownika || Nom d'utilisateur || Benutzername || Nombre de usuario
+Password || Hasło || Mot de passe || Passwort || Contraseña
+Status || Stan || Statut || Status || Estado
+Online || Online || En ligne || Online || En línea
+Offline || Offline || Hors ligne || Offline || Sin conexión
+Active || Aktywne || Actif || Aktiv || Activo
+Disabled || Wyłączone || Désactivé || Deaktiviert || Desactivado
+On || Włączone || Activé || Ein || Activado
+Off || Wyłączone || Désactivé || Aus || Desactivado
+Yes || Tak || Oui || Ja || Sí
+No || Nie || Non || Nein || No
+None || Brak || Aucun || Keine || Ninguno
+Never || Nigdy || Jamais || Nie || Nunca
+Unknown || Nieznane || Inconnu || Unbekannt || Desconocido
+Someone || Ktoś || Quelqu'un || Jemand || Alguien
+Note || Notatka || Note || Notiz || Nota
+Note (optional) || Notatka (opcjonalnie) || Note (facultative) || Notiz (optional) || Nota (opcional)
+Details || Szczegóły || Détails || Details || Detalles
+Time || Czas || Heure || Zeit || Hora
+Type || Typ || Type || Typ || Tipo
+Version || Wersja || Version || Version || Versión
+Created || Utworzono || Créé || Erstellt || Creado
+Expires || Wygasa || Expire || Läuft ab || Caduca
+Label || Etykieta || Libellé || Bezeichnung || Etiqueta
+Owner || Właściciel || Propriétaire || Besitzer || Propietario
+Group || Grupa || Groupe || Gruppe || Grupo
+Tag || Tag || Étiquette || Tag || Etiqueta
+Strategy || Strategia || Stratégie || Strategie || Estrategia
+Default || Domyślna || Par défaut || Standard || Predeterminada
+Archive || Archiwizuj || Archiver || Archivieren || Archivar
+Archived || Zarchiwizowane || Archivé || Archiviert || Archivado
+Outdated || Nieaktualny || Obsolète || Veraltet || Desactualizado
+Review || Do sprawdzenia || À examiner || Prüfen || Revisar
+Saved. || Zapisano. || Enregistré. || Gespeichert. || Guardado.
+Copied. || Skopiowano. || Copié. || Kopiert. || Copiado.
+Request failed ({1}) || Żądanie nie powiodło się ({1}) || La requête a échoué ({1}) || Anfrage fehlgeschlagen ({1}) || La solicitud falló ({1})
+Administrator access is required to view this page. || Ta strona wymaga uprawnień administratora. || Cette page nécessite les droits d'administrateur. || Für diese Seite sind Administratorrechte erforderlich. || Esta página requiere permisos de administrador.
+Administrator || Administrator || Administrateur || Administrator || Administrador
+Read only || Tylko odczyt || Lecture seule || Nur Lesen || Solo lectura
+Read / write || Odczyt i zapis || Lecture / écriture || Lesen / Schreiben || Lectura / escritura
+Full control || Pełna kontrola || Contrôle total || Vollzugriff || Control total
+Unknown access || Nieznany dostęp || Accès inconnu || Unbekannter Zugriff || Acceso desconocido
+Access || Dostęp || Accès || Zugriff || Acceso
+View || Podgląd || Consulter || Ansehen || Ver
+Control || Sterowanie || Contrôler || Steuern || Controlar
+
+# ---- sign in, register, first run, password reset
+Sign in || Zaloguj się || Se connecter || Anmelden || Iniciar sesión
+Sign in - RustDesk API Server || Logowanie - RustDesk API Server || Connexion - RustDesk API Server || Anmelden - RustDesk API Server || Iniciar sesión - RustDesk API Server
+Username or email || Nazwa użytkownika lub e-mail || Nom d'utilisateur ou e-mail || Benutzername oder E-Mail || Nombre de usuario o correo
+Sign in with || Zaloguj się przez || Se connecter avec || Anmelden mit || Iniciar sesión con
+Create an account || Utwórz konto || Créer un compte || Konto erstellen || Crear una cuenta
+Create account || Utwórz konto || Créer le compte || Konto erstellen || Crear cuenta
+Back to sign in || Wróć do logowania || Retour à la connexion || Zurück zur Anmeldung || Volver a iniciar sesión
+Forgot your password? Ask an administrator for a reset link. || Nie pamiętasz hasła? Poproś administratora o link do jego zresetowania. || Mot de passe oublié ? Demandez un lien de réinitialisation à un administrateur. || Passwort vergessen? Bitten Sie einen Administrator um einen Link zum Zurücksetzen. || ¿Olvidó su contraseña? Pida un enlace de restablecimiento a un administrador.
+Enter the 6-digit code from your authenticator app, or one of your recovery codes. || Wpisz 6-cyfrowy kod z aplikacji uwierzytelniającej albo jeden z kodów odzyskiwania. || Saisissez le code à 6 chiffres de votre application d'authentification, ou un de vos codes de récupération. || Geben Sie den 6-stelligen Code aus Ihrer Authenticator-App oder einen Ihrer Wiederherstellungscodes ein. || Introduzca el código de 6 dígitos de su aplicación de autenticación o uno de sus códigos de recuperación.
+Verification code || Kod weryfikacyjny || Code de vérification || Bestätigungscode || Código de verificación
+Verify || Zweryfikuj || Vérifier || Bestätigen || Verificar
+Your password was changed. Sign in with the new one. || Hasło zostało zmienione. Zaloguj się nowym hasłem. || Votre mot de passe a été modifié. Connectez-vous avec le nouveau. || Ihr Passwort wurde geändert. Melden Sie sich mit dem neuen an. || Su contraseña se cambió. Inicie sesión con la nueva.
+Single sign-on is not available right now. Sign in with your password, or try again. || Logowanie jednokrotne jest teraz niedostępne. Zaloguj się hasłem albo spróbuj ponownie. || L'authentification unique n'est pas disponible pour le moment. Connectez-vous avec votre mot de passe ou réessayez. || Single Sign-on ist derzeit nicht verfügbar. Melden Sie sich mit Ihrem Passwort an oder versuchen Sie es erneut. || El inicio de sesión único no está disponible ahora. Inicie sesión con su contraseña o inténtelo de nuevo.
+Sign in failed. || Logowanie nie powiodło się. || Échec de la connexion. || Anmeldung fehlgeschlagen. || No se pudo iniciar sesión.
+Verification failed. || Weryfikacja nie powiodła się. || La vérification a échoué. || Bestätigung fehlgeschlagen. || La verificación falló.
+Create account - RustDesk API Server || Tworzenie konta - RustDesk API Server || Créer un compte - RustDesk API Server || Konto erstellen - RustDesk API Server || Crear cuenta - RustDesk API Server
+Create an account - RustDesk API Server || Tworzenie konta - RustDesk API Server || Créer un compte - RustDesk API Server || Konto erstellen - RustDesk API Server || Crear una cuenta - RustDesk API Server
+At least 8 characters. || Co najmniej 8 znaków. || Au moins 8 caractères. || Mindestens 8 Zeichen. || Al menos 8 caracteres.
+An administrator has to approve a new account before it can sign in. || Administrator musi zatwierdzić nowe konto, zanim będzie można się na nie zalogować. || Un administrateur doit approuver un nouveau compte avant qu'il puisse se connecter. || Ein Administrator muss ein neues Konto freigeben, bevor es sich anmelden kann. || Un administrador debe aprobar la cuenta nueva antes de que pueda iniciar sesión.
+You can sign in as soon as the account is created. || Zalogujesz się od razu po utworzeniu konta. || Vous pouvez vous connecter dès que le compte est créé. || Sie können sich anmelden, sobald das Konto erstellt ist. || Podrá iniciar sesión en cuanto se cree la cuenta.
+Your account was created. It can sign in once an administrator has approved it. || Konto zostało utworzone. Zalogujesz się, gdy administrator je zatwierdzi. || Votre compte a été créé. Vous pourrez vous connecter une fois qu'un administrateur l'aura approuvé. || Ihr Konto wurde erstellt. Sie können sich anmelden, sobald ein Administrator es freigegeben hat. || Su cuenta se creó. Podrá iniciar sesión cuando un administrador la apruebe.
+Your account was created. You can sign in now. || Konto zostało utworzone. Możesz się teraz zalogować. || Votre compte a été créé. Vous pouvez vous connecter maintenant. || Ihr Konto wurde erstellt. Sie können sich jetzt anmelden. || Su cuenta se creó. Ya puede iniciar sesión.
+Registration failed. || Rejestracja nie powiodła się. || L'inscription a échoué. || Registrierung fehlgeschlagen. || El registro falló.
+First-run setup - RustDesk API Server || Pierwsze uruchomienie - RustDesk API Server || Première configuration - RustDesk API Server || Ersteinrichtung - RustDesk API Server || Configuración inicial - RustDesk API Server
+Welcome || Witamy || Bienvenue || Willkommen || Bienvenido
+Create the first administrator account to get started. || Aby zacząć, utwórz konto pierwszego administratora. || Créez le premier compte administrateur pour commencer. || Erstellen Sie das erste Administratorkonto, um zu beginnen. || Cree la primera cuenta de administrador para empezar.
+Create administrator || Utwórz administratora || Créer l'administrateur || Administrator erstellen || Crear administrador
+Setup failed. || Konfiguracja nie powiodła się. || La configuration a échoué. || Einrichtung fehlgeschlagen. || La configuración falló.
+Choose a new password - RustDesk API Server || Ustaw nowe hasło - RustDesk API Server || Choisir un nouveau mot de passe - RustDesk API Server || Neues Passwort wählen - RustDesk API Server || Elegir una contraseña nueva - RustDesk API Server
+Choose a new password || Ustaw nowe hasło || Choisir un nouveau mot de passe || Neues Passwort wählen || Elegir una contraseña nueva
+Using the link an administrator gave you. It works once. || Używasz linku otrzymanego od administratora. Działa tylko raz. || Vous utilisez le lien fourni par un administrateur. Il ne fonctionne qu'une fois. || Sie verwenden den Link eines Administrators. Er funktioniert nur einmal. || Está usando el enlace que le dio un administrador. Funciona una sola vez.
+New password || Nowe hasło || Nouveau mot de passe || Neues Passwort || Contraseña nueva
+At least 8 characters. You will be signed out everywhere. || Co najmniej 8 znaków. Zostaniesz wylogowany wszędzie. || Au moins 8 caractères. Vous serez déconnecté partout. || Mindestens 8 Zeichen. Sie werden überall abgemeldet. || Al menos 8 caracteres. Se cerrará su sesión en todas partes.
+Repeat it || Powtórz je || Répétez-le || Wiederholen || Repítala
+Set password || Ustaw hasło || Définir le mot de passe || Passwort festlegen || Establecer contraseña
+The two passwords are not the same. || Hasła nie są takie same. || Les deux mots de passe ne sont pas identiques. || Die beiden Passwörter stimmen nicht überein. || Las dos contraseñas no coinciden.
+This page needs the full link the administrator gave you. || Ta strona wymaga pełnego linku otrzymanego od administratora. || Cette page nécessite le lien complet fourni par l'administrateur. || Diese Seite benötigt den vollständigen Link des Administrators. || Esta página necesita el enlace completo que le dio el administrador.
+Could not set the password. || Nie udało się ustawić hasła. || Impossible de définir le mot de passe. || Das Passwort konnte nicht festgelegt werden. || No se pudo establecer la contraseña.
+RustDesk API Server || RustDesk API Server || RustDesk API Server || RustDesk API Server || RustDesk API Server

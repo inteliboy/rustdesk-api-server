@@ -20,7 +20,9 @@ from rustdesk_api.models.device import Device
 from rustdesk_api.models.group import Group
 from rustdesk_api.models.tag import Tag
 from rustdesk_api.models.user import User
+from rustdesk_api.services import fleet as fleet_service
 from rustdesk_api.services import server_metrics
+from rustdesk_api.services import strategies as strategy_service
 
 router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
 
@@ -31,7 +33,8 @@ def dashboard_stats(
     _admin: User = Depends(get_current_admin),
     settings: Settings = Depends(get_settings_dep),
 ) -> DashboardStats:
-    total_devices = db.execute(select(func.count(Device.id))).scalar_one()
+    live = Device.archived_at.is_(None)
+    total_devices = db.execute(select(func.count(Device.id)).where(live)).scalar_one()
     total_users = db.execute(select(func.count(User.id))).scalar_one()
     total_groups = db.execute(select(func.count(Group.id))).scalar_one()
     total_tags = db.execute(select(func.count(Tag.id))).scalar_one()
@@ -40,8 +43,29 @@ def dashboard_stats(
         seconds=settings.device_online_timeout
     )
     online_devices = db.execute(
-        select(func.count(Device.id)).where(Device.last_seen.is_not(None), Device.last_seen >= cutoff)
+        select(func.count(Device.id)).where(live, Device.last_seen.is_not(None), Device.last_seen >= cutoff)
     ).scalar_one()
+    new_devices = db.execute(
+        select(func.count(Device.id)).where(
+            live,
+            Device.created_at >= datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=24),
+        )
+    ).scalar_one()
+    archived_devices = db.execute(
+        select(func.count(Device.id)).where(Device.archived_at.is_not(None))
+    ).scalar_one()
+    # Nothing of its own, nothing through its group (or no group), and no default.
+    has_default = strategy_service.get_default(db) is not None
+    without_strategy = 0
+    if not has_default:
+        group_has_strategy = select(Group.id).where(Group.strategy_id.is_not(None))
+        without_strategy = db.execute(
+            select(func.count(Device.id)).where(
+                live,
+                Device.strategy_id.is_(None),
+                (Device.group_id.is_(None)) | (Device.group_id.not_in(group_has_strategy)),
+            )
+        ).scalar_one()
 
     return DashboardStats(
         total_devices=total_devices,
@@ -50,6 +74,10 @@ def dashboard_stats(
         total_users=total_users,
         total_groups=total_groups,
         total_tags=total_tags,
+        new_devices_24h=new_devices,
+        outdated_devices=fleet_service.count_outdated(db, settings),
+        archived_devices=archived_devices,
+        devices_without_strategy=without_strategy,
     )
 
 

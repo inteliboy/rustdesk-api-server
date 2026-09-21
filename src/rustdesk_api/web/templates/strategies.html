@@ -9,10 +9,11 @@
       New strategy
     </button>
   </div>
-  <p class="text-sm text-slate-500 mb-6">
+  <p class="text-sm text-slate-500 mb-6" data-i18n-html="strategies.intro">
     A strategy is a set of RustDesk client settings pushed to devices: it is assigned to a device (on its page) or to a
     group, and reaches the client with its next heartbeat. Settings a strategy leaves unset are reset to the client&rsquo;s
-    own default.
+    own default. The <strong>default</strong> strategy is what a device gets when it has none of its own and none through
+    its group &mdash; a baseline for every new device.
   </p>
 
   <div id="editor" class="card p-5 mb-6 hidden">

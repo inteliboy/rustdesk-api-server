@@ -82,11 +82,11 @@ has("activity still readable", h.describeActivity(mk("tag_deleted", { name: "pro
 // as a title="" attribute) must stay inert.
 const loginOk = (detail, ip = "10.0.0.5") => ({ action: "login", result: "success", actor_username: "admin", ip_address: ip, detail });
 eq("login origin", h.describeActivity(loginOk({ via: "webui", browser: "Chrome 130", os: "Windows", user_agent: "Mozilla/5.0" })),
-  '<span class="whitespace-nowrap">admin</span> logged in from 10.0.0.5 using <span title="Mozilla/5.0" class="underline decoration-dotted decoration-slate-400">Chrome 130 on Windows</span>');
-eq("login old entry", h.describeActivity(loginOk({ via: "webui" })), "<span class=\"whitespace-nowrap\">admin</span> logged in from 10.0.0.5");
+  '<span class="whitespace-nowrap">admin</span> logged in from <span class="whitespace-nowrap">10.0.0.5</span> using <span title="Mozilla/5.0" class="underline decoration-dotted decoration-slate-400">Chrome 130 on Windows</span>');
+eq("login old entry", h.describeActivity(loginOk({ via: "webui" })), "<span class=\"whitespace-nowrap\">admin</span> logged in from <span class=\"whitespace-nowrap\">10.0.0.5</span>");
 eq("login no detail at all", h.describeActivity({ action: "login", result: "success", actor_username: "admin", ip_address: null, detail: null }), "<span class=\"whitespace-nowrap\">admin</span> logged in");
 has("login rustdesk client", h.describeActivity(loginOk({ via: "rustdesk_client" })), ">RustDesk client</span>");
-has("login failure keeps origin", h.describeActivity({ action: "login", result: "failure", actor_username: null, ip_address: "1.2.3.4", detail: { username: "bob", browser: "curl" } }), 'for "bob" from <span class="whitespace-nowrap cursor-help underline decoration-dotted decoration-slate-400" tabindex="0" data-ip="1.2.3.4">1.2.3.4</span> using');
+has("login failure keeps origin", h.describeActivity({ action: "login", result: "failure", actor_username: null, ip_address: "1.2.3.4", detail: { username: "bob", browser: "curl" } }), 'for "bob" from <span class="whitespace-nowrap"><span class="whitespace-nowrap cursor-help underline decoration-dotted decoration-slate-400" tabindex="0" data-ip="1.2.3.4">1.2.3.4</span></span> using');
 const hostile = h.describeActivity(loginOk({ via: "webui", browser: XSS, os: XSS, user_agent: '"><img src=x onerror=alert(1)>' }, XSS));
 lacks("login hostile tag", hostile, "<img");
 lacks("login hostile title breakout", hostile, 'title=""');
@@ -156,7 +156,7 @@ const linked = h.userLink('7"><img src=x onerror=alert(1)>', XSS);
 lacks("userLink hostile id", linked, "<img");
 lacks("userLink hostile name", linked, "<img");
 has("activity actor is a link", h.describeActivity({ action: "logout", result: "success", actor_id: 3, actor_username: "bob", detail: null }), 'href="/users?id=3"');
-eq("activity unknown actor", h.describeActivity({ action: "logout", result: "success", actor_id: null, actor_username: null, detail: null }), "Someone logged out");
+eq("activity unknown actor", h.describeActivity({ action: "logout", result: "success", actor_id: null, actor_username: null, detail: null }), "<span class=\"whitespace-nowrap\">Someone</span> logged out");
 h.setUser({ id: 2, is_admin: false });
 eq("userLink non-admin is plain", h.userLink(7, "alice"), '<span class="whitespace-nowrap">alice</span>');
 h.setUser(null);

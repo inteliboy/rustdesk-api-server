@@ -15,6 +15,19 @@ from pathlib import Path
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from rustdesk_api.clientversion import parse_version
+
+# What NOTIFY_EVENTS may name (see services/notifications.py for when each is sent).
+NOTIFY_EVENT_NAMES = (
+    "device_offline",
+    "device_back_online",
+    "new_device",
+    "device_takeover_attempt",
+    "client_alarm",
+    "account_locked",
+    "backup_failed",
+)
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -98,6 +111,56 @@ class Settings(BaseSettings):
     # How often the background task runs (it also runs once at startup). Each
     # run that deletes something adds one audit entry, hence the daily default.
     log_retention_interval_hours: int = Field(default=24, ge=1, alias="LOG_RETENTION_INTERVAL_HOURS")
+
+    # Database backups (SQLite only). The server writes a consistent snapshot every
+    # BACKUP_INTERVAL_HOURS and keeps the newest BACKUP_KEEP of them (0 hours turns the
+    # schedule off), and takes one before it applies a pending migration, so a bad
+    # upgrade can be undone. Backups are whole copies of the database - password
+    # hashes included - so keep the directory as private as the database itself.
+    # Empty BACKUP_DIR means a `backups` folder next to the database file.
+    backup_dir: str = Field(default="", alias="BACKUP_DIR")
+    backup_interval_hours: int = Field(default=24, ge=0, alias="BACKUP_INTERVAL_HOURS")
+    backup_keep: int = Field(default=7, ge=1, le=1000, alias="BACKUP_KEEP")
+    backup_before_migration: bool = Field(default=True, alias="BACKUP_BEFORE_MIGRATION")
+
+    # Notifications: any of the three channels below may be set, all that are set
+    # receive every enabled event. The values are secrets (a webhook URL or ntfy
+    # topic is a credential), so they live here and never in the database, and are
+    # never shown in the WebUI or the logs.
+    notify_webhook_url: str = Field(default="", alias="NOTIFY_WEBHOOK_URL", repr=False)
+    # Signs each webhook body (HMAC-SHA256, header X-RustDesk-API-Signature).
+    notify_webhook_secret: str = Field(default="", alias="NOTIFY_WEBHOOK_SECRET", repr=False)
+    # The full topic URL, e.g. https://ntfy.sh/my-private-topic or your own server.
+    notify_ntfy_url: str = Field(default="", alias="NOTIFY_NTFY_URL", repr=False)
+    notify_ntfy_token: str = Field(default="", alias="NOTIFY_NTFY_TOKEN", repr=False)
+    notify_smtp_host: str = Field(default="", alias="NOTIFY_SMTP_HOST")
+    notify_smtp_port: int = Field(default=587, ge=1, le=65535, alias="NOTIFY_SMTP_PORT")
+    notify_smtp_user: str = Field(default="", alias="NOTIFY_SMTP_USER")
+    notify_smtp_password: str = Field(default="", alias="NOTIFY_SMTP_PASSWORD", repr=False)
+    # starttls (port 587), ssl (port 465) or none (a trusted local relay only).
+    notify_smtp_security: str = Field(default="starttls", alias="NOTIFY_SMTP_SECURITY")
+    notify_email_from: str = Field(default="", alias="NOTIFY_EMAIL_FROM")
+    notify_email_to: str = Field(default="", alias="NOTIFY_EMAIL_TO")
+    # Which events are sent (comma-separated; see services/notifications.EVENTS).
+    notify_events: str = Field(
+        default="device_offline,new_device,device_takeover_attempt,client_alarm,account_locked,backup_failed",
+        alias="NOTIFY_EVENTS",
+    )
+    # A device flagged "notify when offline" is reported after this long without a heartbeat.
+    notify_offline_after_minutes: int = Field(
+        default=10, ge=1, le=10080, alias="NOTIFY_OFFLINE_AFTER_MINUTES"
+    )
+    # At most this many notifications per minute across all events (a bulk import or an
+    # alarm storm must not flood a phone); the rest are dropped and counted.
+    notify_max_per_minute: int = Field(default=20, ge=1, le=600, alias="NOTIFY_MAX_PER_MINUTE")
+    notify_timeout_seconds: float = Field(default=10.0, gt=0, le=60, alias="NOTIFY_TIMEOUT_SECONDS")
+
+    # Fleet hygiene. A device unseen for this many days is archived: hidden from the
+    # default device list and the counts, back the moment it reports again. 0 = never.
+    # Devices flagged "notify when offline" are never archived.
+    device_stale_days: int = Field(default=0, ge=0, alias="DEVICE_STALE_DAYS")
+    # Clients older than this (e.g. 1.4.0) are flagged as outdated. Empty turns it off.
+    min_client_version: str = Field(default="", alias="MIN_CLIENT_VERSION")
 
     # Server tab: this process's CPU and memory, sampled every N seconds into a
     # rolling in-memory window (nothing is written to the database, and the
@@ -187,6 +250,43 @@ class Settings(BaseSettings):
 
         validate_keys(value)
         return value.strip()
+
+    @field_validator("notify_webhook_url", "notify_ntfy_url")
+    @classmethod
+    def _check_notify_url(cls, value: str) -> str:
+        value = value.strip()
+        if value and not value.lower().startswith(("http://", "https://")):
+            # The URL may carry a token, so it is not echoed.
+            raise ValueError("A notification URL must start with http:// or https://")
+        return value
+
+    @field_validator("notify_smtp_security")
+    @classmethod
+    def _check_smtp_security(cls, value: str) -> str:
+        value = value.strip().lower()
+        if value not in ("starttls", "ssl", "none"):
+            raise ValueError("NOTIFY_SMTP_SECURITY must be starttls, ssl or none")
+        return value
+
+    @field_validator("notify_events")
+    @classmethod
+    def _check_notify_events(cls, value: str) -> str:
+        names = [n.strip() for n in value.split(",") if n.strip()]
+        unknown = [n for n in names if n not in NOTIFY_EVENT_NAMES]
+        if unknown:
+            raise ValueError(
+                f"NOTIFY_EVENTS has unknown event(s) {', '.join(unknown)}; "
+                f"known: {', '.join(NOTIFY_EVENT_NAMES)}"
+            )
+        return ",".join(names)
+
+    @field_validator("min_client_version")
+    @classmethod
+    def _check_min_client_version(cls, value: str) -> str:
+        value = value.strip()
+        if value and parse_version(value) is None:
+            raise ValueError("MIN_CLIENT_VERSION must look like 1.4.0")
+        return value
 
     @field_validator("metrics_token")
     @classmethod
@@ -288,6 +388,14 @@ class Settings(BaseSettings):
         return [
             d.strip().lstrip("@").lower() for d in self.oidc_allowed_email_domains.split(",") if d.strip()
         ]
+
+    @property
+    def notify_event_list(self) -> list[str]:
+        return [n for n in self.notify_events.split(",") if n]
+
+    @property
+    def notify_email_recipients(self) -> list[str]:
+        return [a.strip() for a in self.notify_email_to.split(",") if a.strip()]
 
     @property
     def cors_origin_list(self) -> list[str]:

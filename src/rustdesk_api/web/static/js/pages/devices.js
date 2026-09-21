@@ -5,8 +5,8 @@ let state = {
   search: "",
   groupId: urlParams.get("group_id") || "",
   tagId: urlParams.get("tag_id") || "",
-  status: "",
-  sort: "last_seen",
+  status: ["online", "offline", "archived"].includes(urlParams.get("status")) ? urlParams.get("status") : "",
+  sort: ["last_seen", "created", "name", "id"].includes(urlParams.get("sort")) ? urlParams.get("sort") : "last_seen",
 };
 
 // What the bulk bar can do. `needs` says which list fills the second dropdown.
@@ -17,6 +17,23 @@ function statusBadge(online) {
   return online
     ? `<span class="badge badge-online"><span class="badge-dot"></span>Online</span>`
     : `<span class="badge badge-offline"><span class="badge-dot"></span>Offline</span>`;
+}
+
+// Small extra badges after the online/offline one. Each says what it is in words,
+// not just in colour.
+function deviceFlags(d) {
+  const flags = [];
+  if (d.uuid_change_pending) {
+    flags.push(`<span class="badge badge-offline" title="A different install is claiming this device"><span class="badge-dot"></span>Review</span>`);
+  }
+  if (d.archived) {
+    flags.push(`<span class="badge badge-offline" title="Silent for a long time; it returns to the list when it reports again"><span class="badge-dot"></span>Archived</span>`);
+  }
+  if (d.outdated) {
+    const c = "#d97706";
+    flags.push(`<span class="badge" title="This RustDesk client is older than the minimum version" style="background:${c}22;color:${c}"><span class="badge-dot" style="background:${c}"></span>Outdated</span>`);
+  }
+  return flags.map((f) => ` ${f}`).join("");
 }
 
 function optionList(items, placeholder, selectedValue) {
@@ -72,7 +89,7 @@ async function loadDevices() {
       .map(
         (d) => `<tr id="device-row-${d.id}" class="hover:bg-slate-50 cursor-pointer" data-href="/devices/${d.id}">
           <td class="px-4 py-3"><input type="checkbox" class="row-select" value="${Number(d.id)}" aria-label="Select this device" /></td>
-          <td class="px-4 py-3" data-cell="status">${statusBadge(d.online)}${d.uuid_change_pending ? ` <span class="badge badge-offline" title="A different install is claiming this device"><span class="badge-dot"></span>Review</span>` : ""}</td>
+          <td class="px-4 py-3" data-cell="status"><span data-status-badge>${statusBadge(d.online)}</span>${deviceFlags(d)}</td>
           <td class="px-4 py-3" data-cell="scheme">${apiSchemeBadge(d.api_scheme)}</td>
           <td class="px-4 py-3">${connectLink(d.rustdesk_id)}</td>
           <td class="px-4 py-3 whitespace-nowrap">${escapeHtml(d.alias || d.hostname || "-")}</td>
@@ -113,10 +130,16 @@ function bulkActions() {
   if (admin) {
     actions.push(
       { key: "set_owner", label: "Set owner...", needs: "users", clearLabel: "(no owner)" },
-      { key: "set_strategy", label: "Set strategy...", needs: "strategies", clearLabel: "(no strategy)" }
+      { key: "set_strategy", label: "Set strategy...", needs: "strategies", clearLabel: "(no strategy)" },
+      { key: "watch", label: "Notify when offline", needs: null },
+      { key: "unwatch", label: "Stop offline notifications", needs: null }
     );
   }
-  actions.push({ key: "delete", label: "Delete", needs: null });
+  actions.push(
+    { key: "archive", label: "Archive", needs: null },
+    { key: "unarchive", label: "Restore from archive", needs: null },
+    { key: "delete", label: "Delete", needs: null }
+  );
   return actions;
 }
 
@@ -165,7 +188,7 @@ async function applyBulk() {
     const field = { tags: "tag_id", groups: "group_id", users: "owner_id", strategies: "strategy_id" }[action.needs];
     body[field] = value === "none" ? null : parseInt(value, 10);
   }
-  if (action.key === "delete" && !confirm(`Delete ${selected.size} device(s)? This cannot be undone.`)) return;
+  if (action.key === "delete" && !confirm(t("Delete {1} device(s)? This cannot be undone.", [selected.size]))) return;
   try {
     const result = await api("/api/v1/devices/bulk", { method: "POST", body: JSON.stringify(body) });
     const skipped = result.skipped.length;
@@ -268,7 +291,7 @@ document.getElementById("view-save").addEventListener("click", async () => {
 
 document.getElementById("view-delete").addEventListener("click", async () => {
   const id = document.getElementById("view-select").value;
-  if (!id || !confirm("Delete this saved view?")) return;
+  if (!id || !confirm(t("Delete this saved view?"))) return;
   try {
     await api(`/api/v1/views/${encodeURIComponent(id)}`, { method: "DELETE" });
     toast("View deleted.", "success");
@@ -330,6 +353,7 @@ document.getElementById("import-run").addEventListener("click", () => runImport(
   renderNav("devices", user);
   if (user.is_admin) document.getElementById("import-toggle").classList.remove("hidden");
   await loadFilterOptions();
+  showFilters(); // status and sort may come from the address (the dashboard links here)
   fillBulkActions();
   await Promise.all([loadViews(), loadDevices()]);
 
@@ -341,7 +365,8 @@ document.getElementById("import-run").addEventListener("click", () => runImport(
     const row = document.getElementById(`device-row-${msg.device.id}`);
     if (!row) return;
     const statusCell = row.querySelector('[data-cell="status"]');
-    if (statusCell) statusCell.innerHTML = statusBadge(msg.device.online);
+    const badge = statusCell && statusCell.querySelector("[data-status-badge]");
+    if (badge) badge.innerHTML = statusBadge(msg.device.online);
     const schemeCell = row.querySelector('[data-cell="scheme"]');
     if (schemeCell) schemeCell.innerHTML = apiSchemeBadge(msg.device.api_scheme);
     const lastSeenCell = row.querySelector('[data-cell="last-seen"]');
