@@ -67,9 +67,12 @@ them is fictional demo data: made-up people, devices and addresses, made-up hard
 | Dashboard: server panel (CPU and memory charts, version, commit, whether a newer build exists) | [dashboard-server-light.png](screenshots/dashboard-server-light.png) | [dashboard-server-dark.png](screenshots/dashboard-server-dark.png) |
 | Dashboard with the menu on the left (**Appearance > Menu**), and the account controls at the top right | [dashboard-menu-left-light.png](screenshots/dashboard-menu-left-light.png) | [dashboard-menu-left-dark.png](screenshots/dashboard-menu-left-dark.png) |
 | Devices: status, owner, group, tags | [devices-light.png](screenshots/devices-light.png) | [devices-dark.png](screenshots/devices-dark.png) |
+| Devices waiting for approval (`NEW_DEVICE_POLICY=approve`): approve or reject one or several at once | [devices-pending-light.png](screenshots/devices-pending-light.png) | [devices-pending-dark.png](screenshots/devices-pending-dark.png) |
 | Click a device's ID to choose how to connect: the RustDesk client or the browser (when the web client is on) | [devices-connect-menu-light.png](screenshots/devices-connect-menu-light.png) | [devices-connect-menu-dark.png](screenshots/devices-connect-menu-dark.png) |
 | A device: details, strategy, sharing | [device-detail-light.png](screenshots/device-detail-light.png) | [device-detail-dark.png](screenshots/device-detail-dark.png) |
 | The [web client](#web-client-control-a-device-in-the-browser): the password screen of a session in the browser (it follows the WebUI's theme and accent color) | [webclient-light.png](screenshots/webclient-light.png) | [webclient-dark.png](screenshots/webclient-dark.png) |
+| The web client in a session: the stream's numbers in the bar (codec, resolution, FPS, bitrate, latency, decode time), the dock, and the chat window (the remote screen here is a drawn placeholder) | [webclient-session-light.png](screenshots/webclient-session-light.png) | [webclient-session-dark.png](screenshots/webclient-session-dark.png) |
+| The web client's on-screen keyboard, with Ctrl armed for the next key (the remote screen is a drawn placeholder) | [webclient-keyboard-light.png](screenshots/webclient-keyboard-light.png) | [webclient-keyboard-dark.png](screenshots/webclient-keyboard-dark.png) |
 | The web client's file manager: two panes, Send and Receive, the transfer queue | [webclient-files-light.png](screenshots/webclient-files-light.png) | [webclient-files-dark.png](screenshots/webclient-files-dark.png) |
 | Logs: Activity (what happened in the WebUI and the API) | [logs-activity-light.png](screenshots/logs-activity-light.png) | [logs-activity-dark.png](screenshots/logs-activity-dark.png) |
 | Logs: connections reported by the clients | [logs-light.png](screenshots/logs-light.png) | [logs-dark.png](screenshots/logs-dark.png) |
@@ -885,7 +888,7 @@ works from here), a reverse proxy that does not pass WebSocket upgrades, and a k
 **Look.** The client wears the WebUI's theme: light or dark (including "system") and the accent color chosen under
 **Appearance**, read from the same per-browser setting, so it matches the pages around it. The connect screen is the
 sign-in card's twin: the device's ID (fixed, chosen by the WebUI) and the password field, no bar above it. When the
-remote screen appears, so do a flat bar and a dock along the bottom (keys, input mode, type text, clipboard, and
+remote screen appears, so do a flat bar and a dock along the bottom (**Keyboard**, input mode, type text, clipboard, and
 **Files** and **Chat**), all drawn with the WebUI's surfaces and icons. The bar carries the device (the remote user, its
 ID and system), the stream's numbers (codec with hardware or software decoding, resolution, frames per second, bitrate,
 the round trip the remote device reports, and on wider windows decode time, dropped frames, time connected and the remote
@@ -893,6 +896,17 @@ RustDesk version) and the view controls with
 **Disconnect**. **Chat** is a small window in the bottom right corner of the remote screen, like a messenger: drag its
 top or left edge (or the corner) to resize it, click its title to minimize it to a bar (a badge counts unread
 messages), and close it with the cross; its size is remembered in the browser.
+
+**On-screen keyboard.** **Keyboard** opens a full keyboard over the bottom of the remote screen (US layout: function
+keys, the number row, the letters, Tab/Caps/Enter/Backspace, the navigation block and the arrows); drag it by its
+title bar. **Ctrl**, **Shift**, **Alt** and **Win** latch: tap one and it applies to the next key or click only, tap it
+twice quickly and it stays held until you tap it again (Shift also changes the letters shown). So Ctrl, then C, is
+Ctrl+C; Ctrl, Alt, then Del is Ctrl+Alt+Del, sent as the remote device's own key for it; and Ctrl held down while you
+click the remote screen is a Ctrl-click. Above the keys, one tap sends a common combination: Ctrl+Alt+Del,
+Ctrl+Shift+Esc, Alt+Tab, Alt+F4, Win+D, Win+R, Lock, and Ctrl+C, V, X, Z and A. A held key repeats. Your own keyboard
+still works while it is open, and closing it lets go of anything latched. It follows the device's keyboard permission
+and is unavailable in view-only mode. Only the US layout is drawn: keys send the character shown, so a remote layout
+that differs types what it maps that character to.
 
 **File transfer.** **Files** opens a file manager over the remote screen with two panes: this computer on the left and
 the remote computer on the right, each with its own path, sortable columns (folders stay on top), and buttons for a

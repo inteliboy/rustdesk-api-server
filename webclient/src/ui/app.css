@@ -74,7 +74,8 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
 /* Streaming-only chrome: the bar's controls, the dock and the panel exist only while a session is live. */
 #rd-root:not([data-state='streaming']) .rd-stream-only,
 #rd-root:not([data-state='streaming']) #rd-dock,
-#rd-root:not([data-state='streaming']) #rd-chat {
+#rd-root:not([data-state='streaming']) #rd-chat,
+#rd-root:not([data-state='streaming']) #rd-kbd {
   display: none !important;
 }
 
@@ -486,19 +487,6 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
 .rd-db:disabled {
   opacity: 0.35;
   cursor: not-allowed;
-}
-/* Ctrl, Alt and Del are keys, so they look like keys. */
-.rd-keycap {
-  min-width: 40px;
-  justify-content: center;
-  border-color: var(--rd-border-strong);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12px;
-  font-weight: 600;
-}
-.rd-keycap.rd-on {
-  border-color: var(--rd-accent);
-  color: var(--rd-accent);
 }
 /* Pointer / Touch is one choice between two: a segmented control. */
 .rd-seg {
@@ -1201,7 +1189,7 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
   }
   .rd-chip span,
   .rd-disconnect span,
-  .rd-db:not(.rd-keycap) span {
+  .rd-db span {
     display: none; /* icon-only; the title attribute still names them */
   }
   #rd-btn-fit {
@@ -1222,22 +1210,229 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
   }
 }
 
+/* --- on-screen keyboard --------------------------------------------------------- */
+
+/* A window over the bottom of the remote screen, centred and movable by its title bar. Six rows of sixty
+   columns (a normal key is four), a nav cluster level with them, and the shortcuts above. */
+#rd-kbd {
+  --rd-kbd-key-h: 36px;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 16px;
+  margin: 0 auto;
+  width: min(900px, calc(100% - 24px));
+  max-height: calc(100% - 24px);
+  z-index: 23;
+  display: flex;
+  flex-direction: column;
+  background: var(--rd-surface);
+  border: 1px solid var(--rd-border-strong);
+  border-radius: 12px;
+  box-shadow: 0 8px 28px var(--rd-shadow);
+  overflow: hidden;
+  transform: translate(var(--rd-kbd-dx, 0px), var(--rd-kbd-dy, 0px));
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.15s ease, visibility 0s linear 0.15s;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+#rd-kbd.rd-open {
+  visibility: visible;
+  opacity: 1;
+  transition: opacity 0.15s ease;
+}
+#rd-kbd.rd-dragging {
+  transition: none;
+}
+.rd-kbd-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 40px;
+  padding: 0 6px 0 12px;
+  border-bottom: 1px solid var(--rd-border);
+  cursor: grab;
+  touch-action: none;
+}
+#rd-kbd.rd-dragging .rd-kbd-head {
+  cursor: grabbing;
+}
+.rd-kbd-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.rd-kbd-title svg {
+  color: var(--rd-accent);
+}
+.rd-kbd-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 8px 10px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Shortcuts: one tap each. */
+.rd-kbd-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.rd-kbd-chip {
+  height: 28px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  background: var(--rd-surface);
+  border: 1px solid var(--rd-border-strong);
+  border-radius: 8px;
+  color: var(--rd-fg);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.rd-kbd-chip:hover {
+  background: var(--rd-surface-2);
+}
+.rd-kbd-chip:active {
+  background: color-mix(in srgb, var(--rd-accent) 14%, transparent);
+  border-color: var(--rd-accent);
+}
+
+/* The keys. */
+.rd-kbd-keys {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.rd-kbd-main,
+.rd-kbd-nav {
+  display: grid;
+  grid-auto-rows: var(--rd-kbd-key-h);
+  min-width: 0;
+}
+.rd-kbd-main {
+  flex: 60 1 0;
+  grid-template-columns: repeat(60, 1fr);
+}
+.rd-kbd-nav {
+  flex: 12 1 0;
+  grid-template-columns: repeat(12, 1fr);
+}
+.rd-k,
+.rd-k-gap {
+  grid-column: span var(--w, 4);
+}
+.rd-k {
+  margin: 2px;
+  min-width: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--rd-surface);
+  border: 1px solid var(--rd-border-strong);
+  border-radius: 6px;
+  box-shadow: 0 1px 0 var(--rd-border);
+  color: var(--rd-fg);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  overflow: hidden;
+}
+.rd-k:hover {
+  background: var(--rd-surface-2);
+}
+.rd-k:active {
+  background: color-mix(in srgb, var(--rd-accent) 14%, transparent);
+  border-color: var(--rd-accent);
+  box-shadow: none;
+  transform: translateY(1px);
+}
+.rd-k:focus-visible,
+.rd-kbd-chip:focus-visible {
+  outline: 2px solid var(--rd-accent);
+  outline-offset: 1px;
+}
+/* The modifiers: tapped once, until the next key or click; tapped twice, until tapped again. */
+.rd-k-mod {
+  color: var(--rd-muted);
+}
+.rd-k-mod.rd-once {
+  background: color-mix(in srgb, var(--rd-accent) 14%, transparent);
+  border-color: var(--rd-accent);
+  color: var(--rd-accent);
+}
+.rd-k-mod.rd-locked {
+  background: var(--rd-accent);
+  border-color: var(--rd-accent);
+  color: var(--rd-accent-fg);
+}
+
+@media (max-width: 760px) {
+  #rd-kbd {
+    --rd-kbd-key-h: 40px;
+    width: calc(100% - 12px);
+    bottom: 6px;
+  }
+  .rd-kbd-body {
+    padding: 6px;
+  }
+  .rd-k {
+    margin: 1px;
+    font-size: 12px;
+  }
+  /* The nav cluster drops under the main block, as one row. */
+  .rd-kbd-keys {
+    flex-direction: column;
+    gap: 6px;
+    align-items: stretch;
+  }
+  .rd-kbd-nav {
+    grid-template-columns: repeat(13, 1fr);
+  }
+  .rd-kbd-nav .rd-k {
+    grid-column: span 1;
+  }
+  .rd-kbd-nav .rd-k-gap {
+    display: none;
+  }
+}
+
 /* Dark, thin scrollbars
 /* Dark, thin scrollbars — the UA default renders as white slabs here. */
-#rd-chat * {
+#rd-chat *,
+#rd-kbd * {
   scrollbar-width: thin;
   scrollbar-color: var(--rd-surface-3) transparent;
 }
-#rd-chat *::-webkit-scrollbar {
+#rd-chat *::-webkit-scrollbar,
+#rd-kbd *::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
-#rd-chat *::-webkit-scrollbar-thumb {
+#rd-chat *::-webkit-scrollbar-thumb,
+#rd-kbd *::-webkit-scrollbar-thumb {
   background: var(--rd-surface-3);
   border-radius: 4px;
 }
 #rd-chat *::-webkit-scrollbar-track,
-#rd-chat *::-webkit-scrollbar-corner {
+#rd-chat *::-webkit-scrollbar-corner,
+#rd-kbd *::-webkit-scrollbar-track,
+#rd-kbd *::-webkit-scrollbar-corner {
   background: transparent;
 }
 

@@ -1,13 +1,14 @@
-// RustDesk API Server web client — main-thread UI shell: top bar, command dock, chat window, connect overlay.
+// RustDesk API Server web client — main-thread UI shell: top bar, command dock, chat window, on-screen keyboard, connect overlay.
 //
 // DOM id contract (the Blade view provides some; each is created here if missing, and
-// #rd-canvas / #rd-chat / #rd-overlay are normalized INTO #rd-viewport on mount):
+// #rd-canvas / #rd-chat / #rd-kbd / #rd-overlay are normalized INTO #rd-viewport on mount):
 //   #rd-root       page wrapper (toolbar + viewport); gets data-state="<SessionState>"
 //   #rd-toolbar    top bar — the device, view controls and Disconnect, rendered by this module
 //   #rd-viewport   region between toolbar and page bottom; holds canvas, chat window, dock, overlay, toast
 //   #rd-canvas     <canvas> transferred to the session worker (replaced with a fresh node on reconnect)
 //   #rd-dock       floating bottom command bar — input, clipboard, panels
 //   #rd-chat       floating chat window, bottom right, resizable; .rd-open = visible, .rd-min = title bar only
+//   #rd-kbd        floating on-screen keyboard (keyboard-panel.ts), movable; .rd-open = visible
 //   #rd-ft-overlay the file manager, a window over the remote screen (file-panel.ts)
 //   #rd-overlay    connect overlay — rendered children: #rd-peer-id (row #rd-field-id, hidden when
 //                  the peer id is server-injected or in ?id=), #rd-password, #rd-connect,
@@ -29,6 +30,7 @@ import type {
   UiCommand,
 } from '../core/contracts';
 import { attachInput, type DisplayRect } from '../input/mouse-keyboard';
+import { ModifierLatches, consumesOneShot } from '../input/virtual-keyboard';
 import { readLocalClipboardText } from '../input/clipboard-cursor';
 import {
   BackNotification_BlockInputState,
@@ -63,6 +65,7 @@ import {
   type RdGlobalConfig,
 } from './common';
 import { FilePanel } from './file-panel';
+import { KeyboardPanel } from './keyboard-panel';
 import { TerminalPanel } from './terminal-panel';
 import { CameraPanel } from './camera-panel';
 import { MseVideoPlayer } from '../media/mse-video';
@@ -112,6 +115,7 @@ type Els = {
   viewport: HTMLElement;
   dock: HTMLElement;
   chat: HTMLElement;
+  kbd: HTMLElement;
   overlay: HTMLElement;
   toast: HTMLElement;
   remoteCursor: HTMLImageElement;
@@ -154,18 +158,18 @@ function q<T extends Element>(scope: ParentNode, sel: string): T {
 /**
  * Peer permission name (PermissionInfo_Permission) -> the control it governs.
  * Permissions with no control here are tracked but change nothing. Keyboard
- * additionally gates the modifier latches and Type (KEYBOARD_EXTRA_IDS) — the
+ * additionally gates Type (KEYBOARD_EXTRA_IDS) — the
  * map keeps one canonical id per permission because the peer reports the
  * permission, not the widgets.
  */
 export const PERMISSION_CONTROLS: Record<string, { id: string; title: string }> = {
   File: { id: 'rd-btn-files', title: 'File transfer' },
   Clipboard: { id: 'rd-btn-clip', title: 'Send clipboard to remote' },
-  Keyboard: { id: 'rd-btn-cad', title: 'Keyboard shortcuts' },
+  Keyboard: { id: 'rd-btn-kbd', title: 'On-screen keyboard' },
 };
 
 /** Controls beyond the canonical one that a withdrawn Keyboard permission disables. */
-const KEYBOARD_EXTRA_IDS = ['rd-lat-ctrl', 'rd-lat-alt', 'rd-key-del', 'rd-btn-type'];
+const KEYBOARD_EXTRA_IDS = ['rd-btn-type'];
 
 export class RdApp {
   private cfg: RdGlobalConfig | undefined;
@@ -222,8 +226,9 @@ export class RdApp {
 
   // --- chrome state ---------------------------------------------------------
   private viewOnly = false;
-  private latchCtrl = false;
-  private latchAlt = false;
+  /** Ctrl, Shift, Alt and Win as tapped on the on-screen keyboard; merged into what the app sends. */
+  private readonly latches = new ModifierLatches();
+  private kbdPanel: KeyboardPanel | undefined;
   private inputMode: InputMode = 'pointer';
   private fitMode: FitMode = 'fit';
   private quality: number = QUALITY.balanced;
@@ -262,6 +267,7 @@ export class RdApp {
     this.renderTopBar();
     this.renderDock();
     this.renderChat();
+    this.renderKeyboard();
     this.renderOverlay();
 
     const attr = document
@@ -368,6 +374,7 @@ export class RdApp {
       return n;
     };
     const chat = make('rd-chat');
+    const kbd = make('rd-kbd');
     const overlay = make('rd-overlay');
     const toast = make('rd-toast');
     let remoteCursor = document.getElementById('rd-remote-cursor') as HTMLImageElement | null;
@@ -397,6 +404,7 @@ export class RdApp {
       viewport,
       dock,
       chat,
+      kbd,
       overlay,
       toast,
       remoteCursor,
@@ -544,7 +552,8 @@ export class RdApp {
     this.el.btnViewOnly.classList.toggle('rd-on', this.viewOnly);
     // Latched modifiers make no sense with input off; drop them quietly.
     if (this.viewOnly) {
-      this.setLatches(false, false);
+      this.kbdPanel?.close();
+      this.latches.clear();
       this.terminalPanel?.destroy();
       this.terminalPanel = undefined;
       this.removeClipboardSyncOffer();
@@ -558,14 +567,9 @@ export class RdApp {
     const db = (id: string, icon: IconName, label: string, title = label): string =>
       `<button type="button" class="rd-db" id="${id}" title="${title}" aria-label="${title}">` +
       `${iconHtml(icon)}<span>${label}</span></button>`;
-    const key = (id: string, label: string, title: string): string =>
-      `<button type="button" class="rd-db rd-keycap" id="${id}" title="${title}" aria-label="${title}"><span>${label}</span></button>`;
     this.el.dock.innerHTML = `
       <div class="rd-dock-group" role="group" aria-label="Keyboard">
-        ${key('rd-lat-ctrl', 'Ctrl', 'Hold Ctrl for clicks and keys')}
-        ${key('rd-lat-alt', 'Alt', 'Hold Alt for clicks and keys')}
-        ${key('rd-key-del', 'Del', 'Send Delete')}
-        ${db('rd-btn-cad', 'keyboard', 'Keys', 'Keyboard shortcuts')}
+        ${db('rd-btn-kbd', 'keyboard', 'Keyboard', 'On-screen keyboard')}
       </div>
       <span class="rd-dock-sep" aria-hidden="true"></span>
       <div class="rd-dock-group rd-seg" role="group" aria-label="Input mode">
@@ -583,18 +587,7 @@ export class RdApp {
         ${db('rd-btn-chat', 'chat', 'Chat')}
       </div>`;
     const d = this.el.dock;
-    q<HTMLButtonElement>(d, '#rd-lat-ctrl').addEventListener('click', () =>
-      this.setLatches(!this.latchCtrl, this.latchAlt),
-    );
-    q<HTMLButtonElement>(d, '#rd-lat-alt').addEventListener('click', () =>
-      this.setLatches(this.latchCtrl, !this.latchAlt),
-    );
-    q<HTMLButtonElement>(d, '#rd-key-del').addEventListener('click', () => {
-      this.pressControl(ControlKey.Delete, 'Delete sent');
-    });
-    q<HTMLButtonElement>(d, '#rd-btn-cad').addEventListener('click', (e) =>
-      this.openKeysPop(e.currentTarget as HTMLElement),
-    );
+    q<HTMLButtonElement>(d, '#rd-btn-kbd').addEventListener('click', () => this.toggleKeyboard());
     q<HTMLButtonElement>(d, '#rd-mode-pointer').addEventListener('click', () => this.setInputMode('pointer'));
     q<HTMLButtonElement>(d, '#rd-mode-touch').addEventListener('click', () => this.setInputMode('touch'));
     this.setInputMode('pointer');
@@ -614,23 +607,35 @@ export class RdApp {
     this.el.dock.querySelector('#rd-mode-touch')?.classList.toggle('rd-on', mode === 'touch');
   }
 
-  private setLatches(ctrl: boolean, alt: boolean): void {
-    this.latchCtrl = ctrl;
-    this.latchAlt = alt;
-    for (const [id, on] of [
-      ['rd-lat-ctrl', ctrl],
-      ['rd-lat-alt', alt],
-    ] as const) {
-      const b = this.el.dock.querySelector<HTMLButtonElement>(`#${id}`);
-      b?.classList.toggle('rd-on', on);
-      b?.setAttribute('aria-pressed', String(on));
-    }
+  private renderKeyboard(): void {
+    this.kbdPanel = new KeyboardPanel({
+      host: this.el.kbd,
+      viewport: this.el.viewport,
+      latches: this.latches,
+      send: (cmd) => {
+        this.post(cmd);
+      },
+      onVisibility: (open) => {
+        this.el.dock.querySelector('#rd-btn-kbd')?.classList.toggle('rd-on', open);
+        if (!open && this.state === 'streaming') this.canvas.focus();
+      },
+    });
   }
 
-  /** Send a single control key as a press (down+up in one message). */
-  private pressControl(key: ControlKey, note?: string): void {
-    this.post({ c: 'key', down: false, press: true, keyKind: 'control', value: key, modifiers: [] });
-    if (note) this.toast(note);
+  private toggleKeyboard(): void {
+    if (this.state !== 'streaming') {
+      this.toast('Connect to a device first');
+      return;
+    }
+    if (this.permissions.Keyboard === false) {
+      this.toast('This device does not permit keyboard input');
+      return;
+    }
+    if (this.viewOnly) {
+      this.toast('View only — input is not sent');
+      return;
+    }
+    this.kbdPanel?.toggle();
   }
 
   // --- chat window ------------------------------------------------------------------
@@ -1444,36 +1449,6 @@ export class RdApp {
     });
   }
 
-  private openKeysPop(anchor: HTMLElement): void {
-    this.openPop(
-      anchor,
-      (pop) => {
-        pop.innerHTML =
-          '<div class="rd-pop-title">Send to remote</div>' +
-          this.menuItem('keyboard', 'Ctrl+Alt+Del') +
-          this.menuItem('keyboard', 'Windows key') +
-          this.menuItem('keyboard', 'PrintScreen') +
-          this.menuItem('keyboard', 'Escape') +
-          this.menuItem('keyboard', 'Tab');
-        const acts: [string, () => void][] = [
-          ['Ctrl+Alt+Del sent', () => this.post({ c: 'ctrlAltDel' })],
-          ['Windows key sent', () => this.pressControl(ControlKey.Meta)],
-          ['PrintScreen sent', () => this.pressControl(ControlKey.Snapshot)],
-          ['Escape sent', () => this.pressControl(ControlKey.Escape)],
-          ['Tab sent', () => this.pressControl(ControlKey.Tab)],
-        ];
-        pop.querySelectorAll<HTMLButtonElement>('.rd-mi').forEach((b, i) => {
-          b.addEventListener('click', () => {
-            acts[i]![1]();
-            this.toast(acts[i]![0]);
-            this.closePop();
-          });
-        });
-      },
-      true,
-    );
-  }
-
   private openTypePop(anchor: HTMLElement): void {
     this.openPop(
       anchor,
@@ -1740,7 +1715,8 @@ export class RdApp {
     this.viewOnly = false;
     this.el.btnViewOnly.classList.remove('rd-on');
     this.el.btnViewOnly.setAttribute('aria-pressed', 'false');
-    this.setLatches(false, false);
+    this.kbdPanel?.close();
+    this.latches.clear();
     this.clearSecurityState();
     this.peerWho = '';
     this.peerPlatform = '';
@@ -1822,12 +1798,13 @@ export class RdApp {
       if (immediateWorkerTermination) w.terminate();
       else setTimeout(() => w.terminate(), 250); // let a pending 'disconnect' flush first
     }
+    this.kbdPanel?.close();
     this.resetPermissions();
   }
 
   /**
    * Single choke point to the worker. View-only swallows everything that would
-   * act on the remote device. The Ctrl/Alt latches merge into the modifiers of
+   * act on the remote device. The keyboard's latches (Ctrl/Shift/Alt/Win) merge into the modifiers of
    * key and mouse traffic — a pure merge, no synthetic key down/up, so a
    * dropped session can never leave a modifier stuck on the peer.
    */
@@ -1878,14 +1855,12 @@ export class RdApp {
       }
     }
     if (inputChannel && !remoteInputAllowed(this.viewOnly, inputChannel)) return false;
-    if ((this.latchCtrl || this.latchAlt) && !lockScreen && (cmd.c === 'mouse' || cmd.c === 'key')) {
-      const extra: number[] = [];
-      if (this.latchCtrl) extra.push(ControlKey.Control);
-      if (this.latchAlt) extra.push(ControlKey.Alt);
-      cmd = { ...cmd, modifiers: [...new Set([...cmd.modifiers, ...extra])] };
+    if (this.latches.any() && !lockScreen && (cmd.c === 'mouse' || cmd.c === 'key')) {
+      cmd = { ...cmd, modifiers: [...new Set([...cmd.modifiers, ...this.latches.keys()])] };
     }
     if (!this.worker) return false;
     this.worker.postMessage(cmd);
+    if (consumesOneShot(cmd)) this.latches.releaseOnce();
     return true;
   }
 
@@ -2361,6 +2336,7 @@ export class RdApp {
     }
 
     // A capability withdrawn mid-session has to close what it opened.
+    if (kind === 'Keyboard' && !enabled) this.kbdPanel?.close();
     if (kind === 'File') {
       if (!enabled) {
         this.filePanel?.destroy();

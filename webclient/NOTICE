@@ -53,6 +53,10 @@ CHANGES MADE HERE (AGPL section 5(a))
 - The bar (which now also shows the stream's numbers), the dock, the chat (a small, resizable window in the bottom
   right corner in place of the Chat and Details side panel) and the menus are redrawn in the WebUI's flat style:
   solid accent, 1px borders, no gradients, no floating island, no avatar, no edge strip.
+- The Ctrl, Alt and Del keys and the Keys menu of the dock are replaced by an on-screen keyboard (a movable window
+  over the remote screen, new code in input/virtual-keyboard.ts and ui/keyboard-panel.ts): a full US keyboard,
+  Ctrl/Shift/Alt/Win as latches (one-shot, or held after a second tap) merged into the modifiers of the keys and
+  clicks sent, key repeat, and one-tap shortcuts.
 - The file transfer window is redrawn as a two-pane manager over the remote screen: a cursor row and keyboard
   navigation, sortable columns, Send and Receive between the panes, drag and drop from one pane to the other, new
   folder, rename and delete in either pane, and a collapsible queue.

@@ -49,6 +49,8 @@ jobs:
         working-directory: webclient
       - run: npm run typecheck
         working-directory: webclient
+      - run: npm test
+        working-directory: webclient
       - run: npm run build
         working-directory: webclient
       # The built client is committed (the server never needs Node), so it has to match its source.

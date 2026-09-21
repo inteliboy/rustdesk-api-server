@@ -252,3 +252,24 @@ Latency || Opóźnienie || Latence || Latenz || Latencia
 Decode || Dekodowanie || Décodage || Dekodierung || Decodificación
 Round trip to the remote device, as it measures it || Czas podróży do zdalnego urządzenia, mierzony przez nie samo || Aller-retour vers l'appareil distant, tel qu'il le mesure || Umlaufzeit zum entfernten Gerät, von diesem gemessen || Ida y vuelta al dispositivo remoto, según lo mide él
 Time to decode a frame here || Czas dekodowania klatki tutaj || Temps de décodage d'une image ici || Dauer der Dekodierung eines Bildes hier || Tiempo para decodificar un fotograma aquí
+Keyboard || Klawiatura || Clavier || Tastatur || Teclado
+On-screen keyboard || Klawiatura ekranowa || Clavier à l'écran || Bildschirmtastatur || Teclado en pantalla
+Close keyboard || Zamknij klawiaturę || Fermer le clavier || Tastatur schließen || Cerrar el teclado
+Shortcuts || Skróty || Raccourcis || Tastenkürzel || Atajos
+This device does not permit keyboard input || To urządzenie nie zezwala na wprowadzanie z klawiatury || Cet appareil n'autorise pas la saisie au clavier || Dieses Gerät erlaubt keine Tastatureingabe || Este dispositivo no permite la entrada de teclado
+Secure attention: sign-in screen, Task Manager, lock || Sekwencja bezpieczeństwa: ekran logowania, Menedżer zadań, blokada || Séquence d'attention sécurisée : écran de connexion, Gestionnaire des tâches, verrouillage || Sicherheitsfolge: Anmeldebildschirm, Task-Manager, Sperren || Atención segura: pantalla de inicio de sesión, Administrador de tareas, bloqueo
+Task Manager || Menedżer zadań || Gestionnaire des tâches || Task-Manager || Administrador de tareas
+Switch window || Przełącz okno || Changer de fenêtre || Fenster wechseln || Cambiar de ventana
+Close the window || Zamknij okno || Fermer la fenêtre || Fenster schließen || Cerrar la ventana
+Show the desktop || Pokaż pulpit || Afficher le bureau || Desktop anzeigen || Mostrar el escritorio
+Run || Uruchom || Exécuter || Ausführen || Ejecutar
+Lock the remote screen || Zablokuj zdalny ekran || Verrouiller l'écran distant || Entfernten Bildschirm sperren || Bloquear la pantalla remota
+Paste || Wklej || Coller || Einfügen || Pegar
+Cut || Wytnij || Couper || Ausschneiden || Cortar
+Undo || Cofnij || Annuler || Rückgängig || Deshacer
+Select all || Zaznacz wszystko || Tout sélectionner || Alles auswählen || Seleccionar todo
+Backspace || Backspace || Retour arrière || Rücktaste || Retroceso
+Space || Spacja || Espace || Leertaste || Espacio
+Up || W górę || Haut || Nach oben || Arriba
+Down || W dół || Bas || Nach unten || Abajo
+Right || W prawo || Droite || Rechts || Derecha
