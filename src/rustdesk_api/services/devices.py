@@ -62,6 +62,13 @@ def get_by_id(db: Session, device_id: int) -> Device | None:
     return db.get(Device, device_id)
 
 
+def has_reported_sysinfo(device: Device) -> bool:
+    """False for a record that only knows the id (and uuid/address): one created by a
+    client login, an import or `--assign`, which no sysinfo upload has ever filled in.
+    Any real upload carries at least a hostname, an OS or a version."""
+    return any((device.hostname, device.platform, device.client_version))
+
+
 def register_or_update(
     db: Session,
     *,

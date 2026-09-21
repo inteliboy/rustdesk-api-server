@@ -36,6 +36,26 @@ def test_a_deleted_device_is_asked_for_its_sysinfo_again(admin_client):
     assert admin_client.post("/api/heartbeat", json={"id": "dev-gone"}).json()["sysinfo"] is True
 
 
+def test_a_device_registered_by_login_alone_is_asked_for_its_sysinfo(client, admin_client):
+    """A client login registers only the id. Such a bare record has to ask for the
+    system info, or a client that believes it already uploaded never sends it."""
+    uuid = "dXVpZC1hbmRyb2lk"
+    assert (
+        client.post(
+            "/api/login",
+            json={"username": "admin", "password": "adminpass123", "id": "android-1", "uuid": uuid},
+        ).status_code
+        == 200
+    )
+    (device,) = admin_client.get("/api/v1/devices").json()["items"]
+    assert device["hostname"] is None
+    assert client.post("/api/heartbeat", json={"id": "android-1", "uuid": uuid}).json()["sysinfo"] is True
+
+    info = {"id": "android-1", "uuid": uuid, "hostname": "phone", "version": "1.4.9"}
+    client.post("/api/sysinfo", json=info)
+    assert client.post("/api/heartbeat", json={"id": "android-1", "uuid": uuid}).json() == {"data": "OK"}
+
+
 def test_heartbeat_updates_last_seen_without_duplicating_device(client, admin_client):
     token = admin_client.post("/api/login", json={"username": "admin", "password": "adminpass123"}).json()[
         "access_token"

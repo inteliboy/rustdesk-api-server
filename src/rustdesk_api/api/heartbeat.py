@@ -122,6 +122,13 @@ def rustdesk_heartbeat(
         response["disconnect"] = to_close
     modified_at = payload.modified_at if isinstance(payload.modified_at, int) else None
     response.update(strategy_service.heartbeat_fragment(db, device, modified_at))
+    if not device_service.has_reported_sysinfo(device):
+        # A client login (or an import) registers just the id, and the client
+        # only re-sends its system info on its own when it thinks the last upload
+        # failed - so without this the record would stay bare (no host name, OS or
+        # version), e.g. for a client that uploaded to a previous server at the
+        # same address.
+        response["sysinfo"] = True
     db.commit()
     _schedule_broadcast(request, background_tasks, device, settings)
     return response
