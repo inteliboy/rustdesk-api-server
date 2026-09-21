@@ -9,6 +9,7 @@
 
 (async function launch() {
   const version = document.currentScript ? document.currentScript.dataset.version || "" : "";
+  const sourceUrl = document.currentScript ? document.currentScript.dataset.source || "" : "";
   const launcher = document.getElementById("rd-launch");
   const text = document.getElementById("rd-launch-text");
   const error = document.getElementById("rd-launch-error");
@@ -36,7 +37,7 @@
 
   const deviceId = Number(new URLSearchParams(location.search).get("device"));
   if (!Number.isInteger(deviceId) || deviceId < 1) {
-    fail(t("Open the web client from a device: use “Open in browser” on the device page."));
+    fail(t("Open the web client from a device: click its ID and choose “Open in browser”."));
     return;
   }
 
@@ -65,6 +66,7 @@
       myId: session.my_id,
       myName: session.my_name,
       version: session.version,
+      sourceUrl,
       workerUrl: `/static/webclient/session.worker.js?v=${encodeURIComponent(version)}`,
     };
     try {

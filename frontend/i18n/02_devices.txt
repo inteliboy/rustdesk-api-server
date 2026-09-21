@@ -42,6 +42,8 @@ This RustDesk client is older than the minimum version || Ten klient RustDesk je
 Reaches the API server over HTTPS || Łączy się z serwerem API przez HTTPS || Atteint le serveur API en HTTPS || Erreicht den API-Server über HTTPS || Llega al servidor API por HTTPS
 Reaches the API server over plain HTTP || Łączy się z serwerem API przez zwykły HTTP || Atteint le serveur API en HTTP simple || Erreicht den API-Server über unverschlüsseltes HTTP || Llega al servidor API por HTTP sin cifrar
 Connect with RustDesk || Połącz przez RustDesk || Se connecter avec RustDesk || Mit RustDesk verbinden || Conectar con RustDesk
+Client ID || ID klienta || ID du client || Client-ID || ID del cliente
+Connect || Połącz || Se connecter || Verbinden || Conectar
 
 # ---- bulk actions
 Add tag... || Dodaj tag... || Ajouter une étiquette... || Tag hinzufügen... || Añadir etiqueta...
@@ -164,12 +166,12 @@ Failed to load dashboard stats: {1} || Nie udało się wczytać statystyk pulpit
 
 # ---- web client (button on the device page and the launcher page)
 Open in browser || Otwórz w przeglądarce || Ouvrir dans le navigateur || Im Browser öffnen || Abrir en el navegador
+Open in RustDesk || Otwórz w RustDesk || Ouvrir dans RustDesk || In RustDesk öffnen || Abrir en RustDesk
 Control this device in a browser tab. You type the device's password there; it goes to the device, not to this server. || Steruj tym urządzeniem w karcie przeglądarki. Hasło urządzenia wpisujesz tam; trafia ono do urządzenia, nie do tego serwera. || Contrôlez cet appareil dans un onglet du navigateur. Vous y saisissez le mot de passe de l'appareil ; il va à l'appareil, pas à ce serveur. || Steuern Sie dieses Gerät in einem Browser-Tab. Das Passwort des Geräts geben Sie dort ein; es geht an das Gerät, nicht an diesen Server. || Controle este dispositivo en una pestaña del navegador. Allí escribe la contraseña del dispositivo; va al dispositivo, no a este servidor.
 Opening the web client... || Otwieranie klienta webowego... || Ouverture du client web... || Web-Client wird geöffnet... || Abriendo el cliente web...
 Back to devices || Wróć do urządzeń || Retour aux appareils || Zurück zu den Geräten || Volver a los dispositivos
-Open the web client from a device: use “Open in browser” on the device page. || Otwórz klienta webowego z urządzenia: użyj „Otwórz w przeglądarce” na stronie urządzenia. || Ouvrez le client web depuis un appareil : utilisez « Ouvrir dans le navigateur » sur la page de l'appareil. || Öffnen Sie den Web-Client bei einem Gerät: nutzen Sie „Im Browser öffnen“ auf der Geräteseite. || Abra el cliente web desde un dispositivo: use «Abrir en el navegador» en la página del dispositivo.
+Open the web client from a device: click its ID and choose “Open in browser”. || Otwórz klienta webowego z urządzenia: kliknij jego ID i wybierz „Otwórz w przeglądarce”. || Ouvrez le client web depuis un appareil : cliquez sur son ID et choisissez « Ouvrir dans le navigateur ». || Öffnen Sie den Web-Client bei einem Gerät: Klicken Sie auf seine ID und wählen Sie „Im Browser öffnen“. || Abra el cliente web desde un dispositivo: haga clic en su ID y elija «Abrir en el navegador».
 !The web client could not be loaded: {1} || Nie udało się wczytać klienta webowego: {1} || Le client web n'a pas pu être chargé : {1} || Der Web-Client konnte nicht geladen werden: {1} || No se pudo cargar el cliente web: {1}
-Source code (AGPL-3.0) || Kod źródłowy (AGPL-3.0) || Code source (AGPL-3.0) || Quellcode (AGPL-3.0) || Código fuente (AGPL-3.0)
 
 # ---- Dashboard: is this the latest build?
 Latest version || Najnowsza wersja || Dernière version || Neueste Version || Última versión

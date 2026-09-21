@@ -138,8 +138,6 @@ type Els = {
   statDevice: HTMLElement;
   statUser: HTMLElement;
   statPlatform: HTMLElement;
-  overlayPeer: HTMLElement;
-  overlayTarget: HTMLElement;
   fieldId: HTMLElement;
   peerIdInput: HTMLInputElement;
   passwordInput: HTMLInputElement;
@@ -278,16 +276,13 @@ export class RdApp {
     this.fixedPeerId =
       normalizePeerId(this.cfg?.peerId ?? '') || peerIdFromSearch(location.search) || '';
     if (this.fixedPeerId) {
-      this.el.fieldId.hidden = true;
-      this.el.overlayTarget.hidden = false;
-      this.el.overlayPeer.textContent = this.fixedPeerId;
+      this.el.peerIdInput.readOnly = true; // the WebUI chose the device
+      this.el.fieldId.classList.add('rd-fixed');
       this.el.peerIdInput.value = this.fixedPeerId;
       this.el.peerLabel.textContent = this.fixedPeerId;
       this.hydrateSavedPassword(this.fixedPeerId);
       this.el.passwordInput.focus();
     } else {
-      this.el.fieldId.hidden = false;
-      this.el.overlayTarget.hidden = true;
       this.el.peerIdInput.focus();
     }
     // Rewrite the field itself, not just the value read out of it: the saved
@@ -518,13 +513,7 @@ export class RdApp {
         .map((w) => w[0]!.toUpperCase())
         .join('') || '?';
     this.el.toolbar.innerHTML = `
-      <div class="rd-tb-brand">
-        <img src="/static/img/apple-touch-icon.png" alt="" width="30" height="30">
-        <span class="rd-tb-brandtext">
-          <span class="rd-tb-name">RustDesk <span>API Server</span></span>
-          <span class="rd-tb-sub">Web client</span>
-        </span>
-      </div>
+      <div></div>
       <div class="rd-tb-island">
         <span class="rd-peer-chip">
           <span class="rd-status-dot" aria-hidden="true"></span>
@@ -675,6 +664,11 @@ export class RdApp {
     const tab = (id: SideTab, icon: IconName, label: string): string =>
       `<button type="button" class="rd-tab" data-tab="${id}" role="tab" aria-selected="false">` +
       `${iconHtml(icon)}<span>${label}</span><i class="rd-badge" hidden></i></button>`;
+    // This client is AGPL-3.0 software; the link to its source is here, in the session's details.
+    const source = this.cfg?.sourceUrl ?? '';
+    const aboutSource = /^https?:\/\//.test(source)
+      ? ` &middot; <a href="${escapeHtml(source)}" target="_blank" rel="noopener">Source code (AGPL-3.0)</a>`
+      : '';
     this.el.side.innerHTML = `
       <header class="rd-side-head">
         <div class="rd-side-tabs" role="tablist">
@@ -710,6 +704,7 @@ export class RdApp {
             <div class="rd-stat-row"><dt>Frames dropped</dt><dd id="rd-stat-dropped">—</dd></div>
             <div class="rd-stat-row"><dt>Duration</dt><dd id="rd-stat-duration">—</dd></div>
           </dl>
+          <p class="rd-about">Web client ${escapeHtml(overlayVersion(this.cfg))}${aboutSource}</p>
         </section>
       </div>`;
     this.el.edge.innerHTML = `
@@ -1498,39 +1493,18 @@ export class RdApp {
   // --- connect overlay ------------------------------------------------------------
 
   private renderOverlay(): void {
-    const svg = (paths: string, size = 20): string =>
-      `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" ` +
-      `stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
-    const lock = svg('<rect x="4.5" y="10.5" width="15" height="10.5" rx="2.2"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/>');
-    const device = svg('<rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M8 20h8M12 16v4"/>');
-    const arrow = svg('<path d="M5 12h13M12 5.5 18.5 12 12 18.5"/>', 24);
+    // Like the WebUI's sign-in card: two labelled fields and one button. The ID is fixed (read-only) when the
+    // WebUI opened the client for a device.
     this.el.overlay.innerHTML = `
       <div class="rd-card">
-        <div class="rd-brand">
-          <img class="rd-logo" src="/static/img/apple-touch-icon.png" alt="RustDesk API Server" width="60" height="60">
-          <span class="rd-wordmark">RustDesk <span>API Server</span></span>
-        </div>
-        <div class="rd-tagline">Web-Based Client ${overlayVersion(this.cfg)}</div>
-        <div class="rd-divider" aria-hidden="true"></div>
-        <p class="rd-help">Enter the client's temporary or permanent password assigned in the RustDesk client.</p>
-        <div class="rd-target" id="rd-target" hidden>
-          <span class="rd-target-ic">${device}</span>
-          <span class="rd-target-cap">Client ID</span>
-          <span class="rd-target-id" id="rd-overlay-peer"></span>
-        </div>
-        <label class="rd-field" id="rd-field-id" hidden>
-          <span class="rd-input">
-            <span class="rd-input-ic">${device}</span>
-            <input id="rd-peer-id" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="Device ID">
-          </span>
+        <label class="rd-field" id="rd-field-id" for="rd-peer-id">
+          <span class="rd-label">Client ID</span>
+          <input id="rd-peer-id" class="rd-text" type="text" inputmode="numeric" autocomplete="off" spellcheck="false">
         </label>
-        <div class="rd-connect-row">
-          <span class="rd-input">
-            <span class="rd-input-ic">${lock}</span>
-            <input id="rd-password" type="password" autocomplete="new-password" placeholder="Enter password">
-          </span>
-          <button type="button" class="rd-go" id="rd-connect" aria-label="Connect">${arrow}</button>
-        </div>
+        <label class="rd-field" for="rd-password">
+          <span class="rd-label">Password</span>
+          <input id="rd-password" class="rd-text" type="password" autocomplete="new-password">
+        </label>
         <label class="rd-save" hidden>
           <input type="checkbox" id="rd-save-pw">
           <span>Save password on this device</span>
@@ -1541,11 +1515,10 @@ export class RdApp {
           </div>
           <div class="rd-overlay-error" id="rd-overlay-error" role="alert" hidden></div>
         </div>
+        <button type="button" class="rd-go" id="rd-connect">Connect</button>
         <button type="button" class="rd-chip" id="rd-restart-cancel" hidden>Cancel reconnect</button>
       </div>`;
     const o = this.el.overlay;
-    this.el.overlayPeer = q(o, '#rd-overlay-peer');
-    this.el.overlayTarget = q(o, '#rd-target');
     this.el.fieldId = q(o, '#rd-field-id');
     this.el.peerIdInput = q(o, '#rd-peer-id');
     this.el.passwordInput = q(o, '#rd-password');
@@ -1573,7 +1546,7 @@ export class RdApp {
     const has = !!peerId && loadSavedHash(peerId) !== null;
     this.el.saveCheckbox.checked = has;
     this.el.passwordInput.value = '';
-    this.el.passwordInput.placeholder = has ? 'Saved password — click to change' : 'Enter password';
+    this.el.passwordInput.placeholder = has ? 'Saved password — click to change' : '';
   }
 
   /**
@@ -1956,7 +1929,7 @@ export class RdApp {
         const hasDisplayControls = !!currentDisplay?.resolutions.length || !!currentDisplay?.originalResolution ||
           !!parseVirtualDisplayCapability(this.peerPlatform, this.platformAdditions);
         this.el.btnMonitors.hidden = this.displays.length < 2 && !hasDisplayControls;
-        document.title = `${this.peerId} — RustDesk API Server`;
+        document.title = this.peerId;
         break;
       }
       case 'switchDisplay': {

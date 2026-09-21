@@ -67,7 +67,8 @@ them is fictional demo data: made-up people, devices and addresses, made-up hard
 | Dashboard: server panel (CPU and memory charts, version, commit, whether a newer build exists) | [dashboard-server-light.png](screenshots/dashboard-server-light.png) | [dashboard-server-dark.png](screenshots/dashboard-server-dark.png) |
 | Dashboard with the menu on the left (**Appearance > Menu**), and the account controls at the top right | [dashboard-menu-left-light.png](screenshots/dashboard-menu-left-light.png) | [dashboard-menu-left-dark.png](screenshots/dashboard-menu-left-dark.png) |
 | Devices: status, owner, group, tags | [devices-light.png](screenshots/devices-light.png) | [devices-dark.png](screenshots/devices-dark.png) |
-| A device: details, strategy, sharing, and **Open in browser** (when the web client is on) | [device-detail-light.png](screenshots/device-detail-light.png) | [device-detail-dark.png](screenshots/device-detail-dark.png) |
+| Click a device's ID to choose how to connect: the RustDesk client or the browser (when the web client is on) | [devices-connect-menu-light.png](screenshots/devices-connect-menu-light.png) | [devices-connect-menu-dark.png](screenshots/devices-connect-menu-dark.png) |
+| A device: details, strategy, sharing | [device-detail-light.png](screenshots/device-detail-light.png) | [device-detail-dark.png](screenshots/device-detail-dark.png) |
 | The [web client](#web-client-control-a-device-in-the-browser): the password screen of a session in the browser (it follows the WebUI's theme and accent color) | [webclient-light.png](screenshots/webclient-light.png) | [webclient-dark.png](screenshots/webclient-dark.png) |
 | Logs: Activity (what happened in the WebUI and the API) | [logs-activity-light.png](screenshots/logs-activity-light.png) | [logs-activity-dark.png](screenshots/logs-activity-dark.png) |
 | Logs: connections reported by the clients | [logs-light.png](screenshots/logs-light.png) | [logs-dark.png](screenshots/logs-dark.png) |
@@ -786,8 +787,10 @@ and `osslsigncode` from Debian inside the Docker image. Try the installer on one
 
 ## Web client: control a device in the browser
 
-**Open in browser** on a device's page starts a RustDesk session in a browser tab: screen, keyboard and mouse,
-clipboard, file transfer and audio, with nothing to install. It is off until you switch it on:
+Click a device's ID (on the Devices page or the device's own page) and choose **Open in browser**: it starts a
+RustDesk session in a browser tab, with screen, keyboard and mouse, clipboard, file transfer and audio and nothing
+to install. The other choice, **Open in RustDesk**, starts the installed RustDesk client as the ID always did; where
+the browser client is off, the ID goes straight to RustDesk. It is off until you switch it on:
 
 ```env
 WEB_CLIENT_ENABLED=true
@@ -851,7 +854,9 @@ router's own address from inside the network: set `WEB_CLIENT_HBBS_URL` / `WEB_C
 works from here), a reverse proxy that does not pass WebSocket upgrades, and a key that differs from hbbs's.
 
 **Look.** The client wears the WebUI's theme: light or dark (including "system") and the accent color chosen under
-**Appearance**, read from the same per-browser setting, so it matches the pages around it.
+**Appearance**, read from the same per-browser setting, so it matches the pages around it. The connect screen is the
+sign-in card's twin: the device's ID (fixed, chosen by the WebUI) and the password field, no bar above it. The bar and
+the command dock appear when the remote screen does.
 
 **Reverse proxy.** Let the WebSocket upgrade through on `/api/v1/webclient/ws/` (Nginx: `proxy_http_version 1.1;`
 `proxy_set_header Upgrade $http_upgrade;` `proxy_set_header Connection "upgrade";`, and a long `proxy_read_timeout`).
@@ -867,7 +872,8 @@ hbbr, using frames encoded by the client's own code). **Not verified:** a whole 
 machine. Try it on a spare device first.
 
 **Licence.** The client is AGPL-3.0, taken from [CortenDesk](https://github.com/Vaso73/cortendesk)'s web client and
-changed (see [`webclient/NOTICE`](webclient/NOTICE)); the rest of this repository is MIT. To change the client:
+changed (see [`webclient/NOTICE`](webclient/NOTICE)); the rest of this repository is MIT. The link to the client's
+source is in the session's **Details** panel (dock: **Session**), with the client's version. To change the client:
 `cd webclient && npm ci && npm run build` (it needs Node.js 20; running the server does not).
 
 ## Default strategy and fleet hygiene

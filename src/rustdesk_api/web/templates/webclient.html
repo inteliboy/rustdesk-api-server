@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Web client - RustDesk API Server</title>
+  <title>Web client</title>
   <link rel="icon" href="/favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" sizes="32x32" href="/static/img/favicon-32.png" />
   <link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png" />
@@ -17,10 +17,6 @@
       justify-content: center; gap: 12px; padding: 24px; text-align: center; color: var(--rd-fg, #cbd5e1);
       background: var(--rd-bg, #0b1120); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; z-index: 50; }
     #rd-launch[hidden] { display: none; }
-    /* The client is AGPL-3.0 software: say so, and where its source is. Small, in a corner. */
-    #rd-source { position: fixed; right: 10px; bottom: 6px; z-index: 40; font: 11px system-ui, sans-serif;
-      color: var(--rd-muted, #64748b); text-decoration: none; opacity: .8; }
-    #rd-source:hover { color: var(--rd-fg, #94a3b8); text-decoration: underline; }
     #rd-launch a { color: var(--rd-accent, #93c5fd); }
     #rd-launch .rd-launch-error { color: var(--rd-danger, #fca5a5); max-width: 34rem; }
     #rd-launch .rd-launch-detail { max-width: 44rem; margin: 0; padding: 10px 14px; text-align: left; white-space: pre-wrap;
@@ -52,8 +48,7 @@
       <a id="rd-launch-back" href="/devices" hidden>Back to devices</a>
     </p>
   </div>
-  <a id="rd-source" href="{{ source_url }}" target="_blank" rel="noopener">Source code (AGPL-3.0)</a>
   <script src="/static/js/app.js"></script>
-  <script src="/static/js/pages/webclient.js" data-version="{{ version }}"></script>
+  <script src="/static/js/pages/webclient.js" data-version="{{ version }}" data-source="{{ source_url }}"></script>
 </body>
 </html>

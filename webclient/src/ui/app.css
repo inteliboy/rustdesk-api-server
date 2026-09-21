@@ -10,6 +10,7 @@
   --rd-surface-2: #f1f5f9; /* slate-100 */
   --rd-surface-3: #e2e8f0; /* slate-200 */
   --rd-border: #e2e8f0;
+  --rd-border-strong: #cbd5e1; /* slate-300: the border of a field */
   --rd-fg: #0f172a; /* slate-900 */
   --rd-muted: #64748b; /* slate-500 */
   --rd-accent: #2563eb; /* the accent's 600, its 700 below */
@@ -30,6 +31,7 @@ html[data-theme='dark'] {
   --rd-surface-2: #1e293b;
   --rd-surface-3: #334155;
   --rd-border: #334155;
+  --rd-border-strong: #475569;
   --rd-fg: #f1f5f9;
   --rd-muted: #94a3b8;
   --rd-danger: #f87171;
@@ -81,6 +83,11 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
 
 /* --- top bar ----------------------------------------------------------------- */
 
+/* The connect and status screens have no bar; it appears with the remote screen. */
+#rd-root:not([data-state='streaming']) #rd-toolbar {
+  display: none;
+}
+
 #rd-toolbar {
   flex: 0 0 var(--rd-toolbar-h);
   display: grid;
@@ -90,35 +97,6 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
   padding: 0 14px;
   background: var(--rd-surface);
   border-bottom: 1px solid var(--rd-border);
-}
-
-.rd-tb-brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-.rd-tb-brand img {
-  border-radius: 7px;
-}
-.rd-tb-brandtext {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.15;
-  min-width: 0;
-}
-.rd-tb-name {
-  font-weight: 700;
-  font-size: 15px;
-  letter-spacing: 0.01em;
-}
-.rd-tb-name span {
-  color: var(--rd-accent);
-}
-.rd-tb-sub {
-  font-size: 10.5px;
-  color: var(--rd-muted);
-  letter-spacing: 0.02em;
 }
 
 .rd-tb-user {
@@ -182,15 +160,14 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
 }
 
 .rd-status-dot {
-  width: 9px;
-  height: 9px;
+  width: 8px;
+  height: 8px;
   flex: 0 0 auto;
   border-radius: 50%;
   background: var(--rd-muted);
 }
 #rd-root[data-state='streaming'] .rd-status-dot {
-  background: var(--rd-ok);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--rd-ok) 25%, transparent);
+  background: #22c55e; /* the WebUI's online badge */
 }
 #rd-root[data-state='error'] .rd-status-dot {
   background: var(--rd-danger);
@@ -436,7 +413,7 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
   justify-content: center;
   gap: 4px;
   padding: 5px 8px;
-  background: color-mix(in srgb, var(--rd-bg) 88%, black 12%);
+  background: var(--rd-surface); /* like the top bar */
   border-top: 1px solid var(--rd-border);
   overflow-x: auto;
   scrollbar-width: none;
@@ -530,8 +507,8 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
   flex-direction: column;
   background: var(--rd-surface);
   border: 1px solid var(--rd-border);
-  border-radius: 14px;
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.5);
+  border-radius: 12px;
+  box-shadow: 0 18px 48px var(--rd-shadow);
   transform: translateX(calc(100% + 20px));
   transition: transform 0.22s ease;
 }
@@ -764,6 +741,17 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
   max-width: 60%;
 }
 
+.rd-about {
+  margin: 0;
+  padding: 10px 14px 14px;
+  font-size: 12px;
+  color: var(--rd-muted);
+}
+.rd-about a {
+  color: inherit;
+  text-decoration: underline;
+}
+
 /* Edge strip: shortcuts to the panel while it is closed. */
 #rd-edge {
   position: absolute;
@@ -775,11 +763,11 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
   flex-direction: column;
   gap: 6px;
   padding: 6px 4px;
-  background: color-mix(in srgb, var(--rd-surface) 92%, black 8%);
+  background: var(--rd-surface);
   border: 1px solid var(--rd-border);
   border-right: 0;
   border-radius: 12px 0 0 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 8px 24px var(--rd-shadow);
 }
 #rd-root.rd-side-is-open #rd-edge {
   display: none;
@@ -964,6 +952,8 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
 }
 
 /* --- connect overlay -------------------------------------------------------- */
+/* The same look as the WebUI's sign-in card: flat surface, 1px border, 12px radius, labelled fields, one solid
+   accent button. */
 
 #rd-overlay {
   position: absolute;
@@ -973,173 +963,87 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
   align-items: center;
   justify-content: center;
   padding: 16px;
-  background: color-mix(in srgb, var(--rd-bg) 78%, transparent);
-  backdrop-filter: blur(6px);
+  background: var(--rd-bg);
 }
 #rd-overlay.rd-hidden {
   display: none;
 }
 
 .rd-card {
-  width: 460px;
-  max-width: 100%;
-  padding: 40px 44px 36px;
-  background: linear-gradient(180deg, var(--rd-surface) 0%, var(--rd-surface-2) 100%);
-  border: 1px solid var(--rd-border);
-  border-radius: 22px;
-  box-shadow: 0 30px 70px var(--rd-shadow);
-}
-
-.rd-brand {
+  box-sizing: border-box;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
   gap: 16px;
-}
-.rd-logo {
-  flex: none;
-  width: 60px;
-  height: 60px;
-  border-radius: 14px;
-  object-fit: contain;
-  filter: drop-shadow(0 6px 16px color-mix(in srgb, var(--rd-accent) 40%, transparent));
-}
-.rd-wordmark {
-  font-size: 28px;
-  white-space: nowrap;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  color: var(--rd-fg);
-}
-.rd-wordmark span {
-  color: var(--rd-accent);
-}
-.rd-tagline {
-  margin-top: 14px;
-  text-align: center;
-  font-size: 18px;
-  color: var(--rd-muted);
-}
-.rd-divider {
-  width: 64px;
-  height: 1px;
-  margin: 22px auto;
-  background: var(--rd-border);
-}
-.rd-help {
-  margin: 0 auto 26px;
-  max-width: 380px;
-  text-align: center;
-  font-size: 16px;
-  line-height: 1.5;
-  color: color-mix(in srgb, var(--rd-fg) 78%, transparent);
-}
-
-.rd-target {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 12px;
-  padding: 0 4px;
-  color: var(--rd-fg);
-}
-.rd-target-ic {
-  display: flex;
-  color: var(--rd-accent);
-}
-.rd-target-cap {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--rd-muted);
-}
-.rd-target-id {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--rd-fg);
+  width: 24rem;
+  max-width: 100%;
+  padding: 24px;
+  background: var(--rd-surface);
+  border: 1px solid var(--rd-border);
+  border-radius: 12px;
 }
 
 .rd-field {
   display: block;
-  margin-bottom: 12px;
 }
-.rd-connect-row {
-  display: flex;
-  gap: 12px;
-  align-items: stretch;
+.rd-label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  color: color-mix(in srgb, var(--rd-fg) 82%, var(--rd-bg));
 }
-.rd-input {
-  display: flex;
-  align-items: center;
-  flex: 1 1 auto;
-  min-width: 0;
-  height: 60px;
-  padding: 0 16px;
-  gap: 12px;
-  border: 1px solid var(--rd-border);
-  border-radius: 14px;
-  background: var(--rd-bg);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-.rd-input:focus-within {
-  border-color: var(--rd-accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--rd-accent) 22%, transparent);
-}
-.rd-input-ic {
-  flex: none;
-  display: flex;
-  color: var(--rd-muted);
-}
-.rd-input input {
-  flex: 1 1 auto;
-  min-width: 0;
-  border: 0;
-  background: transparent;
+.rd-text {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--rd-border-strong);
+  border-radius: 6px;
+  background: var(--rd-surface);
   color: var(--rd-fg);
   font: inherit;
-  font-size: 17px;
-  outline: none;
+  font-size: 14px;
+  line-height: 20px;
 }
-.rd-input input::placeholder {
-  color: color-mix(in srgb, var(--rd-muted) 85%, transparent);
+.rd-text:focus {
+  outline: 2px solid var(--rd-accent);
+  outline-offset: -1px;
+}
+.rd-fixed .rd-text {
+  background: var(--rd-surface-2);
+  font-variant-numeric: tabular-nums;
+  cursor: default;
 }
 
 .rd-go {
-  flex: none;
-  width: 76px;
+  width: 100%;
+  padding: 8px 12px;
   border: 0;
-  border-radius: 14px;
-  background: linear-gradient(160deg, color-mix(in srgb, var(--rd-accent) 78%, white) 0%, var(--rd-accent) 55%, var(--rd-accent-2) 100%);
-  color: #fff;
+  border-radius: 6px;
+  background: var(--rd-accent);
+  color: var(--rd-accent-fg);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 6px 16px color-mix(in srgb, var(--rd-accent) 35%, transparent);
-  transition: filter 0.15s ease, transform 0.05s ease, opacity 0.15s ease;
 }
 .rd-go:hover:not(:disabled) {
-  filter: brightness(1.08);
-}
-.rd-go:active:not(:disabled) {
-  transform: translateY(1px);
+  background: var(--rd-accent-2);
 }
 .rd-go:disabled {
-  opacity: 0.5;
+  opacity: 0.6;
   cursor: default;
 }
 .rd-go:focus-visible {
   outline: 2px solid var(--rd-accent);
-  outline-offset: 3px;
+  outline-offset: 2px;
 }
 
 .rd-save {
   display: flex;
   align-items: center;
   gap: 9px;
-  margin-top: 16px;
-  padding: 0 4px;
   font-size: 14px;
   color: var(--rd-muted);
   cursor: pointer;
@@ -1152,17 +1056,13 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
   cursor: pointer;
 }
 
+/* Only present when there's a status or error to show. */
 .rd-msg {
-  margin-top: 20px;
-  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  border: 1.5px dashed color-mix(in srgb, var(--rd-accent) 55%, transparent);
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--rd-accent) 7%, transparent);
+  gap: 8px;
+  font-size: 14px;
 }
-/* Only present when there's a status or error to show — collapse otherwise. */
 .rd-msg:not(:has(> :not([hidden]))) {
   display: none;
 }
@@ -1171,8 +1071,7 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
   display: flex;
   align-items: center;
   gap: 10px;
-  color: var(--rd-fg);
-  font-size: 15px;
+  color: var(--rd-muted);
 }
 .rd-overlay-status .rd-spinner {
   display: none;
@@ -1184,7 +1083,7 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
   flex: none;
   width: 15px;
   height: 15px;
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  border: 2px solid var(--rd-border);
   border-top-color: var(--rd-accent);
   border-radius: 50%;
   animation: rd-spin 0.8s linear infinite;
@@ -1196,34 +1095,11 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
 }
 
 .rd-overlay-error {
-  padding: 10px 13px;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--rd-danger) 16%, transparent);
-  border: 1px solid color-mix(in srgb, var(--rd-danger) 42%, transparent);
   color: var(--rd-danger);
-  font-size: 14px;
 }
 .rd-msg-peer {
   color: var(--rd-muted);
   font-size: 14px;
-}
-
-@media (max-width: 520px) {
-  .rd-card {
-    width: 100%;
-    padding: 28px 22px 24px;
-    border-radius: 18px;
-  }
-  .rd-wordmark {
-    font-size: 22px;
-  }
-  .rd-logo {
-    width: 50px;
-    height: 50px;
-  }
-  .rd-go {
-    width: 60px;
-  }
 }
 
 /* --- toast ------------------------------------------------------------------ */
@@ -1321,9 +1197,6 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
 /* --- small screens ------------------------------------------------------------ */
 
 @media (max-width: 900px) {
-  .rd-tb-sub {
-    display: none;
-  }
   .rd-peer,
   .rd-peer-sub {
     max-width: 130px;
@@ -1344,9 +1217,6 @@ html[data-theme='dark'][data-accent='amber'] { --rd-accent: #f59e0b; --rd-accent
     grid-template-columns: auto 1fr auto;
     padding: 0 8px;
     gap: 8px;
-  }
-  .rd-tb-brandtext {
-    display: none;
   }
   .rd-tb-island {
     max-width: none;

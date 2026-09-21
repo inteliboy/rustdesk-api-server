@@ -270,12 +270,69 @@ document.addEventListener("click", (event) => {
   window.location.href = row.dataset.href;
 });
 
-// A RustDesk ID that starts a connection in the installed client via the
-// rustdesk:// URL scheme (the same link the Address Book uses). A surrounding
-// clickable table row ignores clicks on it (see the listener above).
-function connectLink(rustdeskId) {
-  return `<a href="rustdesk://connect/${encodeURIComponent(rustdeskId)}" title="Connect with RustDesk" class="font-mono text-link hover:underline whitespace-nowrap">${escapeHtml(rustdeskId)}</a>`;
+// A RustDesk ID is a link that starts a connection. On its own it opens the installed RustDesk client through the
+// rustdesk:// URL scheme (the same link the Address Book uses). Where the device is one of ours (its id is given)
+// and the server offers the browser client, clicking it opens a small menu instead: the RustDesk client, or a
+// browser tab. A surrounding clickable table row ignores clicks on it (see the listener above).
+let webClientOffer = "unknown"; // "unknown" | "asking" | "yes" | "no"
+function askWebClient() {
+  if (webClientOffer !== "unknown") return;
+  webClientOffer = "asking";
+  api("/api/v1/webclient/status")
+    .then((status) => {
+      webClientOffer = status && status.available ? "yes" : "no";
+    })
+    .catch(() => {
+      webClientOffer = "no";
+    });
 }
+
+function connectLink(rustdeskId, deviceId) {
+  const device = deviceId ? ` data-device="${Number(deviceId)}" aria-haspopup="menu"` : "";
+  if (deviceId) askWebClient();
+  return `<a href="rustdesk://connect/${encodeURIComponent(rustdeskId)}" title="Connect with RustDesk"${device} class="font-mono text-link hover:underline whitespace-nowrap">${escapeHtml(rustdeskId)}</a>`;
+}
+
+function closeConnectMenu() {
+  const menu = document.getElementById("connect-menu");
+  if (menu) menu.remove();
+}
+
+let connectMenuWired = false;
+function openConnectMenu(link) {
+  if (!connectMenuWired) {
+    // Moving the page under an open menu would leave it hanging in the wrong place.
+    window.addEventListener("resize", closeConnectMenu);
+    window.addEventListener("scroll", closeConnectMenu, true);
+    connectMenuWired = true;
+  }
+  const rect = link.getBoundingClientRect();
+  const id = encodeURIComponent(link.textContent.trim());
+  const menu = document.createElement("div");
+  menu.id = "connect-menu";
+  menu.className = "rd-menu";
+  menu.setAttribute("role", "menu");
+  menu.innerHTML =
+    `<a role="menuitem" class="rd-menu-item" href="rustdesk://connect/${id}">${rdIcon("devices", 16)}<span>Open in RustDesk</span></a>` +
+    `<a role="menuitem" class="rd-menu-item" href="/webclient?device=${Number(link.dataset.device)}" target="_blank" rel="noopener" title="Control this device in a browser tab. You type the device's password there; it goes to the device, not to this server.">${rdIcon("browser", 16)}<span>Open in browser</span></a>`;
+  menu.style.top = `${Math.round(rect.bottom + 4)}px`;
+  menu.style.left = `${Math.max(8, Math.round(rect.left))}px`;
+  document.body.appendChild(menu);
+  const first = menu.querySelector("a");
+  if (first) first.focus();
+}
+
+document.addEventListener("click", (event) => {
+  const link = event.target.closest && event.target.closest("a[data-device]");
+  closeConnectMenu();
+  // A modified click (new tab, new window) or no browser client: the plain link, RustDesk.
+  if (!link || webClientOffer !== "yes" || event.button || event.ctrlKey || event.metaKey || event.shiftKey) return;
+  event.preventDefault();
+  openConnectMenu(link);
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") closeConnectMenu();
+});
 
 // A username that opens that user's details on the Users page. That page is
 // administrator-only, so anyone else (and entries with no resolvable user)

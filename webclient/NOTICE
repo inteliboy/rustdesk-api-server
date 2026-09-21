@@ -43,6 +43,13 @@ CHANGES MADE HERE (AGPL section 5(a))
   hardware or software.
 - Look: the client's colors are the WebUI's own theme (light and dark, and the six accent colors), chosen by the
   attributes the WebUI's theme.js puts on the page; its former fixed dark palette and orange accent are gone.
+- No branding: the top bar has no logo or name, the page title is just "Web client" (the device's ID while connected).
+- Icons: the client's hand-drawn icons are replaced by Remix Icon (Apache-2.0, https://remixicon.com) line icons as
+  inline SVG, the set the WebUI's menu uses; the client no longer looks for the Remix icon font. The status dot is the
+  WebUI's online-badge dot.
+- The connect screen is reduced to the device's ID and the password, in the WebUI's sign-in card style, with no top
+  bar (the bar appears with the remote screen). The offer of the source (AGPL section 13) moved from a page footer
+  to the Details panel of a session, next to the version.
 - Build: the output goes into the Python package's static folder, without
   source maps, and with no linked licence files.
 - scripts/print-frames.mjs (new): prints the two frames the server's bridge reads,

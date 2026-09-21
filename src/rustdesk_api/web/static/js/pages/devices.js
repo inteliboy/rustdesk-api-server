@@ -91,7 +91,7 @@ async function loadDevices() {
           <td class="px-4 py-3"><input type="checkbox" class="row-select" value="${Number(d.id)}" aria-label="Select this device" /></td>
           <td class="px-4 py-3" data-cell="status"><span data-status-badge>${statusBadge(d.online)}</span>${deviceFlags(d)}</td>
           <td class="px-4 py-3" data-cell="scheme">${apiSchemeBadge(d.api_scheme)}</td>
-          <td class="px-4 py-3">${connectLink(d.rustdesk_id)}</td>
+          <td class="px-4 py-3">${connectLink(d.rustdesk_id, d.id)}</td>
           <td class="px-4 py-3 whitespace-nowrap">${escapeHtml(d.alias || d.hostname || "-")}</td>
           <td class="px-4 py-3">${escapeHtml(d.platform ? fmtPlatform(d.platform) : "-")}</td>
           <td class="px-4 py-3 text-slate-500 whitespace-nowrap">${escapeHtml(d.cpu ? fmtCpuName(d.cpu) : "-")}</td>

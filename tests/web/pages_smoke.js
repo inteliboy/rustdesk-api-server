@@ -1112,6 +1112,22 @@ const listFixtures = (items) => ({
     assert.ok(!/target="_blank"/.test(line));
   });
 
+  await test("device ID link: plain for an ID we have no device for, a menu marker for a device, asked once", async () => {
+    const fixtures = { "GET ^/api/v1/admin/dashboard": quietStats, "GET ^/api/v1/webclient/status": { enabled: true, available: true } };
+    const env = await new Env("dashboard.html", "dashboard.js", { user: admin, fixtures }).run();
+    const asked = () => env.requests.filter((r) => r.url.startsWith("/api/v1/webclient/status")).length;
+    const plain = env.eval('connectLink("123456789")');
+    assert.match(plain, /href="rustdesk:\/\/connect\/123456789"/);
+    assert.ok(!/data-device/.test(plain), plain);
+    assert.equal(asked(), 0);
+    const own = env.eval('connectLink("123456789", 7)');
+    assert.match(own, /href="rustdesk:\/\/connect\/123456789"/);
+    assert.match(own, /data-device="7"/);
+    env.eval('connectLink("987654321", 8)');
+    await settle();
+    assert.equal(asked(), 1);
+  });
+
   console.log(failures ? `\n${failures} page smoke test(s) failed` : "\nall page smoke tests passed");
   process.exit(failures ? 1 : 0);
 })();

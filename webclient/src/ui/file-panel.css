@@ -244,17 +244,12 @@
   margin-right: 8px;
   color: var(--rd-warn);
 }
-.rd-ft-ic i {
-  font-size: 15px;
-  line-height: 1;
-}
-tr .rd-ft-ic:has(i.ri-file-line),
 tr .rd-ft-ic:has(svg) {
   color: var(--rd-muted);
 }
-/* folders keep the warm tint even with the svg fallback */
-.rd-ft-table td .rd-ft-ic i.ri-folder-3-line,
-.rd-ft-table td .rd-ft-ic i.ri-hard-drive-2-line {
+/* folders and drives keep the warm tint */
+.rd-ft-table td .rd-ft-ic:has(svg[data-icon='folder']),
+.rd-ft-table td .rd-ft-ic:has(svg[data-icon='drive']) {
   color: var(--rd-warn);
 }
 
