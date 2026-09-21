@@ -539,6 +539,17 @@ real URL paths.
 4 terminal. `primary_auth`: 1 click-accept, 2 temporary password, 3
 permanent password, 4 switch sides. `two_factor`: 1 TOTP, 2 trusted device.
 
+**`controlling_name` is not the user's own spelling (source-verified
+2026-09-21, `src/client.rs` 1.4.9, the `display_name` that becomes
+`LoginRequest.my_name`):** the controlling client takes the name from the API
+login (`display_name`, else `name`), else the OS user name, and upper-cases the
+first letter of every word before sending it, so `inteliboy` arrives as
+`Inteliboy`. The original case is lost on the wire. The WebUI therefore shows
+the original spelling where the same name, compared case-insensitively, is the
+OS user name of the controlling device (matched by its RustDesk ID) or one of
+this server's user names (`restore_peer_names`); otherwise it shows the name
+as reported. The database keeps the value as received.
+
 `/api/audit/file` body: `peer_id`, `type` (`FileAuditType`), `path`,
 `is_file` (bool; true when a single file with an empty name),
 `info` - a **JSON-encoded string** (same quirk as `/api/ab`'s `data`)

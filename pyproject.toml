@@ -25,6 +25,7 @@ dependencies = [
     "click>=8.1",
     "cryptography>=42",
     "psutil>=5.9",
+    "segno>=1.6",
 ]
 
 [project.optional-dependencies]

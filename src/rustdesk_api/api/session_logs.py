@@ -117,6 +117,13 @@ def _parse_files(raw: str | None) -> list[list]:
     return parsed if isinstance(parsed, list) else []
 
 
+def _peer_name_of(names: dict[tuple[str, str], str], row) -> str | None:
+    """The controller's name as reported, in its original letter case where known."""
+    if not row.peer_name:
+        return row.peer_name
+    return names.get((row.peer_id or "", row.peer_name), row.peer_name)
+
+
 @router.get("/connection-logs", response_model=ConnectionLogListResponse)
 def list_connection_logs(
     device_id: int | None = Query(default=None),
@@ -130,6 +137,7 @@ def list_connection_logs(
         db, user=user, device_id=device_id, page=page, page_size=page_size
     )
     labels = audit_service.device_labels(db, {r.device_id for r in rows if r.device_id is not None})
+    names = audit_service.restore_peer_names(db, {(r.peer_id, r.peer_name) for r in rows})
     items = [
         ConnectionLogOut(
             id=r.id,
@@ -138,7 +146,7 @@ def list_connection_logs(
             device_label=labels.get(r.device_id) if r.device_id is not None else None,
             from_ip=r.from_ip,
             peer_id=r.peer_id,
-            peer_name=r.peer_name,
+            peer_name=_peer_name_of(names, r),
             conn_type=r.conn_type,
             primary_auth=r.primary_auth,
             two_factor=r.two_factor,
@@ -163,6 +171,7 @@ def list_file_logs(
         db, user=user, device_id=device_id, page=page, page_size=page_size
     )
     labels = audit_service.device_labels(db, {r.device_id for r in rows if r.device_id is not None})
+    names = audit_service.restore_peer_names(db, {(r.peer_id, r.peer_name) for r in rows})
     items = [
         FileTransferLogOut(
             id=r.id,
@@ -170,7 +179,7 @@ def list_file_logs(
             rustdesk_id=r.rustdesk_id,
             device_label=labels.get(r.device_id) if r.device_id is not None else None,
             peer_id=r.peer_id,
-            peer_name=r.peer_name,
+            peer_name=_peer_name_of(names, r),
             from_ip=r.from_ip,
             audit_type=r.audit_type,
             path=r.path,
@@ -197,6 +206,7 @@ def list_alarm_logs(
         db, user=user, device_id=device_id, page=page, page_size=page_size
     )
     labels = audit_service.device_labels(db, {r.device_id for r in rows if r.device_id is not None})
+    names = audit_service.restore_peer_names(db, {(r.peer_id, r.peer_name) for r in rows})
     items = [
         AlarmLogOut(
             id=r.id,
@@ -206,7 +216,7 @@ def list_alarm_logs(
             alarm_type=r.alarm_type,
             from_ip=r.from_ip,
             peer_id=r.peer_id,
-            peer_name=r.peer_name,
+            peer_name=_peer_name_of(names, r),
             conn_type=r.conn_type,
             message=r.message,
             logged_at=r.logged_at,

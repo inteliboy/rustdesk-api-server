@@ -504,3 +504,15 @@ def test_nothing_secret_reaches_the_audit_log_or_the_user_list(admin_client):
     assert users[0]["two_factor_enabled"] is True and "totp" not in json.dumps(users)
     actions = [a["action"] for a in _audit(admin_client)]
     assert "two_factor_enabled" in actions
+
+
+def test_setup_returns_a_scannable_svg_qr_code(admin_client):
+    """A QR code of the otpauth URI, so an authenticator app can scan it."""
+    from urllib.parse import unquote
+
+    body = admin_client.post("/api/v1/auth/2fa/setup").json()
+    assert body["qr_svg"].startswith("data:image/svg+xml")
+    svg = unquote(body["qr_svg"])
+    assert "<svg" in svg and "<path" in svg
+    # Only a picture: the secret must not appear in it as text.
+    assert body["secret"] not in svg

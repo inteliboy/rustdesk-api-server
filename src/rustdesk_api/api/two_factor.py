@@ -24,7 +24,7 @@ from rustdesk_api.config import Settings
 from rustdesk_api.db.database import get_db
 from rustdesk_api.errors import ApiError
 from rustdesk_api.models.user import User
-from rustdesk_api.security import totp
+from rustdesk_api.security import qr, totp
 from rustdesk_api.security.encryption import SecretBox, get_secret_box
 from rustdesk_api.security.passwords import verify_password
 from rustdesk_api.services import audit as audit_service
@@ -45,6 +45,8 @@ class TwoFactorStatus(BaseModel):
 class SetupOut(BaseModel):
     secret: str
     otpauth_uri: str
+    # The otpauth_uri as an SVG QR code in a data: URI, for scanning with the app.
+    qr_svg: str
 
 
 class CodeRequest(BaseModel):
@@ -125,7 +127,8 @@ def begin_setup(
     except two_factor_service.TwoFactorError as exc:
         raise _translate(exc) from exc
     db.commit()
-    return SetupOut(secret=secret, otpauth_uri=totp.provisioning_uri(secret, user.username, ISSUER))
+    uri = totp.provisioning_uri(secret, user.username, ISSUER)
+    return SetupOut(secret=secret, otpauth_uri=uri, qr_svg=qr.svg_data_uri(uri))
 
 
 @router.post(

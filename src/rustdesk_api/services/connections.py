@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session
 
 from rustdesk_api.models.client_audit import ConnectionLog
 from rustdesk_api.models.device import Device
+from rustdesk_api.services import client_audit
 
 # A client has a handful of incoming sessions at most; anything larger is junk.
 MAX_CONNECTIONS = 64
@@ -98,6 +99,7 @@ def describe(db: Session, device: Device) -> list[dict]:
         if row.conn_id is not None and row.conn_id.isdigit():
             by_conn.setdefault(int(row.conn_id), row)
     pending = set(device.pending_disconnect_ids)
+    names = client_audit.restore_peer_names(db, {(r.peer_id, r.peer_name) for r in by_conn.values()})
     result = []
     for conn_id in live:
         row = by_conn.get(conn_id)
@@ -105,7 +107,9 @@ def describe(db: Session, device: Device) -> list[dict]:
             {
                 "id": conn_id,
                 "peer_id": row.peer_id if row else None,
-                "peer_name": row.peer_name if row else None,
+                "peer_name": names.get((row.peer_id or "", row.peer_name or ""), row.peer_name)
+                if row
+                else None,
                 "from_ip": row.from_ip if row else None,
                 "started_at": row.started_at if row else None,
                 "disconnect_requested": conn_id in pending,

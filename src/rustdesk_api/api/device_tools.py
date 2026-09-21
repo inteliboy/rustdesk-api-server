@@ -32,6 +32,7 @@ from rustdesk_api.security.permissions import (
     can_view_device,
 )
 from rustdesk_api.services import audit as audit_service
+from rustdesk_api.services import client_audit
 from rustdesk_api.services import devices as device_service
 from rustdesk_api.services import groups as group_service
 from rustdesk_api.services import strategies as strategy_service
@@ -295,7 +296,9 @@ def timeline(
     connections = select(ConnectionLog).where(ConnectionLog.device_id == device.id)
     if cutoff is not None:
         connections = connections.where(ConnectionLog.started_at < cutoff)
-    for c in db.execute(connections.order_by(ConnectionLog.started_at.desc()).limit(limit)).scalars():
+    logs = list(db.execute(connections.order_by(ConnectionLog.started_at.desc()).limit(limit)).scalars())
+    names = client_audit.restore_peer_names(db, {(c.peer_id, c.peer_name) for c in logs})
+    for c in logs:
         entries.append(
             TimelineEntry(
                 at=c.started_at,
@@ -303,7 +306,7 @@ def timeline(
                 kind="connection",
                 detail={
                     "peer_id": c.peer_id,
-                    "peer_name": c.peer_name,
+                    "peer_name": names.get((c.peer_id or "", c.peer_name or ""), c.peer_name),
                     "from_ip": c.from_ip,
                     "conn_type": c.conn_type,
                     "ended_at": c.ended_at.isoformat() if c.ended_at else None,

@@ -381,8 +381,8 @@ ever affected, and each use is audit-logged.
 
 ## Two-factor authentication
 
-Turn it on under **Security**: add the key to an authenticator app (any TOTP app), confirm with a code, and
-save the ten recovery codes, which are shown once. From then on signing in to the WebUI asks for a code, and so
+Turn it on under **Security**: scan the QR code with an authenticator app (any TOTP app; or type the key shown
+under it), confirm with a code, and save the ten recovery codes, which are shown once. From then on signing in to the WebUI asks for a code, and so
 does the RustDesk client (it shows its own verification-code dialog). Turning it off or making new recovery
 codes needs your password and a current code.
 

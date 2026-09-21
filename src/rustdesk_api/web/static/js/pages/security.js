@@ -130,7 +130,10 @@ async function startSetup() {
   holder.classList.remove("hidden");
   holder.innerHTML = `
     <ol class="list-decimal ml-5 space-y-3 text-sm">
-      <li>Add an account to your authenticator app using this key
+      <li>Scan this QR code with your authenticator app:
+        <img src="${escapeHtml(setup.qr_svg)}" width="200" height="200" alt="QR code to add this account to an authenticator app"
+          class="my-2 rounded-md border border-slate-300" />
+        Cannot scan it? Type this key into the app instead
         (or <a href="${escapeHtml(setup.otpauth_uri)}" class="text-link underline">open it in the app</a> on this device):
         <div class="font-mono break-all my-2 select-all">${escapeHtml(setup.secret)}</div>
         Choose <em>time based</em> if it asks.</li>

@@ -179,3 +179,26 @@ def test_audit_endpoints_are_rate_limited_per_ip(client):
     client.app.state.client_audit_rate_limiter = RateLimiter(max_attempts=2, window_seconds=60)
     codes = [client.post("/api/audit/conn", json={"id": "x"}).status_code for _ in range(4)]
     assert codes == [200, 200, 429, 429]
+
+
+def test_controller_name_gets_its_original_case_back_when_known(admin_client):
+    """The controlling client capitalizes its own name before sending it
+    (client.rs "display_name"). When the same name is known here, only the case
+    is restored; unknown names stay as reported."""
+    # The controller is registered here, and its OS user name is lower case.
+    admin_client.post(
+        "/api/sysinfo",
+        json={"id": "ctrl-1", "uuid": "uuid-c", "hostname": "c", "os": "windows", "username": "inteliboy"},
+    )
+    _register(admin_client)
+    _conn(admin_client, conn_id=1, action="new", ip="203.0.113.7")
+    _conn(admin_client, conn_id=1, peer=["ctrl-1", "Inteliboy"], type=0, primary_auth=2)
+    _conn(admin_client, conn_id=2, action="new", ip="203.0.113.8")
+    _conn(admin_client, conn_id=2, peer=["ctrl-1", "Stranger"], type=0, primary_auth=2)
+    # A server user name matches too, whichever machine the controller is.
+    _conn(admin_client, conn_id=3, action="new", ip="203.0.113.9")
+    _conn(admin_client, conn_id=3, peer=["unregistered", "Admin"], type=0, primary_auth=2)
+
+    items = _conn_logs(admin_client)["items"]
+    names = {row["from_ip"]: row["peer_name"] for row in items}
+    assert names == {"203.0.113.7": "inteliboy", "203.0.113.8": "Stranger", "203.0.113.9": "admin"}

@@ -370,3 +370,43 @@ def device_labels(db: Session, device_ids: set[int]) -> dict[int, str]:
         return {}
     rows = db.execute(select(Device.id, Device.alias, Device.hostname).where(Device.id.in_(device_ids))).all()
     return {row.id: (row.alias or row.hostname or "") for row in rows}
+
+
+def restore_peer_names(db: Session, pairs: set[tuple[str | None, str | None]]) -> dict[tuple[str, str], str]:
+    """(peer id, reported name) -> the name in its original letter case.
+
+    The controlling client capitalizes the first letter of every word of its own
+    name before sending it (client.rs, "display_name"), so "inteliboy" arrives as
+    "Inteliboy" and the original is lost. Where the same name is known here, the
+    peer device's own OS user name or one of this server's user names, and it
+    differs from the reported one only in case, that spelling is used instead.
+    Nothing new is revealed: the match is case-insensitive, so the reader already
+    has the same letters. Names that match nothing are left as reported.
+    """
+    wanted = {(pid, name) for pid, name in pairs if name}
+    if not wanted:
+        return {}
+    lowered = {name.casefold() for _, name in wanted}
+    peer_ids = {pid for pid, _ in wanted if pid}
+
+    device_names: dict[str, str] = {}
+    if peer_ids:
+        for rustdesk_id, username in db.execute(
+            select(Device.rustdesk_id, Device.username).where(Device.rustdesk_id.in_(peer_ids))
+        ):
+            if username:
+                device_names[rustdesk_id] = username
+    user_names = {
+        username.casefold(): username
+        for (username,) in db.execute(select(User.username).where(func.lower(User.username).in_(lowered)))
+    }
+
+    restored: dict[tuple[str, str], str] = {}
+    for pid, name in wanted:
+        key = name.casefold()
+        device_name = device_names.get(pid) if pid else None
+        if device_name and device_name.casefold() == key:
+            restored[(pid or "", name)] = device_name
+        elif key in user_names:
+            restored[(pid or "", name)] = user_names[key]
+    return restored
