@@ -706,6 +706,18 @@ Behaviour here:
   Values follow the client's `option2bool`: `enable-*` options are on unless `N`, `allow-*` options off unless
   `Y`; `access-mode` is `custom|full|view`, `approve-mode` `password|click`, `verification-method`
   `use-temporary-password|use-permanent-password`, `temporary-password-length` `6|8|10`.
+- **Sending the strategy again (added 2026-09-21; source-derived, not observed on a live client).** A heartbeat
+  carries no options, so the server cannot see whether a client still holds the `api-server` it was given; what it
+  can see is *how the heartbeat arrived*. If the device's strategy sets an `https://` `api-server` and a heartbeat
+  arrives over plain HTTP, the client is not using that setting - for example someone cleared it and the client
+  fell back to `http://<ID server>:21114` (from memory of the client's API-server fallback, not re-checked here) -
+  so the strategy is sent again even though the client's `modified_at` matches. The client applies any `strategy`
+  in a response whatever its `modified_at` (`sync.rs`: it stores the timestamp only when it differs, and always calls
+  `handle_config_options`). It is sent at most every 5 minutes per device (`RESEND_INTERVAL`, remembered in
+  `devices.strategy_sent_at`), so a client that cannot apply it is not sent it every 15 s. The ID server, relay
+  server and key leave no trace in a heartbeat, so they are not re-sent. The scheme is the connection's own, or the
+  `X-Forwarded-Proto` of a peer listed in `TRUSTED_PROXIES` (a proxy that does not send it makes every device look
+  like plain HTTP); it is stored in `devices.api_scheme` and shown as the **Connection** column in the WebUI.
 - **Which keys work (source-checked 2026-09-21, `libs/base/src/config/keys.rs` on `master` `a5d4ef9`).**
   `handle_config_options` stores the pushed map with `Config::set_options`, i.e. in the client's `Config` options,
   so a key only has an effect if the client reads it from there: `KEYS_SETTINGS` in `keys.rs`. Every key in the

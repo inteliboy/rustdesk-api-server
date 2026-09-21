@@ -487,9 +487,34 @@ def effective_strategy(db: Session, device: Device) -> Strategy | None:
     return None
 
 
-def heartbeat_fragment(db: Session, device: Device, client_modified_at: int | None) -> dict:
+# How long to wait before sending a strategy again to a client that says it has it.
+RESEND_INTERVAL = datetime.timedelta(minutes=5)
+
+
+def _api_server_lost(strategy: Strategy, scheme: str | None, sent_at: datetime.datetime | None) -> bool:
+    """A heartbeat cannot say which options a client holds, so this is the one sign
+    the server can see: the strategy sets an `https://` API server, yet the client
+    reached us over plain HTTP - so it no longer uses that setting (someone removed
+    it, and the client fell back to `http://<ID server>:21114`). The strategy is
+    then sent again even though the client has that version, at most every
+    `RESEND_INTERVAL`, so a client that cannot apply it is not sent it every 15 s."""
+    api_server = strategy.options.get("api-server")
+    if scheme != "http" or not isinstance(api_server, str) or not api_server.startswith("https://"):
+        return False
+    if sent_at is None:
+        return True
+    if sent_at.tzinfo is None:
+        sent_at = sent_at.replace(tzinfo=datetime.timezone.utc)
+    return _utcnow() - sent_at >= RESEND_INTERVAL
+
+
+def heartbeat_fragment(
+    db: Session, device: Device, client_modified_at: int | None, scheme: str | None = None
+) -> dict:
     """What to merge into the heartbeat response for this device: nothing when
-    the client already has the current strategy."""
+    the client already has the current strategy (unless it has evidently dropped
+    the API server the strategy sets, see `_api_server_lost`). `scheme` is how the
+    heartbeat reached us."""
     strategy = effective_strategy(db, device)
     have = client_modified_at or 0
     if strategy is None:
@@ -497,8 +522,9 @@ def heartbeat_fragment(db: Session, device: Device, client_modified_at: int | No
             return {}
         # It once had one: reset what we may have pushed (not the sticky options).
         return {"modified_at": 0, "strategy": {"config_options": _config_options({})}}
-    if strategy.modified_at == have:
+    if strategy.modified_at == have and not _api_server_lost(strategy, scheme, device.strategy_sent_at):
         return {}
+    device.strategy_sent_at = _utcnow()
     return {
         "modified_at": strategy.modified_at,
         "strategy": {"config_options": _config_options(strategy.options)},

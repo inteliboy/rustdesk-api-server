@@ -88,6 +88,8 @@ class DeviceOut(BaseModel):
     os_version: str | None
     client_version: str | None
     ip_address: str | None
+    # "http" or "https": how the client's last heartbeat reached this server.
+    api_scheme: str | None = None
     cpu: str | None
     memory: str | None
     note: str | None = None

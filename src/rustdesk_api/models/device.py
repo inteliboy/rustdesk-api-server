@@ -88,6 +88,13 @@ class Device(Base):
         DateTime(timezone=True), nullable=True, index=True
     )
 
+    # "http" or "https": how the client's last heartbeat reached this server (as seen
+    # through a trusted proxy). NULL until the first heartbeat after this was added.
+    api_scheme: Mapped[str | None] = mapped_column(String(5), nullable=True)
+    # When we last put the strategy into a heartbeat response; limits how often a
+    # strategy the client already has is sent again (see services.strategies).
+    strategy_sent_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
     owner_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )

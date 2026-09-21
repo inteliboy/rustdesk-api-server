@@ -42,6 +42,19 @@ def get_client_ip(request: Request, settings: Settings = Depends(get_settings_de
     return resolve_client_ip(request, settings)
 
 
+def resolve_client_scheme(request: HTTPConnection, settings: Settings) -> str:
+    """ "http" or "https": how the client reached us. Behind a reverse proxy the
+    connection to us is plain HTTP whatever the client used, so the proxy's
+    X-Forwarded-Proto is read - but only from a configured trusted proxy, like
+    X-Forwarded-For above."""
+    client_host = request.client.host if request.client else None
+    if client_host and client_host in settings.trusted_proxy_list:
+        proto = request.headers.get("x-forwarded-proto", "").split(",")[0].strip().lower()
+        if proto in ("http", "https"):
+            return proto
+    return "https" if request.url.scheme in ("https", "wss") else "http"
+
+
 def _extract_bearer_token(authorization: str | None) -> str | None:
     if not authorization:
         return None

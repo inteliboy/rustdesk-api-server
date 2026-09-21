@@ -57,6 +57,7 @@ def _to_out(device: Device, timeout: int) -> DeviceOut:
         os_version=device.os_version,
         client_version=device.client_version,
         ip_address=device.ip_address,
+        api_scheme=device.api_scheme,
         cpu=device.cpu,
         memory=device.memory,
         note=device.note,

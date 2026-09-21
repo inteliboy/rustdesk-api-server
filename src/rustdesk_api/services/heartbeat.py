@@ -13,6 +13,7 @@ def handle_heartbeat(
     uuid: str | None,
     ip_address: str | None,
     online_timeout: int | None = None,
+    api_scheme: str | None = None,
 ) -> Device | None:
     """RustDesk clients send periodic heartbeats keyed by id/uuid.
 
@@ -24,5 +25,9 @@ def handle_heartbeat(
     if device is None:
         return None
     return device_service.touch_heartbeat(
-        db, rustdesk_id=rustdesk_id, ip_address=ip_address, online_timeout=online_timeout
+        db,
+        rustdesk_id=rustdesk_id,
+        ip_address=ip_address,
+        online_timeout=online_timeout,
+        api_scheme=api_scheme,
     )

@@ -290,6 +290,17 @@ function tagBadges(tags) {
     .join(" ");
 }
 
+// How a device's last heartbeat reached the server: "https" (the current address) or
+// plain "http" (e.g. a client that lost its API server setting and fell back to
+// <ID server>:21114). Never trusts the value beyond those two words.
+function apiSchemeBadge(scheme) {
+  if (scheme !== "https" && scheme !== "http") return "-";
+  const secure = scheme === "https";
+  const c = secure ? "#16a34a" : "#d97706";
+  const tip = secure ? "Reaches the API server over HTTPS" : "Reaches the API server over plain HTTP";
+  return `<span class="badge" title="${tip}" style="background:${c}22;color:${c}"><span class="badge-dot" style="background:${c}"></span>${secure ? "HTTPS" : "HTTP"}</span>`;
+}
+
 // The post-login redirect target. Only same-origin absolute paths are
 // allowed: a bare assignment of ?next= to location.href would allow
 // "javascript:..." (script execution) and "//evil.example" (open redirect).

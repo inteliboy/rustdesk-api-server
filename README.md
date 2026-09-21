@@ -390,6 +390,15 @@ installed with. **Try it on one device first** - assign the strategy to that dev
 that can no longer reach this server cannot be corrected from here. The key must match the ID server's public key.
 A worked example is under [Moving clients from an older API server](#moving-clients-from-an-older-api-server).
 
+The **Connection** column on the Devices page (and *API connection* on a device's page) shows whether the
+device's last heartbeat came in over **HTTPS** or plain **HTTP** - handy while moving clients off an old
+`http://...:21114` address. Behind a reverse proxy it needs the proxy in `TRUSTED_PROXIES` and an
+`X-Forwarded-Proto` header (most proxies set it), otherwise every device looks like plain HTTP. If a device's
+strategy sets an `https://` API server and its heartbeat arrives over plain HTTP, the client has evidently dropped
+that setting (say it was removed by hand), so the strategy is sent again, at most every 5 minutes. That only
+works while the client can still reach this server at all; the ID server, relay server and key cannot be checked
+this way and are not re-sent.
+
 **`rustdesk --assign`.** Run on a device as administrator/root,
 `rustdesk --assign --token <token> --user_name alice --address_book_name "My address book" --address_book_tag office`
 puts that device in a user's address book (with tag, alias, note), device group, and - for administrators -

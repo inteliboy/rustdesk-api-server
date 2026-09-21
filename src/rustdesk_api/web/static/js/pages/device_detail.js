@@ -323,6 +323,7 @@ async function render() {
       ${row("OS version", escapeHtml(d.os_version ?? "-"))}
       ${row("Client version", escapeHtml(d.client_version ?? "-"))}
       ${row("IP address", d.ip_address ? ipLabel(d.ip_address) : "-")}
+      ${row("API connection", apiSchemeBadge(d.api_scheme))}
       ${row("CPU", `<span class="whitespace-nowrap">${escapeHtml(d.cpu ? fmtCpu(d.cpu) : "-")}</span>`)}
       ${row("Memory", `<span class="whitespace-nowrap">${escapeHtml(d.memory ? fmtMemory(d.memory) : "-")}</span>`)}
       ${row("Owner", d.owner_username ? userLink(d.owner_id, d.owner_username) : "-")}

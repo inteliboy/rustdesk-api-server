@@ -80,6 +80,7 @@ def device_snapshot_for_broadcast(
             "alias": device.alias,
             "last_seen": device.last_seen.isoformat() if device.last_seen else None,
             "online": device.is_online(online_timeout_seconds),
+            "api_scheme": device.api_scheme,
         },
     }
     return payload, device.owner_id, shared_with_user_ids

@@ -73,6 +73,7 @@ async function loadDevices() {
         (d) => `<tr id="device-row-${d.id}" class="hover:bg-slate-50 cursor-pointer" data-href="/devices/${d.id}">
           <td class="px-4 py-3"><input type="checkbox" class="row-select" value="${Number(d.id)}" aria-label="Select this device" /></td>
           <td class="px-4 py-3" data-cell="status">${statusBadge(d.online)}${d.uuid_change_pending ? ` <span class="badge badge-offline" title="A different install is claiming this device"><span class="badge-dot"></span>Review</span>` : ""}</td>
+          <td class="px-4 py-3" data-cell="scheme">${apiSchemeBadge(d.api_scheme)}</td>
           <td class="px-4 py-3">${connectLink(d.rustdesk_id)}</td>
           <td class="px-4 py-3 whitespace-nowrap">${escapeHtml(d.alias || d.hostname || "-")}</td>
           <td class="px-4 py-3">${escapeHtml(d.platform ? fmtPlatform(d.platform) : "-")}</td>
@@ -341,6 +342,8 @@ document.getElementById("import-run").addEventListener("click", () => runImport(
     if (!row) return;
     const statusCell = row.querySelector('[data-cell="status"]');
     if (statusCell) statusCell.innerHTML = statusBadge(msg.device.online);
+    const schemeCell = row.querySelector('[data-cell="scheme"]');
+    if (schemeCell) schemeCell.innerHTML = apiSchemeBadge(msg.device.api_scheme);
     const lastSeenCell = row.querySelector('[data-cell="last-seen"]');
     if (lastSeenCell) lastSeenCell.textContent = fmtDate(msg.device.last_seen);
   });

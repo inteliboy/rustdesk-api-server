@@ -534,3 +534,103 @@ def test_server_option_values_are_validated_and_normalised(admin_client):
         "relay-server": "192.168.1.5",
         "allow-websocket": "N",
     }
+
+
+# --------------------------------------------------------------------------
+# How the client reached us, and sending the strategy again
+# --------------------------------------------------------------------------
+
+
+def _https_client(app):
+    from fastapi.testclient import TestClient
+
+    return TestClient(app, base_url="https://testserver")
+
+
+def _forget_when_the_strategy_was_sent(minutes):
+    """Pretend the strategy went to the device `minutes` ago."""
+    import datetime
+
+    from rustdesk_api.db.database import get_session_factory
+    from rustdesk_api.models.device import Device
+
+    with get_session_factory()() as db:
+        device = db.query(Device).one()
+        device.strategy_sent_at = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(
+            minutes=minutes
+        )
+        db.commit()
+
+
+def test_the_device_records_whether_its_heartbeat_came_over_http_or_https(app, admin_client):
+    device = _register(admin_client)
+    assert device["api_scheme"] is None
+
+    _beat(admin_client)
+    assert _device(admin_client, device["id"])["api_scheme"] == "http"
+
+    https = _https_client(app)
+    _beat(https)
+    assert _device(admin_client, device["id"])["api_scheme"] == "https"
+
+
+def test_a_client_that_reaches_us_over_http_again_gets_the_https_api_server_resent(app, admin_client):
+    device = _register(admin_client)
+    _assign(admin_client, device, _strategy(admin_client, "Move", MOVE)["id"])
+
+    first = _beat(admin_client, modified_at=0)
+    assert first["strategy"]["config_options"]["api-server"] == MOVE["api-server"]
+
+    # It has this version, and it was sent a moment ago: not again yet.
+    assert _beat(admin_client, modified_at=first["modified_at"]) == {"data": "OK"}
+
+    # Later, it is still on plain http, so it has dropped the API server: send it again.
+    _forget_when_the_strategy_was_sent(minutes=10)
+    again = _beat(admin_client, modified_at=first["modified_at"])
+    assert again["modified_at"] == first["modified_at"]
+    assert again["strategy"]["config_options"]["api-server"] == MOVE["api-server"]
+
+    # ... and then not on every heartbeat.
+    assert _beat(admin_client, modified_at=first["modified_at"]) == {"data": "OK"}
+
+
+def test_a_client_that_uses_https_is_not_sent_the_strategy_it_already_has(app, admin_client):
+    device = _register(admin_client)
+    _assign(admin_client, device, _strategy(admin_client, "Move", MOVE)["id"])
+    https = _https_client(app)
+    first = _beat(https, modified_at=0)
+    assert "strategy" in first
+
+    _forget_when_the_strategy_was_sent(minutes=10)
+    assert _beat(https, modified_at=first["modified_at"]) == {"data": "OK"}
+
+
+def test_a_strategy_without_an_api_server_is_never_resent_to_a_client_on_http(admin_client):
+    device = _register(admin_client)
+    _assign(admin_client, device, _strategy(admin_client, "Plain", {"enable-audio": "N"})["id"])
+    first = _beat(admin_client, modified_at=0)
+
+    _forget_when_the_strategy_was_sent(minutes=10)
+    assert _beat(admin_client, modified_at=first["modified_at"]) == {"data": "OK"}
+
+
+def test_the_scheme_comes_from_a_trusted_proxy_only():
+    from types import SimpleNamespace
+
+    from rustdesk_api.api.deps import resolve_client_scheme
+
+    def request(peer, forwarded=None, scheme="http"):
+        headers = {"x-forwarded-proto": forwarded} if forwarded else {}
+        return SimpleNamespace(
+            client=SimpleNamespace(host=peer), headers=headers, url=SimpleNamespace(scheme=scheme)
+        )
+
+    settings = SimpleNamespace(trusted_proxy_list=["127.0.0.1"])
+    assert resolve_client_scheme(request("127.0.0.1", "https"), settings) == "https"
+    assert resolve_client_scheme(request("127.0.0.1", "HTTPS, http"), settings) == "https"
+    assert resolve_client_scheme(request("127.0.0.1", "http", scheme="https"), settings) == "http"
+    assert resolve_client_scheme(request("127.0.0.1", "gopher"), settings) == "http"
+    assert resolve_client_scheme(request("127.0.0.1"), settings) == "http"
+    # Anyone else claiming https is ignored.
+    assert resolve_client_scheme(request("203.0.113.9", "https"), settings) == "http"
+    assert resolve_client_scheme(request("203.0.113.9", scheme="https"), settings) == "https"

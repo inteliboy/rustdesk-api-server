@@ -16,7 +16,7 @@ from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
-from rustdesk_api.api.deps import get_client_ip, get_settings_dep
+from rustdesk_api.api.deps import get_client_ip, get_settings_dep, resolve_client_scheme
 from rustdesk_api.config import Settings
 from rustdesk_api.db.database import get_db
 from rustdesk_api.models.device import Device
@@ -110,18 +110,20 @@ def rustdesk_heartbeat(
         # disconnects, or a say in which connections are recorded - and the
         # heartbeat does not even make the device look online.
         return response
+    scheme = resolve_client_scheme(request, settings)
     heartbeat_service.handle_heartbeat(
         db,
         rustdesk_id=payload.id,
         uuid=payload.uuid,
         ip_address=client_ip,
         online_timeout=settings.device_online_timeout,
+        api_scheme=scheme,
     )
     to_close = connection_service.record_heartbeat(db, device, payload.conns)
     if to_close:
         response["disconnect"] = to_close
     modified_at = payload.modified_at if isinstance(payload.modified_at, int) else None
-    response.update(strategy_service.heartbeat_fragment(db, device, modified_at))
+    response.update(strategy_service.heartbeat_fragment(db, device, modified_at, scheme))
     if not device_service.has_reported_sysinfo(device):
         # A client login (or an import) registers just the id, and the client
         # only re-sends its system info on its own when it thinks the last upload

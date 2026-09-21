@@ -5,7 +5,7 @@ const src = fs.readFileSync(process.argv[2], "utf8");
 // Evaluate the real app.js with a minimal DOM stub so we test the shipped code.
 const document = { getElementById: () => null, cookie: "", addEventListener() {} };
 const window = { location: { protocol: "https:", host: "x", pathname: "/", search: "" } };
-const fn = new Function("document", "window", "fetch", src + "\nreturn { escapeHtml, safeColor, safeNextPath, tagBadges, describeActivity, fmtCpu, fmtCpuName, fmtMemory, fmtPlatform, connectLink, ipLabel, isLocalIp, addressBookRuleName, parseServerDate, fmtDate, userLink, setUser: (u) => { currentUser = u; } };");
+const fn = new Function("document", "window", "fetch", src + "\nreturn { escapeHtml, safeColor, safeNextPath, tagBadges, apiSchemeBadge, describeActivity, fmtCpu, fmtCpuName, fmtMemory, fmtPlatform, connectLink, ipLabel, isLocalIp, addressBookRuleName, parseServerDate, fmtDate, userLink, setUser: (u) => { currentUser = u; } };");
 const h = fn(document, window, () => {});
 
 let failed = 0;
@@ -39,6 +39,12 @@ const badges = h.tagBadges([{ name: XSS, color: 'red" onmouseover="alert(1)' }])
 lacks("tag name", badges, "<img");
 lacks("tag color", badges, "onmouseover=\"");
 has("tag color fallback", badges, "#64748b");
+
+// Only the two known words become a badge; anything else a server sent is not echoed.
+has("https badge", h.apiSchemeBadge("https"), "HTTPS");
+has("http badge", h.apiSchemeBadge("http"), ">HTTP<");
+eq("no scheme yet", h.apiSchemeBadge(null), "-");
+eq("scheme junk", h.apiSchemeBadge(XSS), "-");
 
 // Audit-log feed text is inserted as HTML by its callers.
 const mk = (action, detail, actor = XSS) => ({ action, detail, actor_username: actor, result: "success", target_type: "x", target_id: 1 });

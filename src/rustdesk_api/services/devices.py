@@ -205,6 +205,7 @@ def touch_heartbeat(
     rustdesk_id: str,
     ip_address: str | None = None,
     online_timeout: int | None = None,
+    api_scheme: str | None = None,
 ) -> Device | None:
     device = get_by_rustdesk_id(db, rustdesk_id)
     if device is None:
@@ -214,6 +215,8 @@ def touch_heartbeat(
     device.last_seen = now
     if ip_address and device.ip_address != ip_address:
         device.ip_address = ip_address
+    if api_scheme and device.api_scheme != api_scheme:
+        device.api_scheme = api_scheme
     db.flush()
     return device
 
