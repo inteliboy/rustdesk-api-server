@@ -70,7 +70,7 @@ def installer_env(monkeypatch, tmp_path):
 
     scripts: list[str] = []
 
-    def fake_run(makensis, script, sign_command=""):
+    def fake_run(makensis, script, sign_command="", permanent_password=""):
         text = script.read_text(encoding="utf-8")
         scripts.append(text)
         outfile = re.search(r'^Outfile "(.+)"$', text, re.MULTILINE)[1]
@@ -239,7 +239,7 @@ def test_an_unknown_release_or_missing_architecture_is_refused_at_once(installer
 
 
 def test_a_failed_build_says_why_and_offers_no_file(installer_env, monkeypatch, admin_client):
-    def failing(makensis, script, sign_command=""):
+    def failing(makensis, script, sign_command="", permanent_password=""):
         raise inst.InstallerError("makensis failed (exit code 1).\nError: nope")
 
     monkeypatch.setattr(inst, "run_makensis", failing)
@@ -252,7 +252,7 @@ def test_a_failed_build_says_why_and_offers_no_file(installer_env, monkeypatch, 
 def test_a_second_build_while_one_runs_is_refused(installer_env, monkeypatch, admin_client):
     started, release = threading.Event(), threading.Event()
 
-    def slow(makensis, script, sign_command=""):
+    def slow(makensis, script, sign_command="", permanent_password=""):
         started.set()
         release.wait(5)
         return "ok"
@@ -273,6 +273,27 @@ def test_a_second_build_while_one_runs_is_refused(installer_env, monkeypatch, ad
 def test_an_unknown_build_is_not_found(installer_env, admin_client):
     assert admin_client.get("/api/v1/admin/installer/builds/nope").status_code == 404
     assert admin_client.get("/api/v1/admin/installer/builds/nope/file").status_code == 404
+
+
+def test_a_permanent_password_reaches_the_script_and_never_the_audit_log(installer_env, admin_client):
+    r = admin_client.post("/api/v1/admin/installer/builds", json=_body(permanent_password="hunter2pass"))
+    job = _wait(admin_client, r.json()["id"])
+
+    assert job["state"] == "done"
+    assert '--password "hunter2pass"' in installer_env[0]
+    logs = admin_client.get("/api/v1/admin/audit-logs").json()["items"]
+    entry = next(e for e in logs if e["action"] == "installer_build")
+    assert entry["detail"]["permanent_password"] is True
+    assert "hunter2pass" not in str(logs)
+
+
+def test_an_invalid_permanent_password_is_refused_at_once(installer_env, admin_client):
+    r = admin_client.post("/api/v1/admin/installer/builds", json=_body(permanent_password="a" * 600))
+    assert r.status_code == 422
+    r = admin_client.post("/api/v1/admin/installer/builds", json=_body(permanent_password="bad\npassword"))
+    assert r.status_code == 422 and r.json()["error"]["code"] == "BAD_REQUEST"
+    r = admin_client.post("/api/v1/admin/installer/kit", json=_body(permanent_password="bad\npassword"))
+    assert r.status_code == 422
 
 
 def test_building_is_recorded_in_the_audit_log_without_the_servers(installer_env, admin_client):
@@ -391,7 +412,7 @@ def test_files_are_only_for_administrators_and_deleting_needs_csrf(installer_env
 def test_nothing_is_deleted_while_a_build_runs(installer_env, monkeypatch, admin_client):
     started, release = threading.Event(), threading.Event()
 
-    def slow(makensis, script, sign_command=""):
+    def slow(makensis, script, sign_command="", permanent_password=""):
         started.set()
         release.wait(5)
         return "ok"
@@ -629,7 +650,7 @@ def test_the_certificate_cannot_change_while_a_build_runs(certificate_env, monke
     _upload(admin_client)
     started, release = threading.Event(), threading.Event()
 
-    def slow(makensis, script, sign_command=""):
+    def slow(makensis, script, sign_command="", permanent_password=""):
         started.set()
         release.wait(5)
         return "ok"

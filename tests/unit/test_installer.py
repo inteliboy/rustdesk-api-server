@@ -166,6 +166,36 @@ def test_a_dollar_or_quote_in_a_path_cannot_break_out_of_the_string():
     assert 'Outfile "C:\\$$out.exe"' in text
 
 
+def test_no_password_line_by_default():
+    text = inst.render_nsi(_spec())
+    assert "--password" not in text
+
+
+def test_a_permanent_password_is_set_once_the_service_is_installed():
+    text = inst.render_nsi(_spec(permanent_password="hunter2pass"))
+
+    before_install = text.index("--install-service")
+    password_line = text.index('--password "hunter2pass"')
+    assert password_line > before_install  # the service must be running for the IPC call to work
+    assert text.index("Goto Done") > password_line
+
+
+def test_a_password_with_nsis_special_characters_cannot_break_out_of_the_string():
+    # The whole ExecWait command is itself single-quoted, so an apostrophe in the password
+    # would end that string early unless it is escaped too (unlike a plain "..." value).
+    text = inst.render_nsi(_spec(permanent_password="a\"b$c'd"))
+
+    assert '--password "a$\\"b$$c$\\\'d"' in text
+
+
+def test_an_overlong_or_non_ascii_password_is_refused():
+    with pytest.raises(inst.InstallerError, match="512"):
+        inst.render_nsi(_spec(permanent_password="x" * 513))
+    for bad in ("café", "line1\nline2", "tab\there"):
+        with pytest.raises(inst.InstallerError, match="ASCII"):
+            inst.render_nsi(_spec(permanent_password=bad))
+
+
 def test_an_unexpected_version_or_architecture_is_refused():
     with pytest.raises(inst.InstallerError):
         inst.render_nsi(_spec(version='1.0"\nExecWait calc'))
@@ -321,6 +351,19 @@ def test_makensis_output_never_carries_the_signing_command(tmp_path, monkeypatch
     assert "it broke" in str(raised.value) and "INSTALLER_SIGN_COMMAND" in str(raised.value)
 
 
+def test_makensis_output_never_carries_the_permanent_password(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        inst.subprocess,
+        "run",
+        lambda *a, **k: _Completed(1, b"Error at line 42: --password hunter2pass\nsomething broke\n"),
+    )
+    with pytest.raises(inst.InstallerError) as raised:
+        inst.run_makensis("makensis", tmp_path / "a.nsi", "", "hunter2pass")
+
+    assert "hunter2pass" not in str(raised.value)
+    assert "something broke" in str(raised.value)
+
+
 def test_makensis_is_run_without_a_shell_in_the_scripts_folder(tmp_path, monkeypatch):
     seen = {}
 
@@ -382,6 +425,27 @@ def test_the_kit_refuses_an_architecture_the_release_does_not_have():
     stable = inst.parse_releases(_payload())[1]
     with pytest.raises(inst.InstallerError, match="no MSI"):
         inst.build_kit(SERVERS, stable, "arm64")
+
+
+def test_the_kit_says_when_it_has_no_password():
+    release = inst.parse_releases(_payload())[1]  # 1.4.9
+    kit = inst.build_kit(SERVERS, release, "x64")
+    with zipfile.ZipFile(io.BytesIO(kit)) as archive:
+        readme = archive.read("README.txt").decode("ascii")
+        nsi = archive.read("rustdesk.nsi").decode("ascii")
+    assert "It contains no password." in readme
+    assert "--password" not in nsi
+
+
+def test_the_kit_can_bake_in_a_permanent_password_and_warns_about_the_file():
+    release = inst.parse_releases(_payload())[1]
+    kit = inst.build_kit(SERVERS, release, "x64", permanent_password="hunter2pass")
+    with zipfile.ZipFile(io.BytesIO(kit)) as archive:
+        readme = archive.read("README.txt").decode("ascii")
+        nsi = archive.read("rustdesk.nsi").decode("ascii")
+    assert '--password "hunter2pass"' in nsi
+    assert "It contains no password." not in readme
+    assert "plain text" in readme and "do not commit" in readme
 
 
 def test_the_output_names_follow_the_release(tmp_path):

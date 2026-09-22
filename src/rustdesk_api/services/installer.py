@@ -5,6 +5,18 @@ installation, installs the MSI silently, runs `rustdesk.exe --config <string>` a
 installs the service. That is the same recipe as a hand-made rustdesk.nsi; here the
 server writes the script, downloads the MSI and runs `makensis`.
 
+An optional permanent password can be baked in too: once the service is running, the
+script runs `rustdesk.exe --password <value>` (the same local command the client's own
+`--password` CLI flag uses, via IPC to the just-installed service). This is a *local*,
+install-time action, not a server push - RustDesk has no server-to-client channel that
+sets an already-installed device's password (see services/strategies.py, which
+deliberately never pushes passwords for the same reason: only the machine itself should
+ever be able to set what is needed to connect to it). The password reaches the script in
+plain text (there is nowhere else for it to live - it has to end up in the file that
+sets it), so it is redacted from build output/logs and never written anywhere on the
+server outside the build's own scratch directory, which is removed as soon as the build
+finishes.
+
 Two ways to get the file:
 
 * **Build on the server** (`start_build`): needs `makensis` on the server and outbound
@@ -69,6 +81,7 @@ _MSI_NAME = re.compile(
 )
 _DIGEST = re.compile(r"^sha256:(?P<hex>[0-9a-f]{64})$")
 _CONFIG_STRING = re.compile(r"^[A-Za-z0-9_=-]{1,2048}$")
+MAX_PASSWORD_LENGTH = 512
 
 
 class InstallerError(Exception):
@@ -370,8 +383,11 @@ def fetch_icon(settings: Settings, tag: str) -> Path | None:
 
 
 def _nsis(text: str) -> str:
-    """A value inside an NSIS double-quoted string."""
-    return text.replace("$", "$$").replace('"', '$\\"')
+    """A value inside an NSIS string, whichever quote character encloses it. `$\\"`, `$\\'` and
+    `$$` are recognised as escapes regardless of quote style, so escaping all three keeps a value
+    safe whether it lands inside "..." (most of this script) or, nested inside an ExecWait's own
+    '...' (the permanent password, below), '...'."""
+    return text.replace("$", "$$").replace('"', '$\\"').replace("'", "$\\'")
 
 
 _RESET_LINES = (
@@ -422,7 +438,7 @@ Installed:
 
     Sleep 5000
     ExecWait '"${INSTALL_DIR}\${EXECUTABLE}" --install-service'
-    Goto Done
+@@PASSWORD@@    Goto Done
 
 AdminRequired:
     MessageBox MB_ICONSTOP "This installer requires administrator privileges!"
@@ -445,6 +461,37 @@ def _icon_block(icon: str) -> str:
     return f'!if /FileExists "{path}"' + NL + f'Icon "{path}"' + NL + "!endif" + NL
 
 
+def _check_password(value: str) -> str:
+    """Plain ASCII, printable, no newlines: it has to fit on one line of an NSIS script,
+    which has no escape for anything else, and the build kit's zip is written as ASCII too."""
+    if not value:
+        return ""
+    if len(value) > MAX_PASSWORD_LENGTH:
+        raise InstallerError(
+            f"The password is longer than {MAX_PASSWORD_LENGTH} characters.", "BAD_REQUEST", 422
+        )
+    if not value.isascii() or not value.isprintable():
+        raise InstallerError(
+            "The password must be plain ASCII text with no control characters.", "BAD_REQUEST", 422
+        )
+    return value
+
+
+def _password_block(password: str) -> str:
+    """Sets the permanent password once the service is up (`--password`, the client's own
+    local IPC command - see the module docstring). Empty when no password was asked for."""
+    if not password:
+        return ""
+    return (
+        "    Sleep 5000"
+        + NL
+        + '    ExecWait \'"${INSTALL_DIR}\\${EXECUTABLE}" --password "'
+        + _nsis(password)
+        + "\"'"
+        + NL
+    )
+
+
 @dataclass(frozen=True)
 class ScriptSpec:
     servers: client_config.ClientServers
@@ -455,6 +502,7 @@ class ScriptSpec:
     outfile: str
     reset_settings: bool = False
     sign_command: str = ""
+    permanent_password: str = ""
 
 
 def render_nsi(spec: ScriptSpec) -> str:
@@ -467,6 +515,7 @@ def render_nsi(spec: ScriptSpec) -> str:
         )
     if spec.arch not in ARCHES or not re.match(r"^[A-Za-z0-9._-]{1,64}$", spec.version):
         raise InstallerError("Unexpected version or architecture.", "BAD_REQUEST", 422)
+    password = _check_password(spec.permanent_password)
     # The command comes from the environment and Settings has checked it (one line, no backtick).
     finalize = f"!finalize `{spec.sign_command.replace('$', '$$')}`\n" if spec.sign_command else ""
     host = re.sub(r"[^A-Za-z0-9._:/-]", "", spec.servers.id_server)[:80]
@@ -480,6 +529,7 @@ def render_nsi(spec: ScriptSpec) -> str:
         "@@ICON@@": _icon_block(spec.icon),
         "@@MSI@@": _nsis(spec.msi),
         "@@RESET@@": _RESET_LINES if spec.reset_settings else "",
+        "@@PASSWORD@@": _password_block(password),
     }
     text = _NSI_TEMPLATE
     for token, value in replacements.items():
@@ -499,9 +549,10 @@ def _redact(output: str, *secrets_to_hide: str) -> str:
     return output
 
 
-def run_makensis(makensis: str, script: Path, sign_command: str = "") -> str:
-    """Runs makensis on the script. Its output can echo the signing command, so it is
-    scrubbed before anything is kept."""
+def run_makensis(makensis: str, script: Path, sign_command: str = "", permanent_password: str = "") -> str:
+    """Runs makensis on the script. Its output can echo the signing command or (were makensis
+    to report an error on that line) the permanent password, so both are scrubbed before
+    anything is kept."""
     try:
         completed = subprocess.run(  # noqa: S603 - fixed argv, no shell; the script path is ours
             [makensis, "-V2", str(script)],
@@ -518,6 +569,7 @@ def run_makensis(makensis: str, script: Path, sign_command: str = "") -> str:
         (completed.stdout + b"\n" + completed.stderr).decode("utf-8", errors="replace"),
         sign_command,
         sign_command.replace("$", "$$"),
+        permanent_password,
     )
     tail = "\n".join([line for line in text.splitlines() if line.strip()][-OUTPUT_TAIL_LINES:])
     if completed.returncode != 0:
@@ -536,6 +588,7 @@ class BuildSpec:
     # Sign with the uploaded certificate: None = if there is one that can be used, True = it
     # must be used (the build is refused when it cannot be), False = do not.
     sign_with_certificate: bool | None = None
+    permanent_password: str = ""
 
 
 @dataclass
@@ -646,6 +699,7 @@ def start_build(settings: Settings, spec: BuildSpec) -> Job:
         )
     release = find_release(spec.tag)
     asset = pick_asset(release, spec.arch)
+    _check_password(spec.permanent_password)
     sign_now, skipped = _certificate_plan(settings, spec.sign_with_certificate)
     if not _build_slot.acquire(blocking=False):
         raise InstallerBusy
@@ -695,11 +749,12 @@ def _run_job(settings: Settings, spec: BuildSpec, release: Release, asset: Asset
                         outfile=str(outfile.resolve()),
                         reset_settings=spec.reset_settings,
                         sign_command=settings.installer_sign_command,
+                        permanent_password=spec.permanent_password,
                     )
                 ),
                 encoding="utf-8",
             )
-            run_makensis(makensis, script, settings.installer_sign_command)
+            run_makensis(makensis, script, settings.installer_sign_command, spec.permanent_password)
         finally:
             shutil.rmtree(scratch, ignore_errors=True)
         if not outfile.is_file():
@@ -848,9 +903,16 @@ Or with a .pfx file (you are asked for its password):
 Other options: -TimestampUrl (default http://timestamp.digicert.com), -SignTool <path to signtool.exe>,
 -Makensis <path to makensis.exe>.
 
-The setup file contains this server's ID server, relay, API server and public key. It contains no
-password. Try it on one machine first: it removes an existing RustDesk installation before it installs.
+The setup file contains this server's ID server, relay, API server and public key.{password_note} Try it
+on one machine first: it removes an existing RustDesk installation before it installs.
 """
+
+_KIT_README_NO_PASSWORD = " It contains no password."
+_KIT_README_WITH_PASSWORD = (
+    " It also sets the permanent connect password you chose, in plain text inside rustdesk.nsi -"
+    " treat this zip like a password: do not commit it, e-mail it in the clear, or leave it lying"
+    " around once you are done building."
+)
 
 _KIT_SCRIPT = r"""<#
   Builds the RustDesk setup file for @@SERVER@@ (RustDesk @@VERSION@@, @@ARCH@@).
@@ -926,7 +988,11 @@ Write-Host "Done: $((Resolve-Path -LiteralPath $output).Path)"
 
 
 def build_kit(
-    servers: client_config.ClientServers, release: Release, arch: str, reset_settings: bool = False
+    servers: client_config.ClientServers,
+    release: Release,
+    arch: str,
+    reset_settings: bool = False,
+    permanent_password: str = "",
 ) -> bytes:
     """A zip with the NSIS script and a PowerShell script that builds (and optionally signs)
     the setup file on the machine that runs it."""
@@ -954,6 +1020,7 @@ def build_kit(
             icon="rustdesk.ico",
             outfile=outfile,
             reset_settings=reset_settings,
+            permanent_password=permanent_password,
         )
     )
     readme = _KIT_README.format(
@@ -961,6 +1028,7 @@ def build_kit(
         version=release.version,
         arch=arch,
         msi_arch=msi_arch,
+        password_note=_KIT_README_WITH_PASSWORD if permanent_password else _KIT_README_NO_PASSWORD,
     )
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:

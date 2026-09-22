@@ -136,6 +136,7 @@ function installerBody() {
     tag: document.getElementById("inst-tag").value,
     arch: document.getElementById("inst-arch").value,
     reset_settings: document.getElementById("inst-reset").checked,
+    permanent_password: document.getElementById("inst-password").value,
   };
   // Only when the box is on the page: otherwise the server decides (it signs if it can).
   if (!document.getElementById("inst-sign-row").classList.contains("hidden")) {
@@ -143,6 +144,18 @@ function installerBody() {
   }
   return body;
 }
+
+// A-Z, a-z, 0-9 only: easy to read back over the phone, no NSIS-escaping surprises to think about.
+function generatePassword(length = 16) {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+  const bytes = new Uint32Array(length);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (n) => alphabet[n % alphabet.length]).join("");
+}
+
+document.getElementById("inst-password-generate").addEventListener("click", () => {
+  document.getElementById("inst-password").value = generatePassword();
+});
 
 // Can a build be signed with the uploaded certificate right now?
 function certificateUsable(status) {

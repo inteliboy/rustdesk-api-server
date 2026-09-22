@@ -91,6 +91,9 @@ class BuildIn(BaseModel):
     reset_settings: bool = False
     # Sign with the uploaded certificate: omitted = if one can be used, true = it must, false = do not.
     sign: bool | None = None
+    # Sets this as the permanent password once installed (rustdesk.exe --password). Never stored;
+    # only reaches the generated script. Empty = leave the password alone.
+    permanent_password: str = Field(default="", max_length=installer_service.MAX_PASSWORD_LENGTH)
 
 
 class BuildOut(BaseModel):
@@ -292,6 +295,7 @@ def start_build(
                 arch=payload.arch,
                 reset_settings=payload.reset_settings,
                 sign_with_certificate=payload.sign,
+                permanent_password=payload.permanent_password,
             ),
         )
     except installer_service.InstallerError as exc:
@@ -306,6 +310,7 @@ def start_build(
             "reset_settings": payload.reset_settings,
             "signed": job.certificate or bool(settings.installer_sign_command),
             "certificate": job.certificate,
+            "permanent_password": bool(payload.permanent_password),
         },
     )
     db.commit()
@@ -348,7 +353,11 @@ def download_kit(
     try:
         release = installer_service.find_release(payload.tag)
         data = installer_service.build_kit(
-            _servers(payload.servers), release, payload.arch, payload.reset_settings
+            _servers(payload.servers),
+            release,
+            payload.arch,
+            payload.reset_settings,
+            payload.permanent_password,
         )
     except installer_service.InstallerError as exc:
         raise _raise(exc) from exc
@@ -356,7 +365,12 @@ def download_kit(
         db,
         action="installer_kit",
         actor_id=admin.id,
-        detail={"tag": release.tag, "arch": payload.arch, "reset_settings": payload.reset_settings},
+        detail={
+            "tag": release.tag,
+            "arch": payload.arch,
+            "reset_settings": payload.reset_settings,
+            "permanent_password": bool(payload.permanent_password),
+        },
     )
     db.commit()
     filename = f"rustdesk-{release.version}-{payload.arch}-kit.zip"

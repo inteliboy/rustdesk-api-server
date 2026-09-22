@@ -275,7 +275,8 @@ Phase 3. LDAP sign-in and webhook notifications are not implemented.
   devices, **archiving** of devices that are gone and a flag for **outdated clients** - see Notifications, Database
   backups and Default strategy and fleet hygiene below
 - A **Deploy** page with the client's config string, a QR code and setup commands - see Deploying many clients - and a
-  **Windows installer** builder (any RustDesk release incl. nightly, x64/ARM64, optional signing) - see Windows installer
+  **Windows installer** builder (any RustDesk release incl. nightly, x64/ARM64, optional signing, optional permanent
+  password) - see Windows installer
 - A **Settings** page that lists every option set with an environment variable and whether it is on or off, with
   secrets reported only as set or not - see Configuration
 - WebUI in English, Polish, French, German and Spanish - see Languages below
@@ -866,10 +867,20 @@ service. It is the recipe of a hand-made NSIS script, generated for you:
 - **Existing settings.** The installer removes an installed RustDesk first (so the version chosen here is the version
   installed). The client's configuration - and so its **ID** - is only deleted if you tick *Also remove RustDesk's
   existing settings*.
+- **Permanent password (optional).** Type one in, or click *Generate*, and the finished setup file also runs
+  `rustdesk.exe --password <it>` once the service is installed - the same local command the client's own
+  "change password" screen uses. This is a *local*, install-time action, not something pushed to already-deployed
+  devices later: RustDesk has no server-to-client channel for that (see [Roles and permissions](#roles-and-permissions)
+  and the strategy option list below, which deliberately never carry a password, for the same reason - only the
+  machine itself should ever be able to set what is needed to connect to it). The password has to end up in the file
+  that sets it, so it is in **plain text** inside the generated `rustdesk.nsi` - the build kit's zip carries it too if
+  you set one there, and its README says so instead of "it contains no password". It is redacted from build output
+  and the audit log either way, and never stored on the server beyond the build's own scratch directory.
 
-The file contains the ID server, relay, API server and the public key - the same values as the config string - and
-no password. Only administrators can build it (it runs a program and may sign with your certificate); the audit log
-records who built one, which release and whether it was signed. Settings: `INSTALLER_BUILD_ENABLED`,
+Except for that optional password, the file contains only the ID server, relay, API server and the public key - the
+same values as the config string. Only administrators can build it (it runs a program and may sign with your
+certificate); the audit log records who built one, which release and whether it was signed (never the password
+itself). Settings: `INSTALLER_BUILD_ENABLED`,
 `INSTALLER_MAKENSIS`, `INSTALLER_DIR`, `INSTALLER_SIGN_COMMAND`, `INSTALLER_OSSLSIGNCODE`, `INSTALLER_TIMESTAMP_URL` and
 `INSTALLER_ICON` (default: RustDesk's own icon, fetched from GitHub) - see `.env.example`.
 
