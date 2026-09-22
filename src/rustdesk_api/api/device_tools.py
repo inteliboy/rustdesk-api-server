@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from rustdesk_api.api.deps import get_current_admin, get_current_user, verify_csrf
+from rustdesk_api.api.deps import get_current_user, require_permission, verify_csrf
 from rustdesk_api.db.database import get_db
 from rustdesk_api.errors import ApiError
 from rustdesk_api.models.audit import AuditLog
@@ -30,6 +30,7 @@ from rustdesk_api.security.permissions import (
     can_edit_device,
     can_manage_connections,
     can_view_device,
+    has_permission,
 )
 from rustdesk_api.services import audit as audit_service
 from rustdesk_api.services import client_audit
@@ -118,18 +119,18 @@ def bulk_update(
             if group is None or (not user.is_admin and group.owner_id != user.id):
                 raise ApiError("GROUP_NOT_FOUND", "The requested group does not exist.", 404)
     elif action == "set_owner":
-        if not user.is_admin:
+        if not has_permission(user, "devices", "manage"):
             raise ApiError("FORBIDDEN", "Only administrators may reassign device ownership.", 403)
         if payload.owner_id is not None:
             if db.get(User, payload.owner_id) is None:
                 raise ApiError("USER_NOT_FOUND", "The requested user does not exist.", 404)
             owner_id = payload.owner_id
-    elif action in ("watch", "unwatch") and not user.is_admin:
+    elif action in ("watch", "unwatch") and not has_permission(user, "devices", "manage"):
         # The alerts go to the channels the administrator configured, so a user
         # cannot choose what they are about.
         raise ApiError("FORBIDDEN", "Only administrators may change offline alerts.", 403)
     elif action == "set_strategy":
-        if not user.is_admin:
+        if not has_permission(user, "devices", "manage"):
             raise ApiError("FORBIDDEN", "Only administrators may assign strategies.", 403)
         if payload.strategy_id is not None:
             strategy = strategy_service.get_by_id(db, payload.strategy_id)
@@ -145,7 +146,7 @@ def bulk_update(
             continue
         allowed = can_delete_device(user, device) if action == "delete" else can_edit_device(user, device)
         if action in ("set_owner", "set_strategy", "watch", "unwatch", "approve", "reject"):
-            allowed = user.is_admin
+            allowed = has_permission(user, "devices", "manage")
         if not allowed:
             skipped.append(Skipped(id=device_id, reason="forbidden"))
             continue
@@ -210,7 +211,7 @@ def set_watch(
     device_id: int,
     payload: WatchRequest,
     db: Session = Depends(get_db),
-    admin: User = Depends(get_current_admin),
+    admin: User = Depends(require_permission("devices", "manage")),
 ) -> dict:
     """Notify (see Settings) when this device stops reporting. Administrators only."""
     device = device_service.get_by_id(db, device_id)
@@ -280,7 +281,9 @@ def _decide_approval(db: Session, device_id: int, admin: User, approve: bool) ->
 
 @router.post("/{device_id}/approve", response_model=ApprovalOut, dependencies=[Depends(verify_csrf)])
 def approve_device(
-    device_id: int, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)
+    device_id: int,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_permission("devices", "manage")),
 ) -> ApprovalOut:
     """Let a device that is waiting (or was rejected) be managed. Administrators only."""
     return _decide_approval(db, device_id, admin, approve=True)
@@ -288,7 +291,9 @@ def approve_device(
 
 @router.post("/{device_id}/reject", response_model=ApprovalOut, dependencies=[Depends(verify_csrf)])
 def reject_device(
-    device_id: int, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)
+    device_id: int,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_permission("devices", "manage")),
 ) -> ApprovalOut:
     """Turn a device down: it stays on record, and nothing it uploads is used, until it
     is approved or deleted. Administrators only."""

@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from rustdesk_api.api.deps import get_current_admin, verify_csrf
+from rustdesk_api.api.deps import require_permission, verify_csrf
 from rustdesk_api.db.database import get_db
 from rustdesk_api.errors import ApiError
 from rustdesk_api.models.strategy import Strategy
@@ -80,13 +80,15 @@ def _translate(exc: strategy_service.StrategyError) -> ApiError:
 
 
 @router.get("/strategies/options")
-def strategy_options(_admin: User = Depends(get_current_admin)) -> list[dict]:
+def strategy_options(_user: User = Depends(require_permission("policies", "view"))) -> list[dict]:
     """What a strategy may set: every option, its type and allowed values."""
     return strategy_service.catalog()
 
 
 @router.get("/strategies", response_model=list[StrategyOut])
-def list_strategies(db: Session = Depends(get_db), _admin: User = Depends(get_current_admin)):
+def list_strategies(
+    db: Session = Depends(get_db), _user: User = Depends(require_permission("policies", "view"))
+):
     strategies = strategy_service.list_strategies(db)
     counts = strategy_service.usage_counts(db, [s.id for s in strategies])
     return [_to_out(s, counts.get(s.id, (0, 0))) for s in strategies]
@@ -94,7 +96,9 @@ def list_strategies(db: Session = Depends(get_db), _admin: User = Depends(get_cu
 
 @router.post("/strategies", response_model=StrategyOut, status_code=201, dependencies=[Depends(verify_csrf)])
 def create_strategy(
-    payload: StrategyIn, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)
+    payload: StrategyIn,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_permission("policies", "manage")),
 ) -> StrategyOut:
     try:
         strategy = strategy_service.create_strategy(
@@ -116,7 +120,9 @@ def create_strategy(
 
 @router.get("/strategies/{strategy_id}", response_model=StrategyOut)
 def get_strategy(
-    strategy_id: int, db: Session = Depends(get_db), _admin: User = Depends(get_current_admin)
+    strategy_id: int,
+    db: Session = Depends(get_db),
+    _user: User = Depends(require_permission("policies", "view")),
 ) -> StrategyOut:
     strategy = _get_or_404(db, strategy_id)
     return _to_out(strategy, strategy_service.usage_counts(db, [strategy.id])[strategy.id])
@@ -127,7 +133,7 @@ def update_strategy(
     strategy_id: int,
     payload: StrategyIn,
     db: Session = Depends(get_db),
-    admin: User = Depends(get_current_admin),
+    admin: User = Depends(require_permission("policies", "manage")),
 ) -> StrategyOut:
     strategy = _get_or_404(db, strategy_id)
     try:
@@ -150,7 +156,9 @@ def update_strategy(
 
 @router.delete("/strategies/{strategy_id}", status_code=204, dependencies=[Depends(verify_csrf)])
 def delete_strategy(
-    strategy_id: int, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)
+    strategy_id: int,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_permission("policies", "manage")),
 ) -> None:
     strategy = _get_or_404(db, strategy_id)
     name = strategy.name
@@ -177,7 +185,7 @@ def set_default_strategy(
     strategy_id: int,
     payload: DefaultStrategyRequest,
     db: Session = Depends(get_db),
-    admin: User = Depends(get_current_admin),
+    admin: User = Depends(require_permission("policies", "manage")),
 ) -> StrategyOut:
     """The strategy for devices that have none of their own and none through their group."""
     strategy = _get_or_404(db, strategy_id)
@@ -206,7 +214,7 @@ def assign_device_strategy(
     device_id: int,
     payload: AssignStrategyRequest,
     db: Session = Depends(get_db),
-    admin: User = Depends(get_current_admin),
+    admin: User = Depends(require_permission("policies", "manage")),
 ) -> dict:
     device = device_service.get_by_id(db, device_id)
     if device is None:
@@ -230,7 +238,7 @@ def assign_group_strategy(
     group_id: int,
     payload: AssignStrategyRequest,
     db: Session = Depends(get_db),
-    admin: User = Depends(get_current_admin),
+    admin: User = Depends(require_permission("policies", "manage")),
 ) -> dict:
     group = group_service.get_by_id(db, group_id)
     if group is None:

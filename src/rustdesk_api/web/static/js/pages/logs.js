@@ -246,7 +246,7 @@ async function clearAll() {
 (async () => {
   const user = await requireAuth();
   if (!user) return;
-  isAdmin = !!user.is_admin;
+  isAdmin = hasPerm(user, "logs", "manage");
   // Activity leads for administrators; a link to one device's logs (device_id) opens on Connections.
   if (!isAdmin && state.tab === "activity") state.tab = null;
   if (!state.tab) state.tab = isAdmin && !state.deviceId ? "activity" : "conn";

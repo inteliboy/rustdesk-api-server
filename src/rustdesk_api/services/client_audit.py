@@ -22,6 +22,7 @@ from rustdesk_api.models.client_audit import AlarmLog, ConnectionLog, FileTransf
 from rustdesk_api.models.device import Device
 from rustdesk_api.models.share import DeviceShare
 from rustdesk_api.models.user import User
+from rustdesk_api.security.permissions import has_permission
 from rustdesk_api.services import devices as device_service
 from rustdesk_api.services import notifications
 
@@ -377,7 +378,7 @@ def list_connection_logs(
 ) -> tuple[list[ConnectionLog], int]:
     stmt = select(ConnectionLog)
     count_stmt = select(func.count(ConnectionLog.id))
-    if not user.is_admin:
+    if not (user.is_admin or has_permission(user, "logs", "view")):
         cond = ConnectionLog.device_id.in_(_visible_device_ids(user))
         stmt, count_stmt = stmt.where(cond), count_stmt.where(cond)
     if device_id is not None:
@@ -397,7 +398,7 @@ def list_file_logs(
 ) -> tuple[list[FileTransferLog], int]:
     stmt = select(FileTransferLog)
     count_stmt = select(func.count(FileTransferLog.id))
-    if not user.is_admin:
+    if not (user.is_admin or has_permission(user, "logs", "view")):
         cond = FileTransferLog.device_id.in_(_visible_device_ids(user))
         stmt, count_stmt = stmt.where(cond), count_stmt.where(cond)
     if device_id is not None:
@@ -417,7 +418,7 @@ def list_alarm_logs(
 ) -> tuple[list[AlarmLog], int]:
     stmt = select(AlarmLog)
     count_stmt = select(func.count(AlarmLog.id))
-    if not user.is_admin:
+    if not (user.is_admin or has_permission(user, "logs", "view")):
         cond = AlarmLog.device_id.in_(_visible_device_ids(user))
         stmt, count_stmt = stmt.where(cond), count_stmt.where(cond)
     if device_id is not None:

@@ -299,6 +299,29 @@ class Settings(BaseSettings):
     oidc_username_claim: str = Field(default="preferred_username", alias="OIDC_USERNAME_CLAIM")
     oidc_timeout_seconds: float = Field(default=10.0, alias="OIDC_TIMEOUT_SECONDS", gt=0, le=60)
 
+    # LDAP / Active Directory sign-in: a WebUI login that does not match locally
+    # falls back to a directory search + bind (services/ldap_auth.py). Off unless
+    # LDAP_ENABLED and both LDAP_SERVER_URL/LDAP_BASE_DN are set.
+    ldap_enabled: bool = Field(default=False, alias="LDAP_ENABLED")
+    ldap_server_url: str = Field(default="", alias="LDAP_SERVER_URL")
+    ldap_use_starttls: bool = Field(default=False, alias="LDAP_USE_STARTTLS")
+    # The service account used to search for the signing-in user's DN.
+    ldap_bind_dn: str = Field(default="", alias="LDAP_BIND_DN")
+    ldap_bind_password: str = Field(default="", alias="LDAP_BIND_PASSWORD", repr=False)
+    ldap_base_dn: str = Field(default="", alias="LDAP_BASE_DN")
+    ldap_user_search_filter: str = Field(default="(uid={username})", alias="LDAP_USER_SEARCH_FILTER")
+    ldap_username_attribute: str = Field(default="uid", alias="LDAP_USERNAME_ATTRIBUTE")
+    ldap_email_attribute: str = Field(default="mail", alias="LDAP_EMAIL_ATTRIBUTE")
+    ldap_display_name_attribute: str = Field(default="displayName", alias="LDAP_DISPLAY_NAME_ATTRIBUTE")
+    # A directory sign-in with no linked account may create a (non-admin) user.
+    ldap_auto_create_users: bool = Field(default=False, alias="LDAP_AUTO_CREATE_USERS")
+    # ... or may be linked to the local user with the same e-mail address.
+    ldap_link_by_email: bool = Field(default=False, alias="LDAP_LINK_BY_EMAIL")
+    # Optional: members of this group DN become (and stay) administrators when
+    # they sign in through LDAP. Empty disables the mapping.
+    ldap_admin_group_dn: str = Field(default="", alias="LDAP_ADMIN_GROUP_DN")
+    ldap_timeout_seconds: float = Field(default=10.0, alias="LDAP_TIMEOUT_SECONDS", gt=0, le=60)
+
     ssl_certfile: str = Field(default="", alias="SSL_CERTFILE")
     ssl_keyfile: str = Field(default="", alias="SSL_KEYFILE")
 
@@ -453,6 +476,16 @@ class Settings(BaseSettings):
             raise ValueError("OIDC needs a real SECRET_KEY (at least 16 characters, not 'change-me').")
         if self.oidc_auto_create_users and not self.oidc_allowed_email_domain_list:
             raise ValueError("OIDC_AUTO_CREATE_USERS needs OIDC_ALLOWED_EMAIL_DOMAINS.")
+        return self
+
+    @model_validator(mode="after")
+    def _check_ldap(self) -> Settings:
+        if not self.ldap_enabled:
+            return self
+        if not self.ldap_server_url or not self.ldap_base_dn:
+            raise ValueError("LDAP_ENABLED needs both LDAP_SERVER_URL and LDAP_BASE_DN.")
+        if "{username}" not in self.ldap_user_search_filter:
+            raise ValueError("LDAP_USER_SEARCH_FILTER must contain a {username} placeholder.")
         return self
 
     @field_validator("database_url")

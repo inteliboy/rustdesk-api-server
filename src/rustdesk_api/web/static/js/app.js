@@ -37,6 +37,13 @@ async function api(path, options = {}) {
     }
   }
   if (!response.ok) {
+    const code = body && body.error && body.error.code;
+    // A role that requires two-factor authentication, but it is not on yet:
+    // every endpoint but the 2FA ones and /me refuses until it is (api/deps.py).
+    // Send the browser to set it up rather than showing a wall of error toasts.
+    if (code === "TWO_FACTOR_SETUP_REQUIRED" && window.location.pathname !== "/security") {
+      window.location.href = "/security?setup_2fa=1";
+    }
     const message = body && body.error && body.error.message ? body.error.message : `Request failed (${response.status})`;
     const err = new Error(message);
     err.status = response.status;
@@ -73,6 +80,17 @@ async function requireAuth() {
     window.location.href = "/login?next=" + encodeURIComponent(window.location.pathname);
     return null;
   }
+}
+
+// True if `user` may act at `level` ("view" or "manage") or higher in `area`
+// of the role permission matrix - an administrator always can. For UI use
+// only (show/hide); the backend enforces this itself on every call.
+const PERMISSION_LEVEL_RANK = { none: 0, view: 1, manage: 2 };
+function hasPerm(user, area, level) {
+  if (!user) return false;
+  if (user.is_admin) return true;
+  const granted = (user.permissions || {})[area] || "none";
+  return (PERMISSION_LEVEL_RANK[granted] || 0) >= (PERMISSION_LEVEL_RANK[level] || 0);
 }
 
 // Escapes text for safe interpolation into innerHTML. Required for anything
@@ -781,12 +799,15 @@ function renderNav(active, user) {
     { key: "address-book", href: "/address-book", label: "Address Book" },
     { key: "logs", href: "/logs", label: "Logs" },
   ];
-  if (user && user.is_admin) {
+  if (hasPerm(user, "policies", "view")) {
     items.push({ key: "strategies", href: "/strategies", label: "Strategies" });
+  }
+  if (hasPerm(user, "users", "view")) {
     items.push({ key: "users", href: "/users", label: "Users" });
   }
+  if (user && user.is_admin) items.push({ key: "roles", href: "/roles", label: "Roles" });
   items.push({ key: "connect", href: "/connect", label: "Deploy" });
-  if (user && user.is_admin) items.push({ key: "settings", href: "/settings", label: "Settings" });
+  if (hasPerm(user, "settings", "view")) items.push({ key: "settings", href: "/settings", label: "Settings" });
   items.push({ key: "security", href: "/security", label: "Security" });
   nav.innerHTML = items
     .map(

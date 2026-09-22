@@ -69,7 +69,7 @@ eq("blocked storage: choice still applies", env.attributes["data-layout"], "left
 // ---- icons
 const iconEnv = { window: {} };
 new Function("window", read("icons.js"))(iconEnv.window);
-const NAV_KEYS = ["dashboard", "devices", "groups", "tags", "address-book", "logs", "strategies", "users", "connect", "settings", "security", "layout-left", "layout-top", "collapse", "expand", "appearance", "logout", "online", "offline", "user"];
+const NAV_KEYS = ["dashboard", "devices", "groups", "tags", "address-book", "logs", "strategies", "users", "roles", "connect", "settings", "security", "layout-left", "layout-top", "collapse", "expand", "appearance", "logout", "online", "offline", "user"];
 for (const key of NAV_KEYS) {
   const svg = iconEnv.window.rdIcon(key);
   ok("icon " + key, /^<svg [^>]*aria-hidden="true"[^>]*><path d="M[^"]+"\/><\/svg>$/.test(svg), svg.slice(0, 80));
@@ -89,7 +89,7 @@ function navFor(user, active) {
 }
 const html = navFor({ username: "u", is_admin: true, id: 1 }, "devices");
 const links = html.match(/<a [^>]*>.*?<\/a>/g) || [];
-eq("admin sees every item", links.length, 11);
+eq("admin sees every item", links.length, 12);
 ok("each link has an icon and a label", links.every((l) => l.includes("<svg") && l.includes('class="rd-nav-label"')));
 eq("one current page", (html.match(/aria-current="page"/g) || []).length, 1);
 ok("the current page is Devices", /href="\/devices"[^>]*aria-current="page"/.test(html));

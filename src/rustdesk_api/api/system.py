@@ -15,7 +15,7 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from rustdesk_api.api.deps import enforce_auth_rate_limit, get_current_admin, get_settings_dep, verify_csrf
+from rustdesk_api.api.deps import enforce_auth_rate_limit, get_settings_dep, require_permission, verify_csrf
 from rustdesk_api.config import Settings
 from rustdesk_api.db.database import get_db
 from rustdesk_api.errors import ApiError
@@ -117,7 +117,7 @@ def _backups(settings: Settings) -> BackupsOut:
 @router.get("/system", response_model=SystemOut)
 def system_overview(
     db: Session = Depends(get_db),
-    _admin: User = Depends(get_current_admin),
+    _user: User = Depends(require_permission("settings", "view")),
     settings: Settings = Depends(get_settings_dep),
 ) -> SystemOut:
     return SystemOut(
@@ -144,7 +144,8 @@ class OptionGroupOut(BaseModel):
 
 @router.get("/options", response_model=list[OptionGroupOut])
 def options_overview(
-    _admin: User = Depends(get_current_admin), settings: Settings = Depends(get_settings_dep)
+    _user: User = Depends(require_permission("settings", "view")),
+    settings: Settings = Depends(get_settings_dep),
 ) -> list[OptionGroupOut]:
     """Every option that is set with an environment variable, and whether it is on. Secrets are
     reported as set or not, never shown."""
@@ -177,7 +178,7 @@ class ChannelResult(BaseModel):
 )
 def send_test_notification(
     db: Session = Depends(get_db),
-    admin: User = Depends(get_current_admin),
+    admin: User = Depends(require_permission("settings", "manage")),
     settings: Settings = Depends(get_settings_dep),
 ) -> list[ChannelResult]:
     """Sends one test message on every configured channel and says how each went.
@@ -215,7 +216,7 @@ def send_test_notification(
 )
 def create_backup_now(
     db: Session = Depends(get_db),
-    admin: User = Depends(get_current_admin),
+    admin: User = Depends(require_permission("settings", "manage")),
     settings: Settings = Depends(get_settings_dep),
 ) -> BackupOut:
     """A manual snapshot of the database. It is kept until someone deletes it."""
@@ -260,7 +261,7 @@ class UpdateStatusOut(BaseModel):
 @router.get("/update-status", response_model=UpdateStatusOut)
 def update_status(
     refresh: bool = False,
-    _admin: User = Depends(get_current_admin),
+    _user: User = Depends(require_permission("settings", "view")),
     settings: Settings = Depends(get_settings_dep),
 ) -> UpdateStatusOut:
     """Whether this server runs the latest build of the project (the Dashboard shows it). Asks

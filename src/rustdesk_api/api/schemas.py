@@ -23,11 +23,20 @@ class UserOut(BaseModel):
     email: str | None
     is_active: bool
     is_admin: bool
+    role_id: int | None = None
     two_factor_enabled: bool = False
+    has_password: bool = True
     # Set while the account is locked by too many wrong passwords.
     locked_until: datetime.datetime | None = None
     created_at: datetime.datetime
     last_login_at: datetime.datetime | None
+
+
+class MeOut(UserOut):
+    # The caller's own effective permission matrix (area -> level; an admin has
+    # "manage" everywhere). For UI use only - every endpoint enforces this
+    # itself regardless of what the WebUI shows or hides (CLAUDE.md section 66).
+    permissions: dict[str, str] = Field(default_factory=dict)
 
 
 class LoginResponse(BaseModel):
@@ -57,12 +66,19 @@ class CreateUserRequest(BaseModel):
     password: str = Field(min_length=8, max_length=256)
     email: str | None = None
     is_admin: bool = False
+    # Only an administrator may set this (see api/users.py) - a delegate with
+    # users:manage access cannot grant roles, only manage ordinary accounts.
+    role_id: int | None = None
 
 
 class UpdateUserRequest(BaseModel):
     is_active: bool | None = None
     is_admin: bool | None = None
     email: str | None = None
+    # Sentinel so "leave it alone" (omitted) is distinguishable from "clear it"
+    # (explicit null); only an administrator may set this (see api/users.py).
+    role_id: int | None = Field(default=None)
+    clear_role: bool = False
 
 
 class ResetPasswordRequest(BaseModel):
@@ -294,3 +310,57 @@ class UpdateAddressBookRequest(BaseModel):
 class SetAddressBookShareRequest(BaseModel):
     username: str = Field(min_length=1, max_length=150)
     rule: int = Field(ge=1, le=3)
+
+
+class RoleOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    description: str | None
+    permissions: dict[str, str]
+    requires_2fa: bool
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+
+
+class CreateRoleRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    description: str | None = None
+    # area -> level; an area left out (or set to anything but "view"/"manage") is "none".
+    permissions: dict[str, str] = Field(default_factory=dict)
+    requires_2fa: bool = False
+
+
+class UpdateRoleRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+    description: str | None = None
+    permissions: dict[str, str] | None = None
+    requires_2fa: bool | None = None
+
+
+class UserGroupOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    description: str | None
+    role_id: int | None
+    member_ids: list[int] = Field(default_factory=list)
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+
+
+class CreateUserGroupRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    description: str | None = None
+    role_id: int | None = None
+    member_ids: list[int] = Field(default_factory=list)
+
+
+class UpdateUserGroupRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+    description: str | None = None
+    role_id: int | None = None
+    clear_role: bool = False
+    member_ids: list[int] | None = None

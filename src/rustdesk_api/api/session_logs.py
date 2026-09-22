@@ -21,11 +21,11 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from rustdesk_api.api.deps import get_current_admin, get_current_user, verify_csrf
+from rustdesk_api.api.deps import get_current_user, require_permission, verify_csrf
 from rustdesk_api.db.database import get_db
 from rustdesk_api.errors import ApiError
 from rustdesk_api.models.user import User
-from rustdesk_api.security.permissions import can_view_device
+from rustdesk_api.security.permissions import can_view_device, has_permission
 from rustdesk_api.services import audit as admin_audit_service
 from rustdesk_api.services import client_audit as audit_service
 from rustdesk_api.services import devices as device_service
@@ -104,7 +104,7 @@ def _check_device_filter(db: Session, user: User, device_id: int | None) -> None
     if device_id is None:
         return
     device = device_service.get_by_id(db, device_id)
-    if device is None or not can_view_device(user, device):
+    if device is None or not (can_view_device(user, device) or has_permission(user, "logs", "view")):
         raise ApiError("DEVICE_NOT_FOUND", "The requested device does not exist.", 404)
 
 
@@ -234,7 +234,7 @@ class DeletedCountResponse(BaseModel):
 
 @router.delete("/connection-logs/{log_id}", status_code=204, dependencies=[Depends(verify_csrf)])
 def delete_connection_log(
-    log_id: int, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)
+    log_id: int, db: Session = Depends(get_db), admin: User = Depends(require_permission("logs", "manage"))
 ) -> None:
     row = audit_service.delete_connection_log(db, log_id)
     if row is None:
@@ -252,7 +252,7 @@ def delete_connection_log(
 
 @router.delete("/file-logs/{log_id}", status_code=204, dependencies=[Depends(verify_csrf)])
 def delete_file_log(
-    log_id: int, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)
+    log_id: int, db: Session = Depends(get_db), admin: User = Depends(require_permission("logs", "manage"))
 ) -> None:
     row = audit_service.delete_file_log(db, log_id)
     if row is None:
@@ -272,7 +272,7 @@ def delete_file_log(
 def clear_connection_logs(
     device_id: int | None = Query(default=None),
     db: Session = Depends(get_db),
-    admin: User = Depends(get_current_admin),
+    admin: User = Depends(require_permission("logs", "manage")),
 ) -> DeletedCountResponse:
     """Deletes ALL connection logs, or only `device_id`'s when given."""
     deleted = audit_service.clear_connection_logs(db, device_id=device_id)
@@ -290,7 +290,7 @@ def clear_connection_logs(
 def clear_file_logs(
     device_id: int | None = Query(default=None),
     db: Session = Depends(get_db),
-    admin: User = Depends(get_current_admin),
+    admin: User = Depends(require_permission("logs", "manage")),
 ) -> DeletedCountResponse:
     """Deletes ALL file-transfer logs, or only `device_id`'s when given."""
     deleted = audit_service.clear_file_logs(db, device_id=device_id)
@@ -306,7 +306,7 @@ def clear_file_logs(
 
 @router.delete("/alarm-logs/{log_id}", status_code=204, dependencies=[Depends(verify_csrf)])
 def delete_alarm_log(
-    log_id: int, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)
+    log_id: int, db: Session = Depends(get_db), admin: User = Depends(require_permission("logs", "manage"))
 ) -> None:
     row = audit_service.delete_alarm_log(db, log_id)
     if row is None:
@@ -326,7 +326,7 @@ def delete_alarm_log(
 def clear_alarm_logs(
     device_id: int | None = Query(default=None),
     db: Session = Depends(get_db),
-    admin: User = Depends(get_current_admin),
+    admin: User = Depends(require_permission("logs", "manage")),
 ) -> DeletedCountResponse:
     """Deletes ALL alarm logs, or only `device_id`'s when given."""
     deleted = audit_service.clear_alarm_logs(db, device_id=device_id)

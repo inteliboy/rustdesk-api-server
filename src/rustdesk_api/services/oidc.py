@@ -82,7 +82,7 @@ def provider_from_settings(settings: Settings) -> Provider | None:
 
 
 def has_usable_password(user: User) -> bool:
-    return not user.password_hash.startswith("!")
+    return user.has_password
 
 
 # ---------------------------------------------------------------------------

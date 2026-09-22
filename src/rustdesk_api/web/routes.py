@@ -113,6 +113,11 @@ def users_page(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(request, "users.html", {"active": "users"})
 
 
+@web_router.get("/roles", response_class=HTMLResponse)
+def roles_page(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse(request, "roles.html", {"active": "roles"})
+
+
 @web_router.get("/address-book", response_class=HTMLResponse)
 def address_book_page(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(request, "address_book.html", {"active": "address-book"})

@@ -194,9 +194,9 @@ document.getElementById("backup-now").addEventListener("click", async (evt) => {
   const user = await requireAuth();
   if (!user) return;
   renderNav("settings", user);
-  if (!user.is_admin) {
+  if (!hasPerm(user, "settings", "view")) {
     document.querySelector("main").innerHTML =
-      `<p class="text-sm text-slate-500">Administrator access is required to view this page.</p>`;
+      `<p class="text-sm text-slate-500">You do not have access to this page.</p>`;
     return;
   }
   try {

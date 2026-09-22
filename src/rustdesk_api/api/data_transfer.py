@@ -25,7 +25,7 @@ from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from rustdesk_api.api.deps import get_current_admin, get_current_user, get_settings_dep, verify_csrf
+from rustdesk_api.api.deps import get_current_user, get_settings_dep, require_permission, verify_csrf
 from rustdesk_api.config import Settings
 from rustdesk_api.db.database import get_db
 from rustdesk_api.errors import ApiError
@@ -142,7 +142,7 @@ USER_COLUMNS = ["username", "email", "is_admin", "is_active", "two_factor", "cre
 def export_users(
     format: Literal["csv", "json"] = Query(default="csv"),
     db: Session = Depends(get_db),
-    admin: User = Depends(get_current_admin),
+    admin: User = Depends(require_permission("users", "view")),
 ) -> Response:
     users = db.execute(select(User).order_by(User.username).limit(MAX_EXPORT_ROWS)).scalars()
     rows = [
@@ -169,7 +169,7 @@ def export_audit(
     format: Literal["csv", "json"] = Query(default="csv"),
     days: int = Query(default=30, ge=1, le=3650),
     db: Session = Depends(get_db),
-    admin: User = Depends(get_current_admin),
+    admin: User = Depends(require_permission("logs", "manage")),
 ) -> Response:
     since = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=days)
     stmt = (
@@ -252,7 +252,7 @@ async def import_devices(
     request: Request,
     dry_run: bool = Query(default=False),
     db: Session = Depends(get_db),
-    admin: User = Depends(get_current_admin),
+    admin: User = Depends(require_permission("devices", "manage")),
 ) -> dict:
     """Send `text/csv` (a header row with any of: rustdesk_id, alias, name, note,
     owner, group, tags) or `application/json` (a list of objects). `rustdesk_id`

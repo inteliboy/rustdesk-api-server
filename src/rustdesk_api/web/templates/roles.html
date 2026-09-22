@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Roles - RustDesk API Server{% endblock %}
+{% block body %}
+{% include "_app_shell.html" %}
+<main class="max-w-5xl mx-auto px-4 py-8">
+  <div class="flex items-center justify-between mb-2">
+    <h1 class="text-lg font-semibold">Roles</h1>
+    <button id="new-role-btn" class="px-4 py-2 rounded-md bg-brand-600 text-white text-sm font-medium hover:bg-brand-700">
+      New role
+    </button>
+  </div>
+  <p class="text-sm text-slate-500 mb-6">A role grants partial access to the console without making someone an administrator.
+    It never changes which devices a person can see - only what they may do.</p>
+
+  <div id="role-form" class="card p-4 mb-6 hidden">
+    <h2 id="role-form-title" class="text-sm font-semibold mb-3">New role</h2>
+    <div class="grid grid-cols-2 gap-3 mb-3">
+      <input id="rf-name" placeholder="Name" class="border border-slate-300 rounded px-2 py-1.5 text-sm" />
+      <input id="rf-description" placeholder="Description (optional)" class="border border-slate-300 rounded px-2 py-1.5 text-sm" />
+    </div>
+    <table class="w-full text-sm mb-3">
+      <thead class="text-slate-500 text-left">
+        <tr><th class="py-1 font-medium">Area</th><th class="py-1 font-medium">None</th><th class="py-1 font-medium">View</th><th class="py-1 font-medium">Manage</th></tr>
+      </thead>
+      <tbody id="rf-matrix"></tbody>
+    </table>
+    <label class="flex items-center gap-2 text-sm mb-3">
+      <input id="rf-2fa" type="checkbox" /> Require two-factor authentication for everyone with this role
+    </label>
+    <div class="flex items-center gap-3">
+      <button id="rf-save" class="px-4 py-2 rounded-md bg-brand-600 text-white text-sm font-medium hover:bg-brand-700">Create</button>
+      <button id="rf-cancel" class="text-sm text-slate-500 hover:text-slate-900">Cancel</button>
+    </div>
+  </div>
+
+  <div class="card overflow-x-auto mb-10">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-slate-500 text-left">
+        <tr>
+          <th class="px-4 py-2 font-medium">Name</th>
+          <th class="px-4 py-2 font-medium">Description</th>
+          <th class="px-4 py-2 font-medium">Permissions</th>
+          <th class="px-4 py-2 font-medium">2FA</th>
+          <th class="px-4 py-2"></th>
+        </tr>
+      </thead>
+      <tbody id="role-rows" class="divide-y divide-slate-100"></tbody>
+    </table>
+    <div id="role-empty" class="hidden p-10 text-center text-sm text-slate-500">No roles yet.</div>
+  </div>
+
+  <div class="flex items-center justify-between mb-2">
+    <h1 class="text-lg font-semibold">User groups</h1>
+    <button id="new-group-btn" class="px-4 py-2 rounded-md bg-brand-600 text-white text-sm font-medium hover:bg-brand-700">
+      New user group
+    </button>
+  </div>
+  <p class="text-sm text-slate-500 mb-6">Assign a role to a group of people at once instead of one at a time.</p>
+
+  <div id="group-form" class="card p-4 mb-6 hidden">
+    <h2 id="group-form-title" class="text-sm font-semibold mb-3">New user group</h2>
+    <div class="grid grid-cols-2 gap-3 mb-3">
+      <input id="gf-name" placeholder="Name" class="border border-slate-300 rounded px-2 py-1.5 text-sm" />
+      <input id="gf-description" placeholder="Description (optional)" class="border border-slate-300 rounded px-2 py-1.5 text-sm" />
+    </div>
+    <select id="gf-role" class="border border-slate-300 rounded px-2 py-1.5 text-sm mb-3 w-full">
+      <option value="">No role</option>
+    </select>
+    <div id="gf-members" class="border border-slate-200 rounded p-2 mb-3 max-h-48 overflow-y-auto text-sm"></div>
+    <div class="flex items-center gap-3">
+      <button id="gf-save" class="px-4 py-2 rounded-md bg-brand-600 text-white text-sm font-medium hover:bg-brand-700">Create</button>
+      <button id="gf-cancel" class="text-sm text-slate-500 hover:text-slate-900">Cancel</button>
+    </div>
+  </div>
+
+  <div class="card overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-slate-500 text-left">
+        <tr>
+          <th class="px-4 py-2 font-medium">Name</th>
+          <th class="px-4 py-2 font-medium">Description</th>
+          <th class="px-4 py-2 font-medium">Role</th>
+          <th class="px-4 py-2 font-medium">Members</th>
+          <th class="px-4 py-2"></th>
+        </tr>
+      </thead>
+      <tbody id="group-rows" class="divide-y divide-slate-100"></tbody>
+    </table>
+    <div id="group-empty" class="hidden p-10 text-center text-sm text-slate-500">No user groups yet.</div>
+  </div>
+</main>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/pages/roles.js"></script>
+
+{% endblock %}

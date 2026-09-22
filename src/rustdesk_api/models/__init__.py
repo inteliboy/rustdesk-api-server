@@ -11,13 +11,16 @@ from rustdesk_api.models.client_audit import AlarmLog, ConnectionLog, FileTransf
 from rustdesk_api.models.device import Device
 from rustdesk_api.models.device_event import DeviceEvent
 from rustdesk_api.models.group import Group
+from rustdesk_api.models.ldap_identity import LdapIdentity
 from rustdesk_api.models.oidc import OidcIdentity, OidcRequest
+from rustdesk_api.models.role import Role
 from rustdesk_api.models.session import AuthSession
 from rustdesk_api.models.share import DeviceShare
 from rustdesk_api.models.strategy import Strategy
 from rustdesk_api.models.tag import Tag, device_tags
 from rustdesk_api.models.two_factor import LoginChallenge, RecoveryCode
 from rustdesk_api.models.user import User
+from rustdesk_api.models.user_group import UserGroup, user_group_members
 
 __all__ = [
     "AddressBook",
@@ -32,16 +35,20 @@ __all__ = [
     "DeviceShare",
     "FileTransferLog",
     "Group",
+    "LdapIdentity",
     "LoginChallenge",
     "OidcIdentity",
     "OidcRequest",
     "PasswordResetToken",
     "RecoveryCode",
+    "Role",
     "SavedView",
     "Strategy",
     "AuthSession",
     "Tag",
     "User",
+    "UserGroup",
     "address_book_entry_tags",
     "device_tags",
+    "user_group_members",
 ]

@@ -20,7 +20,13 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from rustdesk_api.api.connect import ServersIn
-from rustdesk_api.api.deps import enforce_auth_rate_limit, get_current_admin, get_settings_dep, verify_csrf
+from rustdesk_api.api.deps import (
+    enforce_auth_rate_limit,
+    get_current_admin,
+    get_settings_dep,
+    require_permission,
+    verify_csrf,
+)
 from rustdesk_api.config import Settings
 from rustdesk_api.db.database import get_db
 from rustdesk_api.errors import ApiError
@@ -149,7 +155,8 @@ def _raise(exc: installer_service.InstallerError) -> ApiError:
 
 @router.get("", response_model=StatusOut)
 def status(
-    _admin: User = Depends(get_current_admin), settings: Settings = Depends(get_settings_dep)
+    _user: User = Depends(require_permission("settings", "view")),
+    settings: Settings = Depends(get_settings_dep),
 ) -> StatusOut:
     certificate = signing_service.info(installer_service.installer_directory(settings))
     return StatusOut(
@@ -244,7 +251,7 @@ def remove_certificate(
 
 
 @router.get("/releases", response_model=list[ReleaseOut])
-def releases(_admin: User = Depends(get_current_admin)) -> list[ReleaseOut]:
+def releases(_user: User = Depends(require_permission("settings", "view"))) -> list[ReleaseOut]:
     """The RustDesk releases that have a Windows MSI, newest first; the nightly build (a
     pre-release) is among them."""
     try:
@@ -272,7 +279,7 @@ def releases(_admin: User = Depends(get_current_admin)) -> list[ReleaseOut]:
 def start_build(
     payload: BuildIn,
     db: Session = Depends(get_db),
-    admin: User = Depends(get_current_admin),
+    admin: User = Depends(require_permission("settings", "manage")),
     settings: Settings = Depends(get_settings_dep),
 ) -> BuildOut:
     """Starts building in the background; poll GET /builds/{id}. One build at a time."""
@@ -313,12 +320,12 @@ def _job(job_id: str) -> installer_service.Job:
 
 
 @router.get("/builds/{job_id}", response_model=BuildOut)
-def build_status(job_id: str, _admin: User = Depends(get_current_admin)) -> BuildOut:
+def build_status(job_id: str, _user: User = Depends(require_permission("settings", "view"))) -> BuildOut:
     return _out(_job(job_id))
 
 
 @router.get("/builds/{job_id}/file")
-def build_file(job_id: str, _admin: User = Depends(get_current_admin)) -> FileResponse:
+def build_file(job_id: str, _user: User = Depends(require_permission("settings", "view"))) -> FileResponse:
     job = _job(job_id)
     if job.state != "done" or job.file is None or not job.file.is_file():
         raise ApiError("BUILD_NOT_READY", "The installer is not ready.", 409)
@@ -334,7 +341,7 @@ def build_file(job_id: str, _admin: User = Depends(get_current_admin)) -> FileRe
 def download_kit(
     payload: BuildIn,
     db: Session = Depends(get_db),
-    admin: User = Depends(get_current_admin),
+    admin: User = Depends(require_permission("settings", "manage")),
 ) -> Response:
     """A zip with the NSIS script and a PowerShell script to build and sign the setup file
     on a machine of your choice."""
@@ -365,7 +372,8 @@ def download_kit(
 
 @router.get("/files", response_model=FilesOut)
 def stored_files(
-    _admin: User = Depends(get_current_admin), settings: Settings = Depends(get_settings_dep)
+    _user: User = Depends(require_permission("settings", "view")),
+    settings: Settings = Depends(get_settings_dep),
 ) -> FilesOut:
     """What the installer builder keeps on the server: the RustDesk MSIs it downloaded and the
     setup files it built. Neither is needed to keep anything working; both are made again on demand."""
@@ -380,7 +388,9 @@ def stored_files(
 
 @router.get("/files/installer/{name}")
 def download_stored_installer(
-    name: str, _admin: User = Depends(get_current_admin), settings: Settings = Depends(get_settings_dep)
+    name: str,
+    _user: User = Depends(require_permission("settings", "view")),
+    settings: Settings = Depends(get_settings_dep),
 ) -> FileResponse:
     """A setup file built earlier (it survives a restart of the server, the build jobs do not)."""
     try:
@@ -399,7 +409,7 @@ def download_stored_installer(
 def delete_all_files(
     kind: str,
     db: Session = Depends(get_db),
-    admin: User = Depends(get_current_admin),
+    admin: User = Depends(require_permission("settings", "manage")),
     settings: Settings = Depends(get_settings_dep),
 ) -> DeletedOut:
     """Deletes every stored file of one kind ('msi' or 'installer')."""
@@ -411,7 +421,7 @@ def delete_one_file(
     kind: str,
     name: str,
     db: Session = Depends(get_db),
-    admin: User = Depends(get_current_admin),
+    admin: User = Depends(require_permission("settings", "manage")),
     settings: Settings = Depends(get_settings_dep),
 ) -> DeletedOut:
     return _delete(db, admin, settings, kind, name)

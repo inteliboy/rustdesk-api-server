@@ -33,6 +33,7 @@ from rustdesk_api.api.deps import (
 from rustdesk_api.api.schemas import (
     LoginRequest,
     LoginResponse,
+    MeOut,
     SetupRequest,
     TwoFactorLoginRequest,
     UserOut,
@@ -40,14 +41,17 @@ from rustdesk_api.api.schemas import (
 from rustdesk_api.config import Settings
 from rustdesk_api.db.database import get_db
 from rustdesk_api.errors import ApiError
+from rustdesk_api.models.role import PERMISSION_AREAS
 from rustdesk_api.models.session import AuthSession
 from rustdesk_api.models.user import User
 from rustdesk_api.security.encryption import get_secret_box
+from rustdesk_api.security.permissions import effective_permissions
 from rustdesk_api.security.user_agent import audit_client_detail
 from rustdesk_api.services import audit as audit_service
 from rustdesk_api.services import authentication as auth_service
 from rustdesk_api.services import client_audit as client_audit_service
 from rustdesk_api.services import devices as device_service
+from rustdesk_api.services import ldap_auth as ldap_auth_service
 from rustdesk_api.services import tokens as token_service
 from rustdesk_api.services import two_factor as two_factor_service
 
@@ -375,11 +379,34 @@ def webui_login(
             lockout=auth_service.Lockout.from_settings(settings),
             ip_address=client_ip,
         )
-    except (
-        auth_service.InvalidCredentials,
-        auth_service.AccountDisabled,
-        auth_service.AccountLocked,
-    ) as exc:
+    except auth_service.InvalidCredentials as exc:
+        # The local hash never matches for an LDAP-linked account (it is a
+        # sentinel, see services.oidc.UNUSABLE_PASSWORD), so a directory
+        # search+bind is tried before giving up - never for AccountDisabled or
+        # AccountLocked below, which must hard-block regardless of LDAP.
+        ldap_user = ldap_auth_service.authenticate_or_provision(
+            db, settings, payload.username, payload.password
+        )
+        if ldap_user is None or not ldap_user.is_active:
+            audit_service.record(
+                db,
+                action="login",
+                result="failure",
+                ip_address=client_ip,
+                detail={
+                    "username": payload.username,
+                    "via": "webui",
+                    **audit_client_detail(request.headers.get("user-agent")),
+                },
+            )
+            db.commit()
+            raise ApiError("INVALID_CREDENTIALS", str(exc), status.HTTP_401_UNAUTHORIZED) from exc
+        # A correct directory password undoes the local failed-password strike
+        # that auth_service.authenticate already registered above (the local
+        # hash "fails" every time for this account, right or wrong password).
+        auth_service.unlock(ldap_user)
+        user = ldap_user
+    except (auth_service.AccountDisabled, auth_service.AccountLocked) as exc:
         audit_service.record(
             db,
             action="login",
@@ -531,6 +558,9 @@ def webui_logout(
     return {"ok": True}
 
 
-@v1_router.get("/me", response_model=UserOut)
-def whoami(user: User = Depends(get_current_user)) -> User:
-    return user
+@v1_router.get("/me", response_model=MeOut)
+def whoami(user: User = Depends(get_current_user)) -> MeOut:
+    perms = {area: "manage" for area in PERMISSION_AREAS} if user.is_admin else effective_permissions(user)
+    out = MeOut.model_validate(user)
+    out.permissions = perms
+    return out

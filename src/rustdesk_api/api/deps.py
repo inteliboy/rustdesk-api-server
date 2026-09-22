@@ -6,6 +6,8 @@ re-implementing auth/authorization logic inline (CLAUDE.md section 63).
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from fastapi import Cookie, Depends, Header, HTTPException, Request, status
 from sqlalchemy.orm import Session
 from starlette.requests import HTTPConnection
@@ -15,12 +17,25 @@ from rustdesk_api.db.database import get_db
 from rustdesk_api.errors import ApiError
 from rustdesk_api.models.session import AuthSession
 from rustdesk_api.models.user import User
+from rustdesk_api.security.permissions import has_permission, requires_2fa_by_role
 from rustdesk_api.security.rate_limit import RateLimiter
 from rustdesk_api.security.tokens import constant_time_compare
 from rustdesk_api.services import tokens as token_service
 
 SESSION_COOKIE_NAME = "rd_session"
 CSRF_COOKIE_NAME = "rd_csrf"
+
+# Requests a user whose role requires 2FA, but who hasn't enabled it yet, may still
+# make: enough to set it up (or check its status) and to sign out. Everything else
+# is blocked with TWO_FACTOR_SETUP_REQUIRED until they enable it (api/two_factor.py,
+# prefix /api/v1/auth/2fa, already only requires an interactive session - no admin
+# check - so this reuses that flow rather than inventing a new one).
+_TWO_FACTOR_SETUP_ALLOWED_PREFIXES = ("/api/v1/auth/2fa",)
+_TWO_FACTOR_SETUP_ALLOWED_PATHS = ("/api/v1/auth/logout", "/api/v1/auth/me")
+
+
+def _two_factor_setup_exempt(path: str) -> bool:
+    return path in _TWO_FACTOR_SETUP_ALLOWED_PATHS or path.startswith(_TWO_FACTOR_SETUP_ALLOWED_PREFIXES)
 
 
 def get_settings_dep() -> Settings:
@@ -86,6 +101,7 @@ def get_optional_session(
 
 
 def get_current_user(
+    request: Request,
     session_obj: AuthSession | None = Depends(get_optional_session),
 ) -> User:
     if session_obj is None:
@@ -97,6 +113,21 @@ def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={"error": {"code": "ACCOUNT_DISABLED", "message": "This account is disabled."}},
+        )
+    user = session_obj.user
+    if (
+        not user.totp_enabled
+        and requires_2fa_by_role(user)
+        and not _two_factor_setup_exempt(request.url.path)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "error": {
+                    "code": "TWO_FACTOR_SETUP_REQUIRED",
+                    "message": "Your role requires two-factor authentication. Set it up to continue.",
+                }
+            },
         )
     return session_obj.user
 
@@ -129,6 +160,29 @@ def get_current_admin(user: User = Depends(get_current_user)) -> User:
             },
         )
     return user
+
+
+def require_permission(area: str, level: str) -> Callable[[User], User]:
+    """A dependency for one console area/level of the role permission matrix
+    (CLAUDE.md section 66 - the backend, not the WebUI, must enforce this).
+    An administrator always passes; a non-admin passes only if a role
+    (direct or via a user group) grants at least `level` in `area` -
+    see security/permissions.has_permission."""
+
+    def _dependency(user: User = Depends(get_current_user)) -> User:
+        if not has_permission(user, area, level):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "error": {
+                        "code": "FORBIDDEN",
+                        "message": f"'{level}' access to {area} is required.",
+                    }
+                },
+            )
+        return user
+
+    return _dependency
 
 
 def _get_auth_rate_limiter(request: Request, settings: Settings) -> RateLimiter:

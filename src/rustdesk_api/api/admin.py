@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from rustdesk_api.api.deps import get_current_admin, get_settings_dep
+from rustdesk_api.api.deps import get_current_admin, get_settings_dep, require_permission
 from rustdesk_api.api.schemas import DashboardStats
 from rustdesk_api.config import Settings
 from rustdesk_api.db.database import get_db
@@ -158,7 +158,9 @@ def list_audit_logs(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=50, ge=1, le=200),
     db: Session = Depends(get_db),
-    _admin: User = Depends(get_current_admin),
+    # The console audit trail sits behind "manage" of logs, not "view" (CortenDesk
+    # treats sign-in history/the audit trail the same way).
+    _user: User = Depends(require_permission("logs", "manage")),
 ) -> AuditLogListResponse:
     count_stmt = select(func.count(AuditLog.id))
     stmt = select(AuditLog).order_by(AuditLog.created_at.desc())

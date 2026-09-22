@@ -12,7 +12,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from rustdesk_api.api.deps import get_current_admin, get_current_user, verify_csrf
+from rustdesk_api.api.deps import get_current_user, require_permission, verify_csrf
 from rustdesk_api.api.schemas import CreateTagRequest, TagOut, UpdateTagRequest
 from rustdesk_api.db.database import get_db
 from rustdesk_api.errors import ApiError
@@ -52,7 +52,7 @@ def update_tag(
     tag_id: int,
     payload: UpdateTagRequest,
     db: Session = Depends(get_db),
-    admin: User = Depends(get_current_admin),
+    admin: User = Depends(require_permission("devices", "manage")),
 ) -> TagOut:
     tag = tag_service.get_by_id(db, tag_id)
     if tag is None:
@@ -71,7 +71,9 @@ def update_tag(
 
 
 @router.delete("/{tag_id}", status_code=204, dependencies=[Depends(verify_csrf)])
-def delete_tag(tag_id: int, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)) -> None:
+def delete_tag(
+    tag_id: int, db: Session = Depends(get_db), admin: User = Depends(require_permission("devices", "manage"))
+) -> None:
     tag = tag_service.get_by_id(db, tag_id)
     if tag is None:
         raise ApiError("TAG_NOT_FOUND", "The requested tag does not exist.", 404)

@@ -21,6 +21,7 @@ from rustdesk_api.api import (
     ip_info,
     metrics,
     oidc,
+    roles,
     session_logs,
     shares,
     strategies,
@@ -49,6 +50,7 @@ api_router.include_router(account.router)
 api_router.include_router(api_keys.router)
 api_router.include_router(two_factor.router)
 api_router.include_router(users.router)
+api_router.include_router(roles.router)
 api_router.include_router(device_tools.router)
 api_router.include_router(devices.router)
 api_router.include_router(views.router)

@@ -1,4 +1,5 @@
 let me = null;
+let rolesById = {};
 
 function isLocked(user) {
   return Boolean(user.locked_until) && parseServerDate(user.locked_until) > new Date();
@@ -29,7 +30,21 @@ document.getElementById("reset-link-close").addEventListener("click", () => {
   document.getElementById("reset-link-url").textContent = "";
 });
 
+function roleLabel(u) {
+  if (u.is_admin) return "Administrator";
+  if (u.role_id && rolesById[u.role_id]) return escapeHtml(rolesById[u.role_id].name);
+  return "User";
+}
+
 async function loadUsers() {
+  const canManage = hasPerm(me, "users", "manage");
+  if (me.is_admin) {
+    try {
+      rolesById = Object.fromEntries((await api("/api/v1/roles")).map((r) => [r.id, r]));
+    } catch (err) {
+      rolesById = {};
+    }
+  }
   const items = await api("/api/v1/users");
   document.getElementById("user-rows").innerHTML = items
     .map(
@@ -38,7 +53,7 @@ async function loadUsers() {
           <button data-id="${u.id}" class="view-user text-link hover:underline whitespace-nowrap">${escapeHtml(u.username)}</button>
         </td>
         <td class="px-4 py-3 text-slate-500">${escapeHtml(u.email || "-")}</td>
-        <td class="px-4 py-3">${u.is_admin ? "Administrator" : "User"}</td>
+        <td class="px-4 py-3">${roleLabel(u)}</td>
         <td class="px-4 py-3">
           <span class="badge ${u.is_active ? "badge-online" : "badge-offline"}">
             <span class="badge-dot"></span>${u.is_active ? "Active" : "Disabled"}
@@ -49,13 +64,15 @@ async function loadUsers() {
         <td class="px-4 py-3 text-slate-500 whitespace-nowrap">${fmtDate(u.last_login_at)}</td>
         <td class="px-4 py-3 text-right space-x-2 whitespace-nowrap">
           ${
-            u.id !== me.id
+            u.id !== me.id && canManage
               ? `${isLocked(u) ? `<button data-id="${u.id}" class="unlock-user text-slate-500 hover:text-slate-900">Unlock</button>` : ""}
                  ${u.is_active ? `<button data-id="${u.id}" data-name="${escapeHtml(u.username)}" class="reset-link text-slate-500 hover:text-slate-900">Reset link</button>` : ""}
                  ${u.two_factor_enabled ? `<button data-id="${u.id}" class="reset-2fa text-slate-500 hover:text-slate-900">Reset 2FA</button>` : ""}
                  <button data-id="${u.id}" data-active="${u.is_active}" class="toggle-active text-slate-500 hover:text-slate-900">${u.is_active ? "Disable" : "Enable"}</button>
                  <button data-id="${u.id}" class="delete-user text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300">Delete</button>`
-              : `<span class="text-slate-300">You</span>`
+              : u.id === me.id
+                ? `<span class="text-slate-300">You</span>`
+                : ""
           }
         </td>
       </tr>`
@@ -143,7 +160,7 @@ async function openUserDetail(userId) {
   document.getElementById("ud-profile").innerHTML = `
     <div class="grid grid-cols-2 gap-y-1.5">
       <span class="text-slate-500">Email</span><span>${escapeHtml(detail.email || "-")}</span>
-      <span class="text-slate-500">Role</span><span>${detail.is_admin ? "Administrator" : "User"}</span>
+      <span class="text-slate-500">Role</span><span>${roleLabel(detail)}</span>
       <span class="text-slate-500">Status</span><span>${detail.is_active ? "Active" : "Disabled"}</span>
       <span class="text-slate-500">Two-factor</span><span>${detail.two_factor_enabled ? "On" : "Off"}</span>
       <span class="text-slate-500">Created</span><span class="whitespace-nowrap">${fmtDate(detail.created_at)}</span>
@@ -192,9 +209,15 @@ document.getElementById("user-detail-modal").addEventListener("click", (evt) => 
   if (!user) return;
   me = user;
   renderNav("users", user);
-  if (!user.is_admin) {
-    document.querySelector("main").innerHTML = `<p class="text-sm text-slate-500">Administrator access is required to view this page.</p>`;
+  if (!hasPerm(user, "users", "view")) {
+    document.querySelector("main").innerHTML = `<p class="text-sm text-slate-500">You do not have access to this page.</p>`;
     return;
+  }
+  if (!hasPerm(user, "users", "manage")) {
+    document.getElementById("new-user-btn").classList.add("hidden");
+  }
+  if (!user.is_admin) {
+    document.getElementById("nu-admin").closest("label").classList.add("hidden");
   }
   await loadUsers();
   // /users?id=N (used by username links elsewhere) opens that user's details.

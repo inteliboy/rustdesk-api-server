@@ -455,8 +455,15 @@ async function renderEnrollment(fresh) {
 // ------------------------------------------------------------------ password
 
 function setupPasswordForm(user) {
-  document.getElementById("pw-username").value = user.username; // lets a password manager file the new one
   const form = document.getElementById("password-form");
+  if (user.has_password === false) {
+    // Provisioned by single sign-on or a directory (LDAP): there is no local
+    // password to change. An administrator can still issue a reset link to
+    // add one.
+    form.outerHTML = `<p class="text-sm text-slate-500 max-w-md">This account signs in through single sign-on or a directory; there is no local password to change. Ask an administrator for a reset link if you need one.</p>`;
+    return;
+  }
+  document.getElementById("pw-username").value = user.username; // lets a password manager file the new one
   const error = document.getElementById("pw-error");
   const fail = (message) => {
     error.textContent = message;
@@ -500,6 +507,11 @@ function setupPasswordForm(user) {
   if (new URLSearchParams(window.location.search).get("sso") === "linked") {
     toast("Account linked.", "success");
     window.history.replaceState({}, "", window.location.pathname);
+  }
+  if (new URLSearchParams(window.location.search).get("setup_2fa") === "1") {
+    toast("Your role requires two-factor authentication - set it up below to continue.", "info");
+    window.history.replaceState({}, "", window.location.pathname);
+    document.getElementById("two-factor").scrollIntoView({ block: "center" });
   }
   try {
     await Promise.all([renderTwoFactor(), renderSso(), renderSessions(), renderApiKeys(), renderEnrollment()]);

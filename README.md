@@ -44,8 +44,9 @@ RustDesk Client
   personal and shared **address books** in the client's newer per-item protocol
 - **Control the clients**: see and **disconnect** incoming connections, push **strategies** (permission
   and behaviour settings) to devices or groups, enroll devices with `rustdesk --assign`
-- **Security first**: Argon2id passwords, optional **two-factor** login (also in the RustDesk client) and
-  **single sign-on** with OpenID Connect, account lockout, revocable sessions and API keys, CSRF protection, strict Content-Security-Policy,
+- **Security first**: Argon2id passwords, optional **two-factor** login (also in the RustDesk client),
+  **single sign-on** with OpenID Connect, **LDAP / Active Directory** sign-in, a delegable **role permission
+  matrix**, account lockout, revocable sessions and API keys, CSRF protection, strict Content-Security-Policy,
   IDOR-safe authorization on every endpoint, protection against device take-over by ID guessing
 - **Operations**: SQLite with Alembic migrations, scheduled and pre-upgrade **backups**, **notifications**
   (webhook, ntfy, e-mail), log retention, server CPU/memory charts, Prometheus `/metrics`, `/health` and `/ready`,
@@ -180,6 +181,7 @@ Treat it as a young project: run it against a test client first, and please repo
 [Screenshots](#screenshots) · [Features](#features) · [Requirements](#requirements) · [Installation](#windows-installation) ·
 [Docker](#docker-installation) · [Configuration](#configuration) · [Managing clients](#managing-clients) ·
 [Two-factor authentication](#two-factor-authentication) · [Single sign-on](#single-sign-on-openid-connect) ·
+[LDAP](#ldap--active-directory-sign-in) · [Roles and permissions](#roles-and-permissions) ·
 [Accounts and access](#accounts-and-access) ·
 [Working with many devices](#working-with-many-devices) · [Device identity](#device-identity) ·
 [Monitoring](#monitoring-and-network-access) · [Log retention](#log-retention) ·
@@ -222,6 +224,11 @@ Phase 3. LDAP sign-in and webhook notifications are not implemented.
   for the RustDesk client's own login - see Two-factor authentication below
 - Optional **single sign-on with OpenID Connect** (Keycloak, Authentik, Google, Microsoft Entra, Okta, ...) in
   the WebUI and behind the RustDesk client's "Continue with ..." button - see Single sign-on below
+- Optional **LDAP / Active Directory sign-in**: a WebUI password that does not match locally is tried
+  against a directory instead - see LDAP below
+- A delegable **role permission matrix** (Devices, Users, Groups, Address books, Logs, Policies, Settings,
+  Tokens, each None/View/Manage), assignable to a user or a user group, without full administrator access -
+  see Roles and permissions below
 - Account self-service and hardening: optional **self-registration** (with admin approval),
   administrator-issued **password-reset links**, **account lockout**, a list of your signed-in
   **sessions**, and personal **API keys** for scripts - see Accounts and access below
@@ -518,6 +525,62 @@ also get the local two-factor prompt. Every sign-in and link is in the audit log
 PKCE, `state` and `nonce`; ID tokens are checked (signature against the provider's keys with asymmetric
 algorithms only, issuer, audience, expiry, nonce) and every provider URL must be https. Not yet tried against a
 real provider or a real RustDesk client: see `docs/rustdesk-compatibility.md`.
+
+## LDAP / Active Directory sign-in
+
+Let a WebUI password that does not match a local one be tried against a directory instead - no separate
+button, it happens transparently on the same sign-in form. It is off until `LDAP_ENABLED=true` and both
+`LDAP_SERVER_URL`/`LDAP_BASE_DN` are set.
+
+```env
+LDAP_ENABLED=true
+LDAP_SERVER_URL=ldaps://dc1.example.com
+LDAP_BASE_DN=dc=example,dc=com
+LDAP_BIND_DN=cn=svc-rustdesk,ou=service-accounts,dc=example,dc=com
+LDAP_BIND_PASSWORD=...
+LDAP_USER_SEARCH_FILTER=(sAMAccountName={username})
+LDAP_USERNAME_ATTRIBUTE=sAMAccountName
+```
+
+Use `ldaps://` (or `LDAP_USE_STARTTLS=true` with `ldap://`) so the bind password and the directory's answers
+are not sent in the clear. `LDAP_BIND_DN`/`LDAP_BIND_PASSWORD` are a service account used only to search for
+the signing-in user's DN; that DN is then bound again with the password the person typed, which is the only
+real proof of it. The defaults (`LDAP_USER_SEARCH_FILTER=(uid={username})`, `LDAP_USERNAME_ATTRIBUTE=uid`,
+`LDAP_EMAIL_ATTRIBUTE=mail`, `LDAP_DISPLAY_NAME_ATTRIBUTE=displayName`) suit a generic LDAP directory; an
+Active Directory server usually wants `sAMAccountName` for both, as above.
+
+**Who a directory account is**, in this order and nothing else:
+
+1. A username already linked to a local user (made the first time that username signs in successfully).
+2. `LDAP_LINK_BY_EMAIL=true` also links, on first sign-in, the local user with the same e-mail address.
+3. `LDAP_AUTO_CREATE_USERS=true` creates a plain (never administrator, unless the group mapping below says
+   otherwise) user. Such a user has no local password until an administrator sends a reset link.
+
+Otherwise the sign-in is refused, same as a wrong local password - it never reveals whether the directory
+was even reached. `LDAP_ADMIN_GROUP_DN`, if set, is checked on every sign-in: a member of that group DN
+(`memberOf` on the directory entry) becomes an administrator, and loses it again the moment they are removed
+from the group. This server only ever authenticates against the directory; assigning roles or user groups
+(see the next section) to an LDAP-provisioned account is done by hand afterwards, the same as for any other
+account. A local account that is disabled or locked out stays that way regardless of what the directory says.
+Not yet tried against a real Active Directory or OpenLDAP server - see `docs/rustdesk-compatibility.md`.
+
+## Roles and permissions
+
+Beyond administrator/plain user, a **role** grants someone partial access to the console (Devices, Users,
+Groups, Address books, Logs, Policies, Settings, Tokens), each set to **None**, **View** or **Manage**, on the
+admin-only **Roles** page. A role never changes which *devices* someone can see - that is still ownership and
+device sharing, untouched by any of this - it only changes what they may *do* once they can already reach a
+screen. Deleting logs, and the console's own audit trail, sit behind **Manage** of Logs, not **View**.
+
+Assign a role directly to a user (on the Users page) or to a **user group** (its own concept, for assigning a
+role to several people at once - not the device-grouping **Groups** page). A user's effective access is the
+highest level, per area, across their direct role and every user group they belong to. A role can also
+**require two-factor authentication** of everyone who holds it, directly or through a group: an account that
+matches but has not turned 2FA on yet can only reach the two-factor setup screen (and sign out) until it does.
+
+Creating or editing roles and user groups, and granting administrator status or assigning a role to a user,
+stays administrator-only even for someone with `users: Manage` - a delegate who could hand out roles could
+grant themselves anything through the matrix they manage.
 
 ## Accounts and access
 
@@ -1170,6 +1233,10 @@ A self-signed cert is untrusted by default:
   `REGISTRATION_REQUIRES_APPROVAL=true` when you do
 - If you use single sign-on, keep `OIDC_LINK_BY_EMAIL` off unless you trust the provider, and never use
   `OIDC_AUTO_CREATE_USERS` without `OIDC_ALLOWED_EMAIL_DOMAINS` (the server will not start that way)
+- If you use LDAP, prefer `LDAP_SERVER_URL=ldaps://...` (or `LDAP_USE_STARTTLS=true`) so the bind password
+  and directory answers are not sent in the clear, and only set `LDAP_ADMIN_GROUP_DN` for a group you control
+- Give roles the narrowest matrix that does the job, and remember that creating or editing roles and user
+  groups is administrator-only by design, not something a delegate can be given
 - Keep `DEVICE_UUID_REBIND=approve` (the default), consider `NEW_DEVICE_POLICY=approve` if strangers might reach
   the server, and consider `WEBUI_ALLOWED_NETWORKS` if the WebUI need not be
   reachable from everywhere
